@@ -1,0 +1,215 @@
+
+
+//+------------------------------------------------------------------------------------------------------------+//
+//+--- ICT Breakers (BOS / MSS - Market Structure) [ICTProTools]                                            ---+//
+//+------------------------------------------------------------------------------------------------------------+//
+// Ported verbatim (behavior-preserving) from the standalone ICTProTools indicator.
+// © ICTProTools — licensed under the Mozilla Public License 2.0 (https://mozilla.org/MPL/2.0/).
+// All identifiers namespaced with `brk_` to avoid collisions with the host BPI script.
+
+// Utility Function — converts string to corresponding line style
+brk_Fline(val) =>
+    switch val
+        'Solid'  => line.style_solid
+        'Dotted' => line.style_dotted
+        'Dashed' => line.style_dashed
+
+// User Inputs
+var BRK_STRU = 'Structure'
+
+// Timeframe selection for the structure logic
+brk_tfStructure = input.timeframe('', 'Timeframe', group = BRK_STRU, tooltip = 'Select the timeframe used to calculate breakers. You must be on a timeframe equal to or lower than the one selected to display the structure.')
+
+// Number of bars left/right to identify swing points (pivot highs/lows)
+brk_rlBars      = input.int(2, 'Swing Bars', 1, inline = 'piv', group = BRK_STRU, tooltip = 'Number of bars to the left and right of a candle required for it to qualify as a swing point.')
+
+// Continuation (BOS) display settings
+brk_showBos     = input.bool(true, 'Continuation (BOS)', group = BRK_STRU)
+var brk_bosStyle = brk_Fline(input.string('Dotted', 'Style', ['Solid', 'Dashed', 'Dotted'], inline = 'bos', group = BRK_STRU))
+brk_bosWidth    = input.int(2, '', 1, 5, inline = 'bos', group = BRK_STRU)
+brk_bosBullCol  = input.color(color.teal, '', inline = 'bos', group = BRK_STRU)
+brk_bosBearCol  = input.color(color.red, '', 'Define the style and width shared by both Bullish and Bearish Continuation (BOS) lines. You can assign a different color for each direction.', inline = 'bos', group = BRK_STRU)
+
+// Breaker (MSS) display settings
+brk_showMss     = input.bool(true, 'Breaker (MSS)', inline = 'breaker', group = BRK_STRU)
+brk_mssMode     = input.string('Body Only', '- Type', ['Body Only', 'Body / Wick'], 'Define how a level is considered broken for MSS Break: "Body Only" requires a candle close beyond the level, while "Body or Wick" allows wick breaches too.', 'breaker', group = BRK_STRU)
+var brk_mssStyle = brk_Fline(input.string('Solid', 'Style', ['Solid', 'Dashed', 'Dotted'], inline = 'mss', group = BRK_STRU))
+brk_mssWidth    = input.int(2, '', 1, 5, inline = 'mss', group = BRK_STRU)
+brk_mssBullCol  = input.color(color.teal, '', inline = 'mss', group = BRK_STRU)
+brk_mssBearCol  = input.color(color.red, '', 'Define the style and width shared by both Bullish and Bearish Breaker (MSS) lines. You can assign a different color for each direction.', inline = 'mss', group = BRK_STRU)
+
+// Alert Settings
+var BRK_ALERT   = 'Any alert() function call'
+brk_bosBullAlert = input.bool(false, '', inline = 'bos', group = BRK_ALERT)
+brk_bosBullName  = input.string('Bull BOS', '', inline = 'bos', group = BRK_ALERT)
+brk_bosBearAlert = input.bool(false, '', inline = 'bos', group = BRK_ALERT)
+brk_bosBearName  = input.string('Bear BOS', '', tooltip = 'Enable alerts here and set a custom name for Bullish Continuation (Bull BOS) or Bearish Continuation (Bear BOS).', inline = 'bos', group = BRK_ALERT)
+
+brk_mssBullAlert = input.bool(false, '', inline = 'mss', group = BRK_ALERT)
+brk_mssBullName  = input.string('Bull MSS', '', inline = 'mss', group = BRK_ALERT)
+brk_mssBearAlert = input.bool(false, '', inline = 'mss', group = BRK_ALERT)
+brk_mssBearName  = input.string('Bear MSS', '', tooltip = 'Enable alerts here and set a custom name for Bullish Breaker (Bull MSS) or Bearish Breaker (Bear MSS).', inline = 'mss', group = BRK_ALERT)
+
+// Core Logic Variables
+var brk_lin = array.new_line()
+var bool brk_bull = false
+
+// Custom pivot structure
+type brk_piv
+    float pp
+    int   pi
+
+// Track current and new pivots
+var brk_piv brk_pH  = na
+var brk_piv brk_pL  = na
+var brk_piv brk_nPh = na
+var brk_piv brk_nPl = na
+var float   brk_nPh1 = na
+var float   brk_nPl1 = na
+
+// Function: Get pivot points
+brk_Fmtf() =>
+    phPs = ta.pivothigh(brk_rlBars, brk_rlBars)
+    plPs = ta.pivotlow(brk_rlBars, brk_rlBars)
+    int phBi = na
+    int plBi = na
+    if not na(phPs)
+        phBi := time[brk_rlBars]
+    if not na(plPs)
+        plBi := time[brk_rlBars]
+    [phPs, phBi, plPs, plBi]
+
+// Get HTF pivots and data
+[brk_phPs, brk_phBi, brk_plPs, brk_plBi] = request.security(syminfo.tickerid, brk_tfStructure, brk_Fmtf(), lookahead = barmerge.lookahead_on)
+
+if not na(brk_phPs)
+    brk_nPh := brk_piv.new(brk_phPs, brk_phBi)
+    if na(brk_pH)
+        brk_pH := brk_piv.new(brk_phPs, brk_phBi)
+
+if not na(brk_plPs)
+    brk_nPl := brk_piv.new(brk_plPs, brk_plBi)
+    if na(brk_pL)
+        brk_pL := brk_piv.new(brk_plPs, brk_plBi)
+
+brk_bosBull = false
+brk_bosBear = false
+brk_mssBull = false
+brk_mssBear = false
+
+var brk_mssBullVar = false
+var brk_mssBearVar = false
+
+// Fetch HTF close and time to compare with break levels
+[brk_htfClose, brk_htfTime] = request.security(syminfo.tickerid, brk_tfStructure, [close[1], time[1]], lookahead = barmerge.lookahead_on)
+
+brk_highCond     = brk_bull or brk_mssMode == 'Body / Wick' ? high : brk_htfClose
+brk_timeHighCond = brk_bull or brk_mssMode == 'Body / Wick' ? time : brk_htfTime
+
+if ((brk_plPs > brk_nPl1 and brk_bull) or na(brk_nPl1) or brk_plPs < brk_nPl1)
+    brk_nPl1 := brk_plPs
+
+// Check if bullish breaker or continuation is valid
+brk_breakHighCond = not na(brk_pH) and brk_highCond > brk_pH.pp
+
+// Filter for displaying structure only if current TF is lower than or equal to selected TF
+brk_FtfLimit(val) =>
+    timeframe.in_seconds() <= timeframe.in_seconds(val)
+
+var brk_tfL0 = brk_FtfLimit(brk_tfStructure)
+
+// Bullish logic
+if brk_breakHighCond
+    if brk_bull
+        brk_bosBull := true
+        if not brk_mssBullVar and brk_lin.size() > 0
+            brk_lin.shift().delete()
+        brk_mssBullVar := false
+    else
+        brk_mssBull := true
+        brk_mssBullVar := true
+
+    brk_linCon = brk_bull ? brk_showBos : brk_showMss
+    brk_linCol = brk_bull ? brk_bosBullCol : brk_mssBullCol
+
+    // Display lines
+    brk_newLin = line.new(brk_pH.pi, brk_pH.pp, brk_timeHighCond, brk_pH.pp, color = brk_tfL0 and brk_linCon ? brk_linCol : na, xloc = xloc.bar_time, style = brk_bull ? brk_bosStyle : brk_mssStyle, width = brk_bull ? brk_bosWidth : brk_mssWidth)
+
+    // Repeated alerts
+    if brk_bosBullAlert and brk_bull
+        alert('Bull BOS')
+    else if brk_mssBullAlert and not brk_bull
+        alert('Bull Breaker')
+
+    brk_bull := true
+    brk_mssBearVar := false
+
+    brk_pH := na
+    brk_pL := na
+
+    if not na(brk_nPl1) and not na(brk_nPl)
+        brk_pL := brk_piv.new(brk_nPl.pp, brk_nPl.pi)
+
+    brk_lin.unshift(brk_newLin)
+
+brk_lowCond     = brk_bull and brk_mssMode == 'Body Only' ? brk_htfClose : low
+brk_timeLowCond = brk_bull and brk_mssMode == 'Body Only' ? brk_htfTime : time
+
+if ((brk_phPs < brk_nPh1 and not brk_bull) or na(brk_nPh1) or brk_phPs > brk_nPh1)
+    brk_nPh1 := brk_phPs
+
+brk_breakLowCond = not na(brk_pL) and brk_lowCond < brk_pL.pp
+
+// Bearish logic
+if brk_breakLowCond
+    if not brk_bull
+        brk_bosBear := true
+        if not brk_mssBearVar and brk_lin.size() > 0
+            brk_lin.shift().delete()
+        brk_mssBearVar := false
+    else
+        brk_mssBear := true
+        brk_mssBearVar := true
+
+    brk_linCon = brk_bull ? brk_showMss : brk_showBos
+    brk_linCol = brk_bull ? brk_mssBearCol : brk_bosBearCol
+
+    // Display lines
+    brk_newLin = line.new(brk_pL.pi, brk_pL.pp, brk_timeLowCond, brk_pL.pp, color = brk_tfL0 and brk_linCon ? brk_linCol : na, xloc = xloc.bar_time, style = brk_bull ? brk_mssStyle : brk_bosStyle, width = brk_bull ? brk_mssWidth : brk_bosWidth)
+
+    // Repeated alerts
+    if brk_bosBearAlert and not brk_bull
+        alert('Bear BOS')
+    else if brk_mssBearAlert and brk_bull
+        alert('Bear Breaker')
+
+    brk_bull := false
+    brk_mssBullVar := false
+
+    brk_pH := na
+    brk_pL := na
+
+    if not na(brk_nPh1) and not na(brk_nPh)
+        brk_pH := brk_piv.new(brk_nPh.pp, brk_nPh.pi)
+
+    brk_lin.unshift(brk_newLin)
+
+// Update current swing points based on newest values
+if not na(brk_pH) and not na(brk_nPh) and not na(brk_nPh[1]) and brk_lin.size() > 0 and not brk_bull and brk_nPh.pp != (brk_nPh[1]).pp and brk_nPh.pi <= line.get_x2(brk_lin.first())
+    brk_pH := brk_piv.new(brk_nPh.pp, brk_nPh.pi)
+
+if not na(brk_pL) and not na(brk_nPl) and not na(brk_nPl[1]) and brk_lin.size() > 0 and brk_bull and brk_nPl.pp != (brk_nPl[1]).pp and brk_nPl.pi <= line.get_x2(brk_lin.first())
+    brk_pL := brk_piv.new(brk_nPl.pp, brk_nPl.pi)
+
+// Reset broken structure pivots once price exceeds
+if not na(brk_nPh) and high > brk_nPh.pp
+    brk_nPh := na
+
+if not na(brk_nPl) and low < brk_nPl.pp
+    brk_nPl := na
+
+// Single alerts
+alertcondition(brk_bosBull, 'BOS Bull', 'BOS Bull')
+alertcondition(brk_bosBear, 'BOS Bear', 'BOS Bear')
+alertcondition(brk_mssBull, 'MSS Bull', 'MSS Bull')
+alertcondition(brk_mssBear, 'MSS Bear', 'MSS Bear')

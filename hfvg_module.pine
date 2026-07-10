@@ -1,0 +1,361 @@
+
+
+//+------------------------------------------------------------------------------------------------------------+//
+//+--- ICT HTF FVGs (fadi)                                                                                  ---+//
+//+------------------------------------------------------------------------------------------------------------+//
+// Ported (behavior-preserving) from the standalone "ICT HTF FVGs (fadi)" indicator.
+// © fadizeidan — licensed under the Mozilla Public License 2.0 (https://mozilla.org/MPL/2.0/).
+// All identifiers namespaced with `hfvg_` to avoid collisions with the host BPI script.
+// Renders up to 6 configurable HTF fair-value gaps as boxes/labels/CE lines to the right of
+// price, with mitigation handling. Independent of the BPI HTF-candle engine (does not feed models).
+
+//+--- Types ---+//
+type hfvg_Settings
+    bool   CE_show
+    string CE_style
+    color  CE_color
+    bool   Border_show
+    bool   mitigated_show
+    string mitigated_type
+    color  mitigated_color_bull
+    color  mitigated_color_bear
+    bool   ltf_hide
+    bool   label_show
+    color  label_color
+    color  label_bgcolor
+    string label_size
+    int    padding
+    int    buffer
+
+type hfvg_Imbalance_Settings
+    bool   show
+    string htf
+    color  color_bull
+    color  color_bear
+    int    max_count
+
+type hfvg_Imbalance
+    int   open_time
+    int   close_time
+    float open
+    float middle
+    float close
+    bool  mitigated
+    int   mitigated_time
+    line  line_middle
+    label lbl
+    box   box
+
+type hfvg_ImbalanceStructure
+    hfvg_Imbalance[]        imbalance
+    hfvg_Imbalance_Settings settings
+
+type hfvg_Helper
+    string name = "Helper"
+
+//+--- Settings ---+//
+var hfvg_GRP = "HTF FVG (ICT)"
+
+hfvg_Settings          hfvg_settings        = hfvg_Settings.new()
+hfvg_Imbalance_Settings hfvg_HTF_1_Settings = hfvg_Imbalance_Settings.new()
+hfvg_Imbalance_Settings hfvg_HTF_2_Settings = hfvg_Imbalance_Settings.new()
+hfvg_Imbalance_Settings hfvg_HTF_3_Settings = hfvg_Imbalance_Settings.new()
+hfvg_Imbalance_Settings hfvg_HTF_4_Settings = hfvg_Imbalance_Settings.new()
+hfvg_Imbalance_Settings hfvg_HTF_5_Settings = hfvg_Imbalance_Settings.new()
+hfvg_Imbalance_Settings hfvg_HTF_6_Settings = hfvg_Imbalance_Settings.new()
+
+string hfvg_tooltip1 = "HTF FVG Settings:\n\tShow/Hide timeframe\n\tTimeframe to display\n\tBullish FVG Color\n\tBearish FVG Color\n\tMaximum number of FVGs to display"
+string hfvg_tooltip2 = "Mitigated FVG Settings:\n\tShow/Hide mitigated (Applies to all).\n\tBullish FVG Color\n\tBearish FVG Color\n\tWhen to mark it as mitigated (Based on HTF timeframe, not current timeframe)"
+
+hfvg_HTF_1_Settings.show       := input.bool(true, "", inline="htf1", group=hfvg_GRP)
+hfvg_htf_1                      = input.timeframe("5", "", inline="htf1", group=hfvg_GRP)
+hfvg_HTF_1_Settings.htf        := hfvg_htf_1
+hfvg_HTF_1_Settings.color_bull := input.color(color.new(color.green,90), "", inline="htf1", group=hfvg_GRP)
+hfvg_HTF_1_Settings.color_bear := input.color(color.new(color.blue,90), "", inline="htf1", group=hfvg_GRP)
+hfvg_HTF_1_Settings.max_count  := input.int(20, "", inline="htf1", group=hfvg_GRP, tooltip = hfvg_tooltip1)
+
+hfvg_HTF_2_Settings.show       := input.bool(true, "", inline="htf2", group=hfvg_GRP)
+hfvg_htf_2                      = input.timeframe("15", "", inline="htf2", group=hfvg_GRP)
+hfvg_HTF_2_Settings.htf        := hfvg_htf_2
+hfvg_HTF_2_Settings.color_bull := input.color(color.new(color.green,90), "", inline="htf2", group=hfvg_GRP)
+hfvg_HTF_2_Settings.color_bear := input.color(color.new(color.blue,90), "", inline="htf2", group=hfvg_GRP)
+hfvg_HTF_2_Settings.max_count  := input.int(20, "", inline="htf2", group=hfvg_GRP, tooltip = hfvg_tooltip1)
+
+hfvg_HTF_3_Settings.show       := input.bool(true, "", inline="htf3", group=hfvg_GRP)
+hfvg_htf_3                      = input.timeframe("60", "", inline="htf3", group=hfvg_GRP)
+hfvg_HTF_3_Settings.htf        := hfvg_htf_3
+hfvg_HTF_3_Settings.color_bull := input.color(color.new(color.green,90), "", inline="htf3", group=hfvg_GRP)
+hfvg_HTF_3_Settings.color_bear := input.color(color.new(color.blue,90), "", inline="htf3", group=hfvg_GRP)
+hfvg_HTF_3_Settings.max_count  := input.int(20, "", inline="htf3", group=hfvg_GRP, tooltip = hfvg_tooltip1)
+
+hfvg_HTF_4_Settings.show       := input.bool(true, "", inline="htf4", group=hfvg_GRP)
+hfvg_htf_4                      = input.timeframe("240", "", inline="htf4", group=hfvg_GRP)
+hfvg_HTF_4_Settings.htf        := hfvg_htf_4
+hfvg_HTF_4_Settings.color_bull := input.color(color.new(color.green,90), "", inline="htf4", group=hfvg_GRP)
+hfvg_HTF_4_Settings.color_bear := input.color(color.new(color.blue,90), "", inline="htf4", group=hfvg_GRP)
+hfvg_HTF_4_Settings.max_count  := input.int(10, "", inline="htf4", group=hfvg_GRP, tooltip = hfvg_tooltip1)
+
+hfvg_HTF_5_Settings.show       := input.bool(true, "", inline="htf5", group=hfvg_GRP)
+hfvg_htf_5                      = input.timeframe("1D", "", inline="htf5", group=hfvg_GRP)
+hfvg_HTF_5_Settings.htf        := hfvg_htf_5
+hfvg_HTF_5_Settings.color_bull := input.color(color.new(color.green,90), "", inline="htf5", group=hfvg_GRP)
+hfvg_HTF_5_Settings.color_bear := input.color(color.new(color.blue,90), "", inline="htf5", group=hfvg_GRP)
+hfvg_HTF_5_Settings.max_count  := input.int(10, "", inline="htf5", group=hfvg_GRP, tooltip = hfvg_tooltip1)
+
+hfvg_HTF_6_Settings.show       := input.bool(true, "", inline="htf6", group=hfvg_GRP)
+hfvg_htf_6                      = input.timeframe("1W", "", inline="htf6", group=hfvg_GRP)
+hfvg_HTF_6_Settings.htf        := hfvg_htf_6
+hfvg_HTF_6_Settings.color_bull := input.color(color.new(color.green,90), "", inline="htf6", group=hfvg_GRP)
+hfvg_HTF_6_Settings.color_bear := input.color(color.new(color.blue,90), "", inline="htf6", group=hfvg_GRP)
+hfvg_HTF_6_Settings.max_count  := input.int(2, "", inline="htf6", group=hfvg_GRP, tooltip = hfvg_tooltip1)
+
+hfvg_settings.ltf_hide             := input.bool(true, "Hide Lower Timeframes", group=hfvg_GRP)
+hfvg_settings.Border_show          := input.bool(true, "Show Border", group=hfvg_GRP, inline="4")
+hfvg_settings.mitigated_show       := input.bool(true, "Show Mitigated", group=hfvg_GRP, inline="2")
+hfvg_settings.mitigated_color_bull := input.color(color.new(color.gray,95), "", group=hfvg_GRP, inline="2")
+hfvg_settings.mitigated_color_bear := input.color(color.new(color.gray,95), "", group=hfvg_GRP, inline="2")
+hfvg_settings.mitigated_type       := input.string('Wick filled', 'when', options = ['None', 'Wick filled', 'Body filled', 'Wick filled half', 'Body filled half'], group=hfvg_GRP, inline="2", tooltip=hfvg_tooltip2)
+hfvg_settings.CE_show              := input.bool(true, "Show C.E.", group=hfvg_GRP, inline="3")
+hfvg_settings.CE_color             := input.color(color.new(color.black,60), "", group=hfvg_GRP, inline="3")
+hfvg_settings.CE_style             := input.string('····', '', options = ['', '----', '····'], group=hfvg_GRP, inline="3")
+hfvg_settings.label_show           := input.bool(true, "Show Label", group=hfvg_GRP, inline="label")
+hfvg_settings.label_color          := input.color(color.new(color.black, 10), "", group=hfvg_GRP, inline='label')
+hfvg_settings.label_bgcolor        := input.color(color.new(color.white, 100), "", group=hfvg_GRP, inline='label')
+hfvg_settings.label_size           := input.string(size.small, "", [size.tiny, size.small, size.normal, size.large, size.huge], group=hfvg_GRP, inline="label")
+hfvg_settings.padding              := input.int(4, "Distance from current candle", minval=0, group=hfvg_GRP)
+hfvg_settings.buffer               := input.int(6, "Spacing between timeframes", minval=0, group=hfvg_GRP)
+
+//+--- Variables ---+//
+color hfvg_color_transparent = #ffffff00
+
+hfvg_Helper hfvg_helper = hfvg_Helper.new()
+
+var hfvg_ImbalanceStructure hfvg_FVG_1 = hfvg_ImbalanceStructure.new()
+var hfvg_ImbalanceStructure hfvg_FVG_2 = hfvg_ImbalanceStructure.new()
+var hfvg_ImbalanceStructure hfvg_FVG_3 = hfvg_ImbalanceStructure.new()
+var hfvg_ImbalanceStructure hfvg_FVG_4 = hfvg_ImbalanceStructure.new()
+var hfvg_ImbalanceStructure hfvg_FVG_5 = hfvg_ImbalanceStructure.new()
+var hfvg_ImbalanceStructure hfvg_FVG_6 = hfvg_ImbalanceStructure.new()
+
+var hfvg_Imbalance[] hfvg_FVGs_1 = array.new<hfvg_Imbalance>()
+var hfvg_Imbalance[] hfvg_FVGs_2 = array.new<hfvg_Imbalance>()
+var hfvg_Imbalance[] hfvg_FVGs_3 = array.new<hfvg_Imbalance>()
+var hfvg_Imbalance[] hfvg_FVGs_4 = array.new<hfvg_Imbalance>()
+var hfvg_Imbalance[] hfvg_FVGs_5 = array.new<hfvg_Imbalance>()
+var hfvg_Imbalance[] hfvg_FVGs_6 = array.new<hfvg_Imbalance>()
+
+hfvg_FVG_1.imbalance := hfvg_FVGs_1
+hfvg_FVG_1.settings  := hfvg_HTF_1_Settings
+hfvg_FVG_2.imbalance := hfvg_FVGs_2
+hfvg_FVG_2.settings  := hfvg_HTF_2_Settings
+hfvg_FVG_3.imbalance := hfvg_FVGs_3
+hfvg_FVG_3.settings  := hfvg_HTF_3_Settings
+hfvg_FVG_4.imbalance := hfvg_FVGs_4
+hfvg_FVG_4.settings  := hfvg_HTF_4_Settings
+hfvg_FVG_5.imbalance := hfvg_FVGs_5
+hfvg_FVG_5.settings  := hfvg_HTF_5_Settings
+hfvg_FVG_6.imbalance := hfvg_FVGs_6
+hfvg_FVG_6.settings  := hfvg_HTF_6_Settings
+
+// Used internally for padding
+var int hfvg_TF_1 = 0
+var int hfvg_TF_2 = 0
+var int hfvg_TF_3 = 0
+var int hfvg_TF_4 = 0
+var int hfvg_TF_5 = 0
+var int hfvg_TF_6 = 0
+
+var float hfvg_daily   = 0
+var float hfvg_monthly = 0
+
+//+--- Methods ---+//
+method LineStyle(hfvg_Helper helper, string style) =>
+    helper.name := style
+    out = switch style
+        '----' => line.style_dashed
+        '····' => line.style_dotted
+        => line.style_solid
+    out
+
+method Gethtftext(hfvg_Helper helper, string htf) =>
+    helper.name := htf
+    formatted = htf
+    seconds = timeframe.in_seconds(htf)
+    if seconds < 60
+        formatted := str.tostring(seconds) + "s"
+    else if (seconds / 60) < 60
+        formatted := str.tostring((seconds/60)) + "m"
+    else if (seconds/60/60) < 24
+        formatted := str.tostring((seconds/60/60)) + "H"
+    formatted
+
+method Validtimeframe(hfvg_Helper helper, tf) =>
+    helper.name := tf
+    n1 = timeframe.in_seconds()
+    n2 = timeframe.in_seconds(tf)
+    n1 < n2
+
+method ProximityRange(hfvg_Helper helper, tf) =>
+    helper.name := tf
+    float range_high = 0
+    float range_low  = 0
+    if timeframe.isseconds or timeframe.isminutes
+        range_high := close + hfvg_daily
+        range_low  := close - hfvg_daily
+    if timeframe.isdaily
+        range_high := close + hfvg_monthly*3
+        range_low  := close - hfvg_monthly*3
+    if timeframe.isweekly
+        range_high := close + hfvg_monthly*12
+        range_low  := close - hfvg_monthly*12
+    [range_low, range_high]
+
+//+--- Imbalances Methods ---+//
+// AddZone is used to display and manage imbalance related boxes
+method AddZone(hfvg_ImbalanceStructure IS, hfvg_Imbalance imb, int step) =>
+    bool visible = true
+    if IS.settings.show
+        int buffer = time+((time-time[1])*(hfvg_settings.padding+1+(hfvg_settings.buffer*(step-1))))
+        if na(imb.box)
+            imb.box := box.new(imb.open_time, imb.open, buffer, imb.close, hfvg_settings.Border_show ? imb.open < imb.close ? color.new(IS.settings.color_bull, color.t(IS.settings.color_bull)/ 3) : color.new(IS.settings.color_bear, color.t(IS.settings.color_bear)/ 3) : hfvg_color_transparent, hfvg_settings.Border_show ? 1 : 0, bgcolor = imb.open < imb.close ? IS.settings.color_bull : IS.settings.color_bear, xloc=xloc.bar_time)
+            if hfvg_settings.label_show
+                imb.lbl := label.new(buffer, imb.middle, text=hfvg_helper.Gethtftext(IS.settings.htf), xloc=xloc.bar_time, textcolor=hfvg_settings.label_color, style=label.style_label_left, color=hfvg_settings.label_bgcolor, size = hfvg_settings.label_size)
+            if hfvg_settings.CE_show
+                imb.line_middle := line.new(imb.open_time, imb.middle, buffer, imb.middle, xloc=xloc.bar_time, style=hfvg_helper.LineStyle(hfvg_settings.CE_style), color=hfvg_settings.CE_color)
+        else
+            box.set_right(imb.box, imb.mitigated ? imb.mitigated_time : buffer)
+            box.set_bgcolor(imb.box, imb.open < imb.close ? imb.mitigated ? hfvg_settings.mitigated_color_bull : IS.settings.color_bull : imb.mitigated ? hfvg_settings.mitigated_color_bear : IS.settings.color_bear)
+            box.set_border_color(imb.box, hfvg_settings.Border_show ? imb.open < imb.close ? color.new(hfvg_settings.mitigated_color_bull, color.t(hfvg_settings.mitigated_color_bull)/ 3) : color.new(hfvg_settings.mitigated_color_bear, color.t(hfvg_settings.mitigated_color_bear)/ 3) : hfvg_color_transparent)
+            label.set_x(imb.lbl, imb.mitigated ? imb.mitigated_time : buffer)
+            if hfvg_settings.CE_show
+                line.set_x2(imb.line_middle, imb.mitigated ? imb.mitigated_time : buffer)
+        if imb.mitigated and not hfvg_settings.mitigated_show
+            if not na(imb.box)
+                box.delete(imb.box)
+                line.delete(imb.line_middle)
+                label.delete(imb.lbl)
+                visible := false
+    visible
+
+// AddImbalance adds a newly discovered imbalance. this applies for both FVG and Volume Imbalance
+method AddImbalance(hfvg_ImbalanceStructure IS, float o, float c, int o_time) =>
+    hfvg_Imbalance imb = hfvg_Imbalance.new()
+    imb.open_time := o_time
+    imb.open      := o
+    imb.middle    := (o+c)/2
+    imb.close     := c
+    IS.imbalance.unshift(imb)
+    if IS.imbalance.size() > 100
+        temp = IS.imbalance.pop()
+        if not na(temp.box)
+            box.delete(temp.box)
+            line.delete(temp.line_middle)
+            label.delete(temp.lbl)
+    IS
+
+// CheckMitigated checks if the imbalance has been mitigated based on the settings
+method CheckMitigated(hfvg_ImbalanceStructure IS, o, h, l, c) =>
+    if IS.imbalance.size() > 0
+        for i = IS.imbalance.size() - 1 to 0
+            imb = IS.imbalance.get(i)
+            if not imb.mitigated
+                switch hfvg_settings.mitigated_type
+                    "None" =>
+                        imb.mitigated := false
+                    'Wick filled' =>
+                        imb.mitigated := imb.open <= imb.close ? low <= imb.open : high >= imb.open
+                    'Body filled' =>
+                        imb.mitigated := imb.open < imb.close ? math.min(o, c) <= imb.open : math.max(o, c) >= imb.open
+                    'Wick filled half' =>
+                        imb.mitigated := imb.open <= imb.close ? low <= imb.middle : high >= imb.middle
+                    'Body filled half' =>
+                        imb.mitigated := imb.open <= imb.close ? math.min(o, c) <= imb.middle : math.max(o, c) >= imb.middle
+                if imb.mitigated
+                    if not hfvg_settings.mitigated_show
+                        if not na(imb.box)
+                            box.delete(imb.box)
+                            line.delete(imb.line_middle)
+                            label.delete(imb.lbl)
+                        IS.imbalance.remove(i)
+                    else
+                        imb.mitigated_time := time
+    IS
+
+method AdjustMargins(hfvg_ImbalanceStructure IS, int step) =>
+    int count = 0
+    if IS.imbalance.size() > 0
+        int buffer = time+((time-time[1])*(hfvg_settings.padding+1+(hfvg_settings.buffer*(step-1))))
+        [rl, rh] = hfvg_helper.ProximityRange(IS.settings.htf)
+        for i = 0 to IS.imbalance.size() - 1
+            imb = IS.imbalance.get(i)
+            if ((math.max(imb.open, imb.close) > rl) and (math.min(imb.open, imb.close) < rh)) and count < IS.settings.max_count
+                if IS.AddZone(imb, step)
+                    count := count+1
+            else
+                if not na(imb.box)
+                    box.delete(imb.box)
+                    label.delete(imb.lbl)
+                    line.delete((imb.line_middle))
+    IS
+
+// FindImbalance looks for imbalances and, if found, adds it to the list
+method FindImbalance(hfvg_ImbalanceStructure IS, o, h, l, c, t, o1, h1, l1, c1, t1, o2, h2, l2, c2, t2) =>
+    if IS.settings.show and (h < l2 or l > h2)
+        o = h < l2 ? l2 : h2
+        c = h < l2 ? h : l
+        if IS.imbalance.size() == 0
+            IS.AddImbalance(o, c, t2)
+        else
+            if IS.imbalance.first().open_time < t2
+                IS.AddImbalance(o, c, t2)
+    IS
+
+method Process(hfvg_ImbalanceStructure IS, float o, float h, float l, float c, int t, float o1, float h1, float l1, float c1, int t1, float o2, float h2, float l2, float c2, int t2) =>
+    var int visible = 0
+    if IS.settings.show
+        if not hfvg_settings.ltf_hide or (hfvg_settings.ltf_hide and hfvg_helper.Validtimeframe(IS.settings.htf))
+            if IS.settings.show
+                IS.FindImbalance(o, h, l, c, t, o1, h1, l1, c1, t1, o2, h2, l2, c2, t2)
+                visible := 1
+        IS.CheckMitigated(o, h, l, c)
+    visible
+
+//+--- Main call to start the process ---+//
+hfvg_daily   := request.security(syminfo.tickerid, "1D", ta.atr(14))
+hfvg_monthly := request.security(syminfo.tickerid, "1M", ta.atr(14))
+
+[hfvg_o_1, hfvg_h_1, hfvg_l_1, hfvg_c_1, hfvg_t_1]           = request.security(syminfo.tickerid, hfvg_htf_1, [open[1], high[1], low[1], close[1], time[1]])
+[hfvg_o1_1, hfvg_h1_1, hfvg_l1_1, hfvg_c1_1, hfvg_t1_1]      = request.security(syminfo.tickerid, hfvg_htf_1, [open[2], high[2], low[2], close[2], time[2]])
+[hfvg_o2_1, hfvg_h2_1, hfvg_l2_1, hfvg_c2_1, hfvg_t2_1]      = request.security(syminfo.tickerid, hfvg_htf_1, [open[3], high[3], low[3], close[3], time[3]])
+hfvg_TF_1 := hfvg_FVG_1.Process(hfvg_o_1, hfvg_h_1, hfvg_l_1, hfvg_c_1, hfvg_t_1, hfvg_o1_1, hfvg_h1_1, hfvg_l1_1, hfvg_c1_1, hfvg_t1_1, hfvg_o2_1, hfvg_h2_1, hfvg_l2_1, hfvg_c2_1, hfvg_t2_1)
+hfvg_FVG_1.AdjustMargins(hfvg_TF_1)
+
+[hfvg_o_2, hfvg_h_2, hfvg_l_2, hfvg_c_2, hfvg_t_2]           = request.security(syminfo.tickerid, hfvg_htf_2, [open[1], high[1], low[1], close[1], time[1]])
+[hfvg_o1_2, hfvg_h1_2, hfvg_l1_2, hfvg_c1_2, hfvg_t1_2]      = request.security(syminfo.tickerid, hfvg_htf_2, [open[2], high[2], low[2], close[2], time[2]])
+[hfvg_o2_2, hfvg_h2_2, hfvg_l2_2, hfvg_c2_2, hfvg_t2_2]      = request.security(syminfo.tickerid, hfvg_htf_2, [open[3], high[3], low[3], close[3], time[3]])
+hfvg_TF_2 := hfvg_TF_1 + hfvg_FVG_2.Process(hfvg_o_2, hfvg_h_2, hfvg_l_2, hfvg_c_2, hfvg_t_2, hfvg_o1_2, hfvg_h1_2, hfvg_l1_2, hfvg_c1_2, hfvg_t1_2, hfvg_o2_2, hfvg_h2_2, hfvg_l2_2, hfvg_c2_2, hfvg_t2_2)
+hfvg_FVG_2.AdjustMargins(hfvg_TF_2)
+
+[hfvg_o_3, hfvg_h_3, hfvg_l_3, hfvg_c_3, hfvg_t_3]           = request.security(syminfo.tickerid, hfvg_htf_3, [open[1], high[1], low[1], close[1], time[1]])
+[hfvg_o1_3, hfvg_h1_3, hfvg_l1_3, hfvg_c1_3, hfvg_t1_3]      = request.security(syminfo.tickerid, hfvg_htf_3, [open[2], high[2], low[2], close[2], time[2]])
+[hfvg_o2_3, hfvg_h2_3, hfvg_l2_3, hfvg_c2_3, hfvg_t2_3]      = request.security(syminfo.tickerid, hfvg_htf_3, [open[3], high[3], low[3], close[3], time[3]])
+hfvg_TF_3 := hfvg_TF_2 + hfvg_FVG_3.Process(hfvg_o_3, hfvg_h_3, hfvg_l_3, hfvg_c_3, hfvg_t_3, hfvg_o1_3, hfvg_h1_3, hfvg_l1_3, hfvg_c1_3, hfvg_t1_3, hfvg_o2_3, hfvg_h2_3, hfvg_l2_3, hfvg_c2_3, hfvg_t2_3)
+hfvg_FVG_3.AdjustMargins(hfvg_TF_3)
+
+[hfvg_o_4, hfvg_h_4, hfvg_l_4, hfvg_c_4, hfvg_t_4]           = request.security(syminfo.tickerid, hfvg_htf_4, [open[1], high[1], low[1], close[1], time[1]])
+[hfvg_o1_4, hfvg_h1_4, hfvg_l1_4, hfvg_c1_4, hfvg_t1_4]      = request.security(syminfo.tickerid, hfvg_htf_4, [open[2], high[2], low[2], close[2], time[2]])
+[hfvg_o2_4, hfvg_h2_4, hfvg_l2_4, hfvg_c2_4, hfvg_t2_4]      = request.security(syminfo.tickerid, hfvg_htf_4, [open[3], high[3], low[3], close[3], time[3]])
+hfvg_TF_4 := hfvg_TF_3 + hfvg_FVG_4.Process(hfvg_o_4, hfvg_h_4, hfvg_l_4, hfvg_c_4, hfvg_t_4, hfvg_o1_4, hfvg_h1_4, hfvg_l1_4, hfvg_c1_4, hfvg_t1_4, hfvg_o2_4, hfvg_h2_4, hfvg_l2_4, hfvg_c2_4, hfvg_t2_4)
+hfvg_FVG_4.AdjustMargins(hfvg_TF_4)
+
+[hfvg_o_5, hfvg_h_5, hfvg_l_5, hfvg_c_5, hfvg_t_5]           = request.security(syminfo.tickerid, hfvg_htf_5, [open[1], high[1], low[1], close[1], time[1]])
+[hfvg_o1_5, hfvg_h1_5, hfvg_l1_5, hfvg_c1_5, hfvg_t1_5]      = request.security(syminfo.tickerid, hfvg_htf_5, [open[2], high[2], low[2], close[2], time[2]])
+[hfvg_o2_5, hfvg_h2_5, hfvg_l2_5, hfvg_c2_5, hfvg_t2_5]      = request.security(syminfo.tickerid, hfvg_htf_5, [open[3], high[3], low[3], close[3], time[3]])
+hfvg_TF_5 := hfvg_TF_4 + hfvg_FVG_5.Process(hfvg_o_5, hfvg_h_5, hfvg_l_5, hfvg_c_5, hfvg_t_5, hfvg_o1_5, hfvg_h1_5, hfvg_l1_5, hfvg_c1_5, hfvg_t1_5, hfvg_o2_5, hfvg_h2_5, hfvg_l2_5, hfvg_c2_5, hfvg_t2_5)
+hfvg_FVG_5.AdjustMargins(hfvg_TF_5)
+
+[hfvg_o_6, hfvg_h_6, hfvg_l_6, hfvg_c_6, hfvg_t_6]           = request.security(syminfo.tickerid, hfvg_htf_6, [open[1], high[1], low[1], close[1], time[1]])
+[hfvg_o1_6, hfvg_h1_6, hfvg_l1_6, hfvg_c1_6, hfvg_t1_6]      = request.security(syminfo.tickerid, hfvg_htf_6, [open[2], high[2], low[2], close[2], time[2]])
+[hfvg_o2_6, hfvg_h2_6, hfvg_l2_6, hfvg_c2_6, hfvg_t2_6]      = request.security(syminfo.tickerid, hfvg_htf_6, [open[3], high[3], low[3], close[3], time[3]])
+hfvg_TF_6 := hfvg_TF_5 + hfvg_FVG_6.Process(hfvg_o_6, hfvg_h_6, hfvg_l_6, hfvg_c_6, hfvg_t_6, hfvg_o1_6, hfvg_h1_6, hfvg_l1_6, hfvg_c1_6, hfvg_t1_6, hfvg_o2_6, hfvg_h2_6, hfvg_l2_6, hfvg_c2_6, hfvg_t2_6)
+hfvg_FVG_6.AdjustMargins(hfvg_TF_6)

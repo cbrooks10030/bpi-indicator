@@ -1,0 +1,80 @@
+
+
+//+------------------------------------------------------------------------------------------------------------+//
+//+--- ICT Fair Value Gaps (from "Simple ICT OB & FVG" by Gowtham Kannakaje L)                              ---+//
+//+------------------------------------------------------------------------------------------------------------+//
+// FVG-only port (behavior-preserving) — the Order Blocks and HTF-FVG parts of the source are intentionally
+// NOT included, per request. All identifiers namespaced with `gkf_` to avoid collisions with the host script.
+// © Gowtham Kannakaje L.
+
+// --- Inputs ---
+var gkf_GRP = "ICT FVG (GK)"
+
+gkf_mitType = input.string("Close", title="Mitigation Type", options=["Close", "Wick"], tooltip="Choose how Fair Value Gaps are mitigated", inline="gkf_first", group=gkf_GRP)
+gkf_mitLow  = gkf_mitType == "Close" ? close[1] : low
+gkf_mitHigh = gkf_mitType == "Close" ? close[1] : high
+
+gkf_simple  = input(true, title='Show simple version of the FVGs', tooltip="Select this to keep chart clean (box will not be extended)", inline="gkf_first", group=gkf_GRP)
+
+gkf_show       = input(true,  title='Show FVG Boxes', group=gkf_GRP, inline='gkf_3')
+gkf_delMit     = input(false, title='Delete Mitigated FVG', group=gkf_GRP, tooltip="Removes the mitigated Fair Value Gaps from the chart based on the Mitigation Type specified.", inline='gkf_3')
+gkf_bullBorder = input.color(color.rgb(76, 175, 80, 80),  title="FVG border: Bullish ", group=gkf_GRP, inline="gkf_4")
+gkf_bearBorder = input.color(color.rgb(255, 82, 82, 80),  title="Bearish", group=gkf_GRP, inline="gkf_4")
+gkf_bullBox    = input.color(color.rgb(76, 175, 80, 97),  title="FVG box:", group=gkf_GRP, inline="gkf_4")
+gkf_bearBox    = input.color(color.rgb(255, 82, 82, 97),  title="Bearish", group=gkf_GRP, inline="gkf_4")
+
+// --- Detection ---
+gkf_bullFVG = low - high[2] > 0  and open[1] < close[1]
+gkf_bearFVG = low[2] - high > 0  and open[1] > close[1]
+
+// --- Box arrays ---
+var box gkf_bull = na
+var box gkf_bear = na
+var gkf_bullArr = array.new_box()
+var gkf_bearArr = array.new_box()
+var box[] gkf_bullMit = array.new_box()
+var box[] gkf_bearMit = array.new_box()
+
+// --- Draw new FVGs ---
+if (gkf_bullFVG and gkf_show)
+    gkf_bull := box.new(bar_index-2, high[2], bar_index, low, border_color = gkf_simple ? color.rgb(76, 175, 79, 50) : gkf_bullBorder, bgcolor = gkf_bullBox, text = "", text_color = color.rgb(255, 255, 255, 80), text_size = size.small, extend = gkf_simple ? extend.none : extend.right)
+    array.push(gkf_bullArr, gkf_bull)
+
+if (gkf_bearFVG and gkf_show)
+    gkf_bear := box.new(bar_index-2, low[2], bar_index, high, border_color = gkf_simple ? color.rgb(255, 82, 82, 50) : gkf_bearBorder, bgcolor = gkf_bearBox, text = "", text_color = color.rgb(255, 255, 255, 80), text_size = size.small, extend = gkf_simple ? extend.none : extend.right)
+    array.push(gkf_bearArr, gkf_bear)
+
+// --- Bullish clean up / mitigation ---
+if array.size(gkf_bullArr) > 0 and not gkf_simple
+    for i = array.size(gkf_bullArr) - 1 to 0 by 1
+        XX = array.get(gkf_bullArr, i)
+        XXxx = box.get_bottom(XX)
+        XXx = box.get_top(XX)
+        // If the last close/low is below the low of the bullish FVG - remove the FVG
+        if gkf_mitLow < XXxx
+            box.set_right(XX, bar_index)
+            box.set_extend(XX, extend.none)
+            array.unshift(gkf_bullMit, XX)
+            array.remove(gkf_bullArr, i)
+            if gkf_delMit
+                box.delete(XX)
+
+// --- Bearish clean up / mitigation ---
+if array.size(gkf_bearArr) > 0 and not gkf_simple
+    for i = array.size(gkf_bearArr) - 1 to 0 by 1
+        XX = array.get(gkf_bearArr, i)
+        XXx = box.get_top(XX)
+        XXxx = box.get_bottom(XX)
+        // If the last close/high is above the high of the bearish FVG - remove the FVG
+        if gkf_mitHigh > XXx
+            box.set_right(XX, bar_index)
+            box.set_extend(XX, extend.none)
+            array.unshift(gkf_bearMit, XX)
+            array.remove(gkf_bearArr, i)
+            if gkf_delMit
+                box.delete(XX)
+
+// --- Alerts ---
+alertcondition((gkf_bullFVG),                 "Bullish FVG", "Bullish FVG")
+alertcondition((gkf_bearFVG),                 "Bearish FVG", "Bearish FVG")
+alertcondition((gkf_bullFVG or gkf_bearFVG),  "All FVG",     "All FVG")
