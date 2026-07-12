@@ -3321,14 +3321,14 @@ uni_detect() =>
     if sLow
         loBar := bar_index
         loPx  := lastPL
-        float t1 = na
+        float bt1 = na
         float b1 = na
         for k = 0 to uni_lookback
             if close[k] < open[k]
-                t1 := high[k]
+                bt1 := high[k]
                 b1 := low[k]
                 break
-        bBrkT := t1
+        bBrkT := bt1
         bBrkB := b1
     if sHigh
         hiBar := bar_index
@@ -3844,6 +3844,8 @@ bb_push(array<float> zP, array<int> zB, array<bool> zH, float p, int b, bool isH
             array.shift(zP)
             array.shift(zB)
             array.shift(zH)
+    int bb_pushRc = 0
+    bb_pushRc
 
 float bb_ph = ta.pivothigh(bb_swing, bb_swing)
 float bb_pl = ta.pivotlow(bb_swing, bb_swing)
