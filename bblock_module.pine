@@ -68,6 +68,8 @@ bb_push(array<float> zP, array<int> zB, array<bool> zH, float p, int b, bool isH
             array.shift(zP)
             array.shift(zB)
             array.shift(zH)
+    int bb_pushRc = 0
+    bb_pushRc
 
 float bb_ph = ta.pivothigh(bb_swing, bb_swing)
 float bb_pl = ta.pivotlow(bb_swing, bb_swing)
@@ -78,9 +80,20 @@ if not na(bb_ph)
 if not na(bb_pl)
     bb_push(bb_zP, bb_zB, bb_zH, bb_pl, bb_pvBar, false)
 
-// --- Pattern detection over the last three pivots ---
-var int bb_lastBullB = na
-var int bb_lastBearB = na
+// --- Arm a structure from the last three pivots, then fire on the MSS close ---
+// The market-structure shift (the close back through the swing level) usually
+// happens several bars AFTER the third pivot confirms, so we cannot require it on
+// the same bar. Instead we "arm" the structure when it appears and fire once price
+// actually closes through the level. The arm is discarded if price first closes
+// beyond the swept extreme (the setup failed) or once it fires.
+var float bb_armBullHi  = na   // bull: swing High to break (zone top)
+var float bb_armBullLo  = na   // bull: original swing Low (zone bottom)
+var float bb_armBullX   = na   // bull: lower low (invalidation extreme)
+var int   bb_armBullBar = na   // bull: left anchor (swing-High pivot bar)
+var float bb_armBearLo  = na   // bear: swing Low to break (zone bottom)
+var float bb_armBearHi  = na   // bear: swing High (zone top)
+var float bb_armBearX   = na   // bear: higher high (invalidation extreme)
+var int   bb_armBearBar = na   // bear: left anchor (swing-Low pivot bar)
 
 bool  bb_bullFire = false
 bool  bb_bearFire = false
@@ -88,29 +101,65 @@ float bb_zTop  = na
 float bb_zBot  = na
 int   bb_zLeft = na
 
-int bb_n = array.size(bb_zH)
-if bb_n >= 3 and barstate.isconfirmed
-    bool  h0 = array.get(bb_zH, bb_n - 1)
-    bool  h1 = array.get(bb_zH, bb_n - 2)
-    bool  h2 = array.get(bb_zH, bb_n - 3)
-    float p0 = array.get(bb_zP, bb_n - 1)
-    float p1 = array.get(bb_zP, bb_n - 2)
-    float p2 = array.get(bb_zP, bb_n - 3)
-    int   b1 = array.get(bb_zB, bb_n - 2)
-    // Bullish: Low(p2) -> High(p1) -> Lower Low(p0), close back above the High.
-    if (not h0) and h1 and (not h2) and p0 < p2 and close > p1 and b1 != bb_lastBullB
+// Re-arm only when a new pivot printed this bar (so the arm isn't reset every bar).
+bool bb_newPivot = not na(bb_ph) or not na(bb_pl)
+int  bb_n = array.size(bb_zH)
+if bb_n >= 3 and bb_newPivot
+    bool  bb_h0 = array.get(bb_zH, bb_n - 1)
+    bool  bb_h1 = array.get(bb_zH, bb_n - 2)
+    bool  bb_h2 = array.get(bb_zH, bb_n - 3)
+    float bb_p0 = array.get(bb_zP, bb_n - 1)
+    float bb_p1 = array.get(bb_zP, bb_n - 2)
+    float bb_p2 = array.get(bb_zP, bb_n - 3)
+    int   bb_b1 = array.get(bb_zB, bb_n - 2)
+    // Bullish structure: Low(p2) -> High(p1) -> Lower Low(p0).
+    if (not bb_h0) and bb_h1 and (not bb_h2) and bb_p0 < bb_p2
+        bb_armBullHi  := bb_p1
+        bb_armBullLo  := bb_p2
+        bb_armBullX   := bb_p0
+        bb_armBullBar := bb_b1
+    // Bearish structure: High(p2) -> Low(p1) -> Higher High(p0).
+    if bb_h0 and (not bb_h1) and bb_h2 and bb_p0 > bb_p2
+        bb_armBearHi  := bb_p2
+        bb_armBearLo  := bb_p1
+        bb_armBearX   := bb_p0
+        bb_armBearBar := bb_b1
+
+// Fire the bullish breaker when price closes above the swing High; drop the arm if
+// price first closes below the lower low.
+if not na(bb_armBullHi)
+    if close > bb_armBullHi
         bb_bullFire := true
-        bb_lastBullB := b1
-        bb_zTop  := p1
-        bb_zBot  := p2
-        bb_zLeft := b1
-    // Bearish: High(p2) -> Low(p1) -> Higher High(p0), close back below the Low.
-    if h0 and (not h1) and h2 and p0 > p2 and close < p1 and b1 != bb_lastBearB
+        bb_zTop  := bb_armBullHi
+        bb_zBot  := bb_armBullLo
+        bb_zLeft := bb_armBullBar
+        bb_armBullHi  := na
+        bb_armBullLo  := na
+        bb_armBullX   := na
+        bb_armBullBar := na
+    else if close < bb_armBullX
+        bb_armBullHi  := na
+        bb_armBullLo  := na
+        bb_armBullX   := na
+        bb_armBullBar := na
+
+// Fire the bearish breaker when price closes below the swing Low; drop the arm if
+// price first closes above the higher high.
+if not na(bb_armBearLo)
+    if close < bb_armBearLo
         bb_bearFire := true
-        bb_lastBearB := b1
-        bb_zTop  := p2
-        bb_zBot  := p1
-        bb_zLeft := b1
+        bb_zTop  := bb_armBearHi
+        bb_zBot  := bb_armBearLo
+        bb_zLeft := bb_armBearBar
+        bb_armBearHi  := na
+        bb_armBearLo  := na
+        bb_armBearX   := na
+        bb_armBearBar := na
+    else if close > bb_armBearX
+        bb_armBearHi  := na
+        bb_armBearLo  := na
+        bb_armBearX   := na
+        bb_armBearBar := na
 
 // Tighten to candle bodies when wicks are disabled.
 if (bb_bullFire or bb_bearFire) and not bb_useWick and not na(bb_zLeft)
