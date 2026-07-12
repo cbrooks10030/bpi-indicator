@@ -105,25 +105,25 @@ int   bb_zLeft = na
 bool bb_newPivot = not na(bb_ph) or not na(bb_pl)
 int  bb_n = array.size(bb_zH)
 if bb_n >= 3 and bb_newPivot
-    bool  h0 = array.get(bb_zH, bb_n - 1)
-    bool  h1 = array.get(bb_zH, bb_n - 2)
-    bool  h2 = array.get(bb_zH, bb_n - 3)
-    float p0 = array.get(bb_zP, bb_n - 1)
-    float p1 = array.get(bb_zP, bb_n - 2)
-    float p2 = array.get(bb_zP, bb_n - 3)
-    int   b1 = array.get(bb_zB, bb_n - 2)
+    bool  bb_h0 = array.get(bb_zH, bb_n - 1)
+    bool  bb_h1 = array.get(bb_zH, bb_n - 2)
+    bool  bb_h2 = array.get(bb_zH, bb_n - 3)
+    float bb_p0 = array.get(bb_zP, bb_n - 1)
+    float bb_p1 = array.get(bb_zP, bb_n - 2)
+    float bb_p2 = array.get(bb_zP, bb_n - 3)
+    int   bb_b1 = array.get(bb_zB, bb_n - 2)
     // Bullish structure: Low(p2) -> High(p1) -> Lower Low(p0).
-    if (not h0) and h1 and (not h2) and p0 < p2
-        bb_armBullHi  := p1
-        bb_armBullLo  := p2
-        bb_armBullX   := p0
-        bb_armBullBar := b1
+    if (not bb_h0) and bb_h1 and (not bb_h2) and bb_p0 < bb_p2
+        bb_armBullHi  := bb_p1
+        bb_armBullLo  := bb_p2
+        bb_armBullX   := bb_p0
+        bb_armBullBar := bb_b1
     // Bearish structure: High(p2) -> Low(p1) -> Higher High(p0).
-    if h0 and (not h1) and h2 and p0 > p2
-        bb_armBearHi  := p2
-        bb_armBearLo  := p1
-        bb_armBearX   := p0
-        bb_armBearBar := b1
+    if bb_h0 and (not bb_h1) and bb_h2 and bb_p0 > bb_p2
+        bb_armBearHi  := bb_p2
+        bb_armBearLo  := bb_p1
+        bb_armBearX   := bb_p0
+        bb_armBearBar := bb_b1
 
 // Fire the bullish breaker when price closes above the swing High; drop the arm if
 // price first closes below the lower low.
