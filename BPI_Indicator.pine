@@ -1634,48 +1634,687 @@ f_touchedAnyHTFFVG(float lo, float hi) =>
 // === END ICT HTF Candle Fractal Model source ====
 
 
-// Session Levels Settings (NY AM Range, Asia, London, Midnight & 8:30 Opens)
-string GRP_SESSIONS = "Session Levels"
-show_ny_am_range  = input.bool(true, "Show NY AM Range (07:00-09:30 ET) BSL/SSL", group=GRP_SESSIONS)
-ny_am_bsl_color   = input.color(color.new(color.red, 0), "NY AM High (BSL)", inline="nyam", group=GRP_SESSIONS)
-ny_am_ssl_color   = input.color(color.new(color.green, 0), "NY AM Low (SSL)", inline="nyam", group=GRP_SESSIONS)
-ny_am_bsl_label_text = input.string("NY AM BSL", "NY AM High Label", inline="nyamtxt", group=GRP_SESSIONS, tooltip="Text on the NY AM BSL line. Leave blank to hide just this label.")
-ny_am_ssl_label_text = input.string("NY AM SSL", "NY AM Low Label",  inline="nyamtxt", group=GRP_SESSIONS)
+//+------------------------------------------------------------------------------------------------------------+//
+//+--- ICT Killzones & Pivots [TFO] — replaces the old Session Levels visuals (© tradeforopp, MPL-2.0)      ---+//
+//+------------------------------------------------------------------------------------------------------------+//
+// Ported from the standalone "ICT Killzones & Pivots [TFO]" indicator. Draws killzone boxes (Asia/London/
+// NY AM/NY Lunch/NY PM), session pivot lines + labels, killzone range table, D/W/M opens & separators,
+// opening-price lines, and day-of-week labels. Only the opening-price session var h1 was renamed to kz_h1
+// to avoid colliding with the host script's global h1; all other identifiers were collision-free.
 
-show_asia_range   = input.bool(true, "Show Asia High/Low", group=GRP_SESSIONS)
-asia_session_in   = input.session("2000-0000", "Asia Session (ET)", group=GRP_SESSIONS)
-asia_color        = input.color(color.new(color.orange, 0), "Asia Color", group=GRP_SESSIONS)
-asia_high_label_text = input.string("A.High", "Asia High Label", inline="asiatxt", group=GRP_SESSIONS, tooltip="Text on the Asia High/Low lines. Shorten to e.g. 'A.High' / 'A.Low' if you want compact labels.")
-asia_low_label_text  = input.string("A.Low",  "Asia Low Label",  inline="asiatxt", group=GRP_SESSIONS)
+// --- NY AM 07:00-09:30 ET high/low tracker (kept headless: feeds the model detection below; the killzone
+// --- boxes above cover the visual NY session). Do NOT remove — models reference ny_am_high / ny_am_low.
+var float ny_am_high = na
+var float ny_am_low  = na
+ny_am_kz_time  = time(timeframe.period, "0700-0930", "America/New_York")
+is_ny_am_kz    = not na(ny_am_kz_time)
+if is_ny_am_kz and not is_ny_am_kz[1]
+    ny_am_high := high
+    ny_am_low  := low
+else if is_ny_am_kz
+    ny_am_high := math.max(ny_am_high, high)
+    ny_am_low  := math.min(ny_am_low,  low)
 
-show_london_range = input.bool(true, "Show London High/Low", group=GRP_SESSIONS)
-london_session_in = input.session("0200-0500", "London Session (ET)", group=GRP_SESSIONS)
-london_color      = input.color(color.new(color.blue, 0), "London Color", group=GRP_SESSIONS)
-london_high_label_text = input.string("L.High", "London High Label", inline="ldntxt", group=GRP_SESSIONS, tooltip="Text on the London High/Low lines. Shorten to e.g. 'L.High' / 'L.Low' if you want compact labels.")
-london_low_label_text  = input.string("L.Low",  "London Low Label",  inline="ldntxt", group=GRP_SESSIONS)
 
-show_midnight_open = input.bool(true, "Show Midnight Open (00:00 ET)", group=GRP_SESSIONS)
-midnight_color     = input.color(color.new(color.purple, 0), "Midnight Open Color", group=GRP_SESSIONS)
-midnight_label_text = input.string("Midnight", "Midnight Open Label", group=GRP_SESSIONS)
 
-show_830_open    = input.bool(true, "Show 8:30 AM Open (ET)", group=GRP_SESSIONS)
-open_830_color   = input.color(color.new(color.fuchsia, 0), "8:30 Open Color", group=GRP_SESSIONS)
-open_830_label_text = input.string("8:30", "8:30 Open Label", group=GRP_SESSIONS)
+// ---------------------------------------- Constant Functions --------------------------------------------------
+get_line_type(_style) =>
+    switch _style
+        "Solid" => line.style_solid
+        "Dotted" => line.style_dotted
+        "Dashed" => line.style_dashed
 
-show_session_labels = input.bool(true, "Show Session Text Labels", group=GRP_SESSIONS, tooltip="If off, lines still show but text labels are hidden.")
-session_line_width = input.int(1, "Session Line Width", minval=1, maxval=4, group=GRP_SESSIONS)
-session_line_style_in = input.string("solid", "Session Line Style", options=["solid","dashed","dotted"], group=GRP_SESSIONS)
-session_label_size = input.string(SIZE_SMALL, "Session Label Size", options=[SIZE_TINY, SIZE_SMALL, SIZE_NORMAL, SIZE_LARGE, SIZE_HUGE], group=GRP_SESSIONS)
-session_label_pos_in = input.string("Right", "Session Label Position", options=["Above","Below","Left","Right","Center","Inside-Left"], group=GRP_SESSIONS, tooltip="Where each session's text sits relative to the end of its line. 'Inside-Left' pins the RIGHT edge of the text to the end of the line so the text reads BACK into the line and never overflows past the endpoint. 'Center' has NO callout arrow — text sits directly at the anchor (may overflow past line end). Above/Below/Left/Right use a Pine callout label.")
-session_label_padding = input.int(0, "Session Label Nudge (signed bars, −500 to +500)", minval=-500, maxval=500, group=GRP_SESSIONS, tooltip="Signed horizontal nudge for the session label. 0 = label sits at the chart's right edge (current bar). NEGATIVE values pull the text BACKWARD (left, into history). POSITIVE values push the text FORWARD (right, into the future / projection area). Range −500 to +500 bars. NOTE: if the slider in Settings still shows 0 as the minimum after updating the script, that's a TradingView input cache — remove the indicator from the chart and re-add it.")
-session_taken_label_pad = input.int(6, "Swept-Level Label Left Pad (bars)", minval=0, maxval=100, group=GRP_SESSIONS, tooltip="For NY AM / Asia / London levels that have been swept: how many bars to the LEFT of the takeout point the text sits. The text reads back to the left of the takeout candle so it never overlaps the wicks/candles that swept the level. Increase for more clearance.")
-session_taken_center_thresh = input.int(25, "Swept-Level Auto-Center Threshold (bars)", minval=0, maxval=500, group=GRP_SESSIONS, tooltip="If a swept level's line is SHORTER than this many bars (i.e. price took it out soon after it formed, leaving too little room for left-padded text), the text is automatically CENTERED on the line instead. Set to 0 to always left-pad and never auto-center.")
+get_size(x) =>
+    switch x
+        "Auto" => size.auto
+        "Tiny" => size.tiny
+        "Small" => size.small
+        "Normal" => size.normal
+        "Large" => size.large
+        "Huge" => size.huge
 
-auto_hide_sessions_on_htf = input.bool(true, "Auto-hide Sessions on 15m+", group=GRP_SESSIONS, tooltip="When ON, the Asia / London / NY AM session high & low lines (and their labels) are automatically hidden on charts with a 15-minute or higher timeframe to reduce clutter. Midnight Open, 8:30 Open, Previous Day H/L, and the 1hr/15m swing labels are NOT affected. Turn OFF to always show the sessions regardless of chart timeframe.")
-sessions_hidden_by_tf = auto_hide_sessions_on_htf and timeframe.in_seconds() >= 15 * 60
+get_table_pos(pos) =>
+    switch pos
+        "Bottom Center" => position.bottom_center
+        "Bottom Left" => position.bottom_left
+        "Bottom Right" => position.bottom_right
+        "Middle Center" => position.middle_center
+        "Middle Left" => position.middle_left
+        "Middle Right" => position.middle_right
+        "Top Center" => position.top_center
+        "Top Left" => position.top_left
+        "Top Right" => position.top_right
+// ---------------------------------------- Constant Functions --------------------------------------------------
 
-session_line_style = session_line_style_in == "dashed" ? line.style_dashed : session_line_style_in == "dotted" ? line.style_dotted : line.style_solid
 
+// ---------------------------------------- Inputs --------------------------------------------------
+var g_SETTINGS      = "Killzones — Settings"
+max_days            = input.int(3, "Session Drawing Limit", 1, tooltip = "Only this many drawings will be kept on the chart, for each selected drawing type (killzone boxes, pivot lines, open lines, etc.)", group = g_SETTINGS)
+tf_limit            = input.timeframe("30", "Timeframe Limit", tooltip = "Drawings will not appear on timeframes greater than or equal to this", group = g_SETTINGS)
+gmt_tz              = input.string('America/New_York', "Timezone", options = ['America/New_York','GMT-12','GMT-11','GMT-10','GMT-9','GMT-8','GMT-7','GMT-6','GMT-5','GMT-4','GMT-3','GMT-2','GMT-1','GMT+0','GMT+1','GMT+2','GMT+3','GMT+4','GMT+5','GMT+6','GMT+7','GMT+8','GMT+9','GMT+10','GMT+11','GMT+12','GMT+13','GMT+14'], tooltip = "Note GMT is not adjusted to reflect Daylight Saving Time changes", group = g_SETTINGS)
+lbl_size            = get_size(input.string('Normal', "Label Size", options = ['Auto', 'Tiny', 'Small', 'Normal', 'Large', 'Huge'], tooltip = "The size of all labels", group = g_SETTINGS))
+txt_color           = input.color(color.black, "Text Color", tooltip = "The color of all label and table text", group = g_SETTINGS)
+use_cutoff          = input.bool(false, "Drawing Cutoff Time", inline = "CO", tooltip = "When enabled, all pivots and open price lines will stop extending at this time", group = g_SETTINGS)
+cutoff              = input.session("1800-1801", "", inline = "CO", group = g_SETTINGS)
+
+var tf_limit_is_equal_or_more_chart_tf = timeframe.in_seconds('') <= timeframe.in_seconds(tf_limit)
+
+var g_KZ            = "Killzones"
+show_kz             = input.bool(true, "Show Killzone Boxes", inline = "KZ", group = g_KZ)
+show_kz_text        = input.bool(true, "Display Text", inline = "KZ", group = g_KZ)
+
+use_asia            = input.bool(true, "", inline = "ASIA", group = g_KZ)
+as_txt              = input.string("Asia", "", inline = "ASIA", group = g_KZ)
+asia                = input.session("2000-0000", "", inline = "ASIA", group = g_KZ)
+as_color            = input.color(color.blue, "", inline = "ASIA", group = g_KZ)
+
+use_london          = input.bool(true, "", inline = "LONDON", group = g_KZ)
+lo_txt              = input.string("London", "", inline = "LONDON", group = g_KZ)
+london              = input.session("0200-0500", "", inline = "LONDON", group = g_KZ)
+lo_color            = input.color(color.red, "", inline = "LONDON", group = g_KZ)
+
+use_nyam            = input.bool(true, "", inline = "NYAM", group = g_KZ)
+na_txt              = input.string("NY AM", "", inline = "NYAM", group = g_KZ)
+nyam                = input.session("0930-1100", "", inline = "NYAM", group = g_KZ)
+na_color            = input.color(#089981, "", inline = "NYAM", group = g_KZ)
+
+use_nylu            = input.bool(true, "", inline = "NYLU", group = g_KZ)
+nl_txt              = input.string("NY Lunch", "", inline = "NYLU", group = g_KZ)
+nylu                = input.session("1200-1300", "", inline = "NYLU", group = g_KZ)
+nl_color            = input.color(color.yellow, "", inline = "NYLU", group = g_KZ)
+
+use_nypm            = input.bool(true, "", inline = "NYPM", group = g_KZ)
+np_txt              = input.string("NY PM", "", inline = "NYPM", group = g_KZ)
+nypm                = input.session("1330-1600", "", inline = "NYPM", group = g_KZ)
+np_color            = input.color(color.purple, "", inline = "NYPM", group = g_KZ)
+
+box_transparency    = input.int(70, "Box Transparency", 0, 100, group = g_KZ)
+text_transparency   = input.int(50, "Text Transparency", 0, 100, group = g_KZ)
+
+
+var g_LABELS        = "Killzone Pivots"
+show_pivots         = input.bool(true, "Show Pivots", inline = "PV", group = g_LABELS)
+use_alerts          = input.bool(true, "Alert Broken Pivots", inline = "PV", tooltip = "The desired killzones must be enabled at the time that an alert is created, along with the show pivots option, in order for alerts to work", group = g_LABELS)
+show_midpoints      = input.bool(false, "Show Pivot Midpoints", inline = "mp", group = g_LABELS)
+stop_midpoints      = input.bool(true, "Stop Once Mitigated", inline = "mp", group = g_LABELS) 
+show_labels         = input.bool(true, "Show Pivot Labels", inline = "LB", tooltip = "Show labels denoting each killzone's high and low. Optionally choose to show the price of each level. Right side will show labels on the right-hand side of the chart until they are reached", group = g_LABELS)
+label_price         = input.bool(false, "Display Price", inline = "LB", group = g_LABELS)
+label_right         = input.bool(false, "Right Side", inline = "LB", group = g_LABELS)
+ext_pivots          = input.string("Until Mitigated", "Extend Pivots...", options = ['Until Mitigated', 'Past Mitigation'], group = g_LABELS)
+ext_which           = input.string("Most Recent", "...From Which Sessions", options = ['Most Recent', 'All'], group = g_LABELS)
+
+ash_str             = input.string("AS.H", "Killzone 1 Labels", inline = "L_AS", group = g_LABELS)
+asl_str             = input.string("AS.L", "", inline = "L_AS", group = g_LABELS)
+
+loh_str             = input.string("LO.H", "Killzone 2 Labels", inline = "L_LO", group = g_LABELS)
+lol_str             = input.string("LO.L", "", inline = "L_LO", group = g_LABELS)
+
+nah_str             = input.string("NYAM.H", "Killzone 3 Labels", inline = "L_NA", group = g_LABELS)
+nal_str             = input.string("NYAM.L", "", inline = "L_NA", group = g_LABELS)
+
+nlh_str             = input.string("NYL.H", "Killzone 4 Labels", inline = "L_NL", group = g_LABELS)
+nll_str             = input.string("NYL.L", "", inline = "L_NL", group = g_LABELS)
+
+nph_str             = input.string("NYPM.H", "Killzone 5 Labels", inline = "L_NP", group = g_LABELS)
+npl_str             = input.string("NYPM.L", "", inline = "L_NP", group = g_LABELS)
+
+kzp_style           = get_line_type(input.string(defval = 'Solid', title = "Pivot Style", options = ['Solid', 'Dotted', 'Dashed'], inline = "KZP", group = g_LABELS))
+kzp_width           = input.int(1, "", inline = "KZP", group = g_LABELS)
+kzm_style           = get_line_type(input.string(defval = 'Dotted', title = "Midpoint Style", options = ['Solid', 'Dotted', 'Dashed'], inline = "KZM", group = g_LABELS))
+kzm_width           = input.int(1, "", inline = "KZM", group = g_LABELS)
+
+
+var g_RNG           = "Killzone Range"
+show_range          = input.bool(false, "Show Killzone Range", tooltip = "Show the most recent ranges of each selected killzone, from high to low", group = g_RNG)
+show_range_avg      = input.bool(true, "Show Average", tooltip = "Show the average range of each selected killzone", group = g_RNG)
+range_avg           = input.int(5, "Average Length", 0, tooltip = "This many previous sessions will be used to calculate the average. If there isn't enough data on the current chart, it will use as many sessions as possible", group = g_RNG)
+range_pos           = get_table_pos(input.string('Top Right', "Table Position", options = ['Bottom Center', 'Bottom Left', 'Bottom Right', 'Middle Center', 'Middle Left', 'Middle Right', 'Top Center', 'Top Left', 'Top Right'], group = g_RNG))
+range_size          = get_size(input.string('Normal', "Table Size", options = ['Auto', 'Tiny', 'Small', 'Normal', 'Large', 'Huge'], group = g_RNG))
+
+
+var g_DWM           = "Day - Week - Month"
+sep_unlimited       = input.bool(false, "Unlimited", tooltip = "Unlimited will show as many of the selected lines as possible. Otherwise, the session drawing limit will be used", group = g_DWM)
+alert_HL            = input.bool(false, "Alert High/Low Break", tooltip = "Alert when any selected highs and lows are traded through. The desired timeframe's high/low option must be enabled at the time that an alert is created", group = g_DWM)
+
+show_d_open         = input.bool(false, "D Open", inline = "DO", group = g_DWM)
+dhl                 = input.bool(false, "High/Low", inline = "DO", tooltip = "", group = g_DWM)
+ds                  = input.bool(false, "Separators", inline = "DO", tooltip = "Mark where a new day begins", group = g_DWM)
+d_color             = input.color(color.blue, "", inline = "DO", group = g_DWM)
+
+show_w_open         = input.bool(false, "W Open", inline = "WO", group = g_DWM)
+whl                 = input.bool(false, "High/Low", inline = "WO", tooltip = "", group = g_DWM)
+ws                  = input.bool(false, "Separators", inline = "WO", tooltip = "Mark where a new week begins", group = g_DWM)
+w_color             = input.color(#089981, "", inline = "WO", group = g_DWM)
+
+show_m_open         = input.bool(false, "M Open", inline = "MO", group = g_DWM)
+mhl                 = input.bool(false, "High/Low", inline = "MO", tooltip = "", group = g_DWM)
+ms                  = input.bool(false, "Separators", inline = "MO", tooltip = "Mark where a new month begins", group = g_DWM)
+m_color             = input.color(color.red, "", inline = "MO", group = g_DWM)
+
+htf_style           = get_line_type(input.string(defval = 'Solid', title = "Style", options = ['Solid', 'Dotted', 'Dashed'], inline = "D0", group = g_DWM))
+htf_width           = input.int(1, "", inline = "D0", group = g_DWM)
+
+dow_labels          = input.bool(true, "Day of Week Labels", inline = "DOW", group = g_DWM)
+dow_yloc            = input.string('Bottom', "", options = ['Top', 'Bottom'], inline = "DOW", group = g_DWM)
+dow_xloc            = input.string('Midnight', "", options = ['Midnight', 'Midday'], inline = "DOW", group = g_DWM)
+dow_hide_wknd       = input.bool(true, "Hide Weekend Labels", group = g_DWM)
+
+
+var g_OPEN          = "Opening Prices"
+open_unlimited      = input.bool(false, "Unlimited", tooltip = "Unlimited will show as many of the selected lines as possible. Otherwise, the session drawing limit will be used", group = g_OPEN)
+
+use_h1              = input.bool(false, "", inline = "H1", group = g_OPEN)
+h1_text             = input.string("True Day Open", "", inline = "H1", group = g_OPEN)
+kz_h1                  = input.session("0000-0001", "", inline = "H1", group = g_OPEN)
+h1_color            = input.color(color.black, "", inline = "H1", group = g_OPEN)
+
+use_h2              = input.bool(false, "", inline = "H2", group = g_OPEN)
+h2_text             = input.string("06:00", "", inline = "H2", group = g_OPEN)
+h2                  = input.session("0600-0601", "", inline = "H2", group = g_OPEN)
+h2_color            = input.color(color.black, "", inline = "H2", group = g_OPEN)
+
+use_h3              = input.bool(false, "", inline = "H3", group = g_OPEN)
+h3_text             = input.string("10:00", "", inline = "H3", group = g_OPEN)
+h3                  = input.session("1000-1001", "", inline = "H3", group = g_OPEN)
+h3_color            = input.color(color.black, "", inline = "H3", group = g_OPEN)
+
+use_h4              = input.bool(false, "", inline = "H4", group = g_OPEN)
+h4_text             = input.string("14:00", "", inline = "H4", group = g_OPEN)
+h4                  = input.session("1400-1401", "", inline = "H4", group = g_OPEN)
+h4_color            = input.color(color.black, "", inline = "H4", group = g_OPEN)
+
+use_h5              = input.bool(false, "", inline = "H5", group = g_OPEN)
+h5_text             = input.string("00:00", "", inline = "H5", group = g_OPEN)
+h5                  = input.session("0000-0001", "", inline = "H5", group = g_OPEN)
+h5_color            = input.color(color.black, "", inline = "H5", group = g_OPEN)
+
+use_h6              = input.bool(false, "", inline = "H6", group = g_OPEN)
+h6_text             = input.string("00:00", "", inline = "H6", group = g_OPEN)
+h6                  = input.session("0000-0001", "", inline = "H6", group = g_OPEN)
+h6_color            = input.color(color.black, "", inline = "H6", group = g_OPEN)
+
+use_h7              = input.bool(false, "", inline = "H7", group = g_OPEN)
+h7_text             = input.string("00:00", "", inline = "H7", group = g_OPEN)
+h7                  = input.session("0000-0001", "", inline = "H7", group = g_OPEN)
+h7_color            = input.color(color.black, "", inline = "H7", group = g_OPEN)
+
+use_h8              = input.bool(false, "", inline = "H8", group = g_OPEN)
+h8_text             = input.string("00:00", "", inline = "H8", group = g_OPEN)
+h8                  = input.session("0000-0001", "", inline = "H8", group = g_OPEN)
+h8_color            = input.color(color.black, "", inline = "H8", group = g_OPEN)
+
+hz_style            = get_line_type(input.string(defval = 'Dotted', title = "Style", options = ['Solid', 'Dotted', 'Dashed'], inline = "H0", group = g_OPEN))
+hz_width            = input.int(1, "", inline = "H0", group = g_OPEN)
+
+
+
+
+// ---------------------------------------- Variables & Constants --------------------------------------------------
+type kz
+    string _title
+
+    array<box> _box
+
+    array<line> _hi_line
+    array<line> _md_line
+    array<line> _lo_line
+
+    array<label> _hi_label
+    array<label> _lo_label
+
+    array<bool> _hi_valid
+    array<bool> _md_valid
+    array<bool> _lo_valid
+
+    array<float> _range_store
+    float _range_current
+
+type hz
+    array<line> LN
+    array<label> LB
+    array<bool> CO
+
+type dwm_hl
+    array<line> hi_line
+    array<line> lo_line
+    array<label> hi_label
+    array<label> lo_label
+    bool hit_high = false
+    bool hit_low = false
+
+type dwm_info
+    string tf
+    float o = na
+    float h = na
+    float l = na
+    float ph = na
+    float pl = na
+
+type lines_helper
+    hz _hz
+    string h
+    string h_text
+    color h_color
+
+initLines() => 
+    array<lines_helper> res = array.new<lines_helper>()
+    if use_h1
+        res.push(lines_helper.new(hz.new(array.new_line(), array.new_label(), array.new_bool()), kz_h1, h1_text, h1_color))
+    if use_h2
+        res.push(lines_helper.new(hz.new(array.new_line(), array.new_label(), array.new_bool()), h2, h2_text, h2_color))
+    if use_h3
+        res.push(lines_helper.new(hz.new(array.new_line(), array.new_label(), array.new_bool()), h3, h3_text, h3_color))
+    if use_h4
+        res.push(lines_helper.new(hz.new(array.new_line(), array.new_label(), array.new_bool()), h4, h4_text, h4_color))
+    if use_h5
+        res.push(lines_helper.new(hz.new(array.new_line(), array.new_label(), array.new_bool()), h5, h5_text, h5_color))
+    if use_h6
+        res.push(lines_helper.new(hz.new(array.new_line(), array.new_label(), array.new_bool()), h6, h6_text, h6_color))
+    if use_h7
+        res.push(lines_helper.new(hz.new(array.new_line(), array.new_label(), array.new_bool()), h7, h7_text, h7_color))
+    if use_h8
+        res.push(lines_helper.new(hz.new(array.new_line(), array.new_label(), array.new_bool()), h8, h8_text, h8_color))
+    res
+
+var array<lines_helper> lines = initLines()
+
+type kz_helper
+    kz _kz
+    string session
+    color c
+    string box_txt
+    string hi_txt
+    string lo_txt
+
+initKZ() => 
+    array<kz_helper> res = array.new<kz_helper>()
+    if use_asia
+        res.push(kz_helper.new(
+             kz.new(as_txt, array.new_box(), array.new_line(), array.new_line(), array.new_line(), array.new_label(), array.new_label(), array.new_bool(), array.new_bool(), array.new_bool(), array.new_float()),
+             asia, as_color, as_txt, ash_str, asl_str
+         ))
+    if use_london
+        res.push(kz_helper.new(
+             kz.new(lo_txt, array.new_box(), array.new_line(), array.new_line(), array.new_line(), array.new_label(), array.new_label(), array.new_bool(), array.new_bool(), array.new_bool(), array.new_float()),
+             london, lo_color, lo_txt, loh_str, lol_str
+         ))
+    if use_nyam
+        res.push(kz_helper.new(
+             kz.new(na_txt, array.new_box(), array.new_line(), array.new_line(), array.new_line(), array.new_label(), array.new_label(), array.new_bool(), array.new_bool(), array.new_bool(), array.new_float()),
+             nyam, na_color, na_txt, nah_str, nal_str
+         ))
+    if use_nylu
+        res.push(kz_helper.new(
+             kz.new(nl_txt, array.new_box(), array.new_line(), array.new_line(), array.new_line(), array.new_label(), array.new_label(), array.new_bool(), array.new_bool(), array.new_bool(), array.new_float()),
+             nylu, nl_color, nl_txt, nlh_str, nll_str
+         ))
+    if use_nypm
+        res.push(kz_helper.new(
+             kz.new(np_txt, array.new_box(), array.new_line(), array.new_line(), array.new_line(), array.new_label(), array.new_label(), array.new_bool(), array.new_bool(), array.new_bool(), array.new_float()),
+             nypm, np_color, np_txt, nph_str, npl_str
+         ))
+    res
+
+var array<kz_helper> _kz = initKZ()
+
+
+var d_hl = dwm_hl.new(array.new_line(), array.new_line(), array.new_label(), array.new_label())
+var w_hl = dwm_hl.new(array.new_line(), array.new_line(), array.new_label(), array.new_label())
+var m_hl = dwm_hl.new(array.new_line(), array.new_line(), array.new_label(), array.new_label())
+
+var d_info = dwm_info.new("D")
+var w_info = dwm_info.new("W")
+var m_info = dwm_info.new("M")
+
+t_co = not na(time("", cutoff, gmt_tz))
+
+
+var d_sep_line = array.new_line()
+var w_sep_line = array.new_line()
+var m_sep_line = array.new_line()
+
+var d_line = array.new_line()
+var w_line = array.new_line()
+var m_line = array.new_line()
+
+var d_label = array.new_label()
+var w_label = array.new_label()
+var m_label = array.new_label()
+
+var transparent = #ffffff00
+var ext_current = ext_which == 'Most Recent'
+var ext_past = ext_pivots == 'Past Mitigation'
+
+update_dwm_info(dwm_info n) =>
+    if timeframe.change(n.tf)
+        n.ph := n.h
+        n.pl := n.l
+        n.o := open
+        n.h := high
+        n.l := low
+    else
+        n.h := math.max(high, n.h)
+        n.l := math.min(low, n.l)
+
+if dhl or show_d_open
+    update_dwm_info(d_info)
+if whl or show_w_open
+    update_dwm_info(w_info)
+if mhl or show_m_open
+    update_dwm_info(m_info)
+// ---------------------------------------- Variables & Constants --------------------------------------------------
+
+
+// ---------------------------------------- Functions --------------------------------------------------
+get_box_color(color c) =>
+    color.new(c, box_transparency)
+
+get_text_color(color c) =>
+    color.new(c, text_transparency)
+// ---------------------------------------- Functions --------------------------------------------------
+
+
+// ---------------------------------------- Core Logic --------------------------------------------------
+dwm_sep(string tf, bool use, array<line> arr, color col) =>
+    if use
+        if timeframe.change(tf)
+            arr.unshift(line.new(bar_index, high * 1.0001, bar_index, low, style = htf_style, width = htf_width, extend = extend.both, color = col))
+            if not sep_unlimited and arr.size() > max_days
+                arr.pop().delete()
+
+
+dwm_open(string tf, bool use, array<line> lns, array<label> lbls, dwm_info n, color col) =>
+    if use
+        if lns.size() > 0
+            lns.get(0).set_x2(time)
+            lbls.get(0).set_x(time)
+        if timeframe.change(tf)
+            lns.unshift(line.new(time, n.o, time, n.o, xloc = xloc.bar_time, style = htf_style, width = htf_width, color = col))
+            lbls.unshift(label.new(time, n.o, tf + " OPEN", xloc = xloc.bar_time, style = label.style_label_left, color = transparent, textcolor = txt_color, size = lbl_size))
+            if not sep_unlimited and lns.size() > max_days
+                lns.pop().delete()
+                lbls.pop().delete()
+
+
+dwm_hl(string tf, bool use, dwm_hl hl, dwm_info n, color col) =>
+    if use
+        if hl.hi_line.size() > 0
+            hl.hi_line.get(0).set_x2(time)
+            hl.lo_line.get(0).set_x2(time)
+            hl.hi_label.get(0).set_x(time)
+            hl.lo_label.get(0).set_x(time)
+        if timeframe.change(tf)
+            hl.hi_line.unshift(line.new(time, n.ph, time, n.ph, xloc = xloc.bar_time, style = htf_style, width = htf_width, color = col))
+            hl.lo_line.unshift(line.new(time, n.pl, time, n.pl, xloc = xloc.bar_time, style = htf_style, width = htf_width, color = col))
+            hl.hi_label.unshift(label.new(time, n.ph, "P" + tf + "H", xloc = xloc.bar_time, style = label.style_label_left, color = transparent, textcolor = txt_color, size = lbl_size))
+            hl.lo_label.unshift(label.new(time, n.pl, "P" + tf + "L", xloc = xloc.bar_time, style = label.style_label_left, color = transparent, textcolor = txt_color, size = lbl_size))
+            hl.hit_high := false
+            hl.hit_low := false
+            if not sep_unlimited and hl.hi_line.size() > max_days
+                hl.hi_line.pop().delete()
+                hl.lo_line.pop().delete()
+                hl.hi_label.pop().delete()
+                hl.lo_label.pop().delete()
+        if hl.hi_line.size() > 0 and alert_HL
+            if not hl.hit_high and high > hl.hi_line.get(0).get_y1()
+                hl.hit_high := true
+                alert(str.format("Hit P{0}H", tf))
+            if not hl.hit_low and low < hl.lo_line.get(0).get_y1()
+                hl.hit_low := true
+                alert(str.format("Hit P{0}L", tf))
+
+
+dwm() =>
+    if tf_limit_is_equal_or_more_chart_tf
+        // DWM - Separators
+        dwm_sep("D", ds, d_sep_line, d_color)
+        dwm_sep("W", ws, w_sep_line, w_color)
+        dwm_sep("M", ms, m_sep_line, m_color)
+
+        // DWM - Open Lines
+        dwm_open("D", show_d_open, d_line, d_label, d_info, d_color)
+        dwm_open("W", show_w_open, w_line, w_label, w_info, w_color)
+        dwm_open("M", show_m_open, m_line, m_label, m_info, m_color)
+
+        // DWM - Highs and Lows
+        dwm_hl("D", dhl, d_hl, d_info, d_color)
+        dwm_hl("W", whl, w_hl, w_info, w_color)
+        dwm_hl("M", mhl, m_hl, m_info, m_color)
+
+
+method hz_line(lines_helper this) =>
+    bool t = not na(time("", this.h, gmt_tz))
+    bool t_prev = not na(time("", this.h, gmt_tz, bars_back = 1))
+    hz hz = this._hz
+    string txt = this.h_text
+    color col = this.h_color
+
+    if t and not t_prev
+        hz.LN.unshift(line.new(bar_index, open, bar_index, open, style = hz_style, width = hz_width, color = col))
+        hz.LB.unshift(label.new(bar_index, open, txt, style = label.style_label_left, color = transparent, textcolor = txt_color, size = lbl_size))
+        array.unshift(hz.CO, false)
+        if not open_unlimited and hz.LN.size() > max_days
+            hz.LN.pop().delete()
+            hz.LB.pop().delete()
+            hz.CO.pop()
+    if not t and hz.CO.size() > 0
+        if not hz.CO.get(0)
+            hz.LN.get(0).set_x2(bar_index)
+            hz.LB.get(0).set_x(bar_index)
+            if (use_cutoff ? t_co : false)
+                hz.CO.set(0, true)
+
+
+hz_lines() =>
+    if tf_limit_is_equal_or_more_chart_tf
+        for [_, value] in lines
+            hz_line(value)
+
+
+del_kz(kz k) =>
+    if k._box.size() > max_days
+        k._box.pop().delete()
+    if k._hi_line.size() > max_days
+        k._hi_line.pop().delete()
+        k._lo_line.pop().delete()
+        k._hi_valid.pop()
+        k._lo_valid.pop()
+        if show_midpoints
+            k._md_line.pop().delete()
+            k._md_valid.pop()
+    if k._hi_label.size() > max_days
+        k._hi_label.pop().delete()
+        k._lo_label.pop().delete()
+
+update_price_string(label L, float P) =>
+    S = L.get_text()
+    pre = str.substring(S, 0, str.pos(S, " ")) 
+    str.trim(pre)
+    L.set_text(str.format("{0} ({1})", pre, P))
+
+adjust_in_kz(kz kz, bool t) =>
+    if t
+        kzBox0 = kz._box.get(0)
+        kzBox0.set_right(time)
+        newTop = math.max(kzBox0.get_top(), high)
+        kzBox0.set_top(newTop)
+        newBottom = math.min(kzBox0.get_bottom(), low)
+        kzBox0.set_bottom(newBottom)
+
+        kz._range_current := newTop - newBottom
+
+        if show_pivots and kz._hi_line.size() > 0
+            kzHiLine0 = kz._hi_line.get(0)
+            kzHiLine0.set_x2(time)
+            if high > kzHiLine0.get_y1()
+                kzHiLine0.set_xy1(time, high)
+                kzHiLine0.set_xy2(time, high)
+
+            kzLoLine0 = kz._lo_line.get(0)
+            kzLoLine0.set_x2(time)
+            if low < kzLoLine0.get_y1()
+                kzLoLine0.set_xy1(time, low)
+                kzLoLine0.set_xy2(time, low)
+
+            if show_midpoints
+                kzMidLine0 = kz._md_line.get(0)
+                kzMidLine0.set_x2(time)
+                kzMidLine0.set_xy1(time, math.avg(kzHiLine0.get_y2(), kzLoLine0.get_y2()))
+                kzMidLine0.set_xy2(time, math.avg(kzHiLine0.get_y2(), kzLoLine0.get_y2()))
+
+        if show_labels and kz._hi_label.size() > 0
+            if label_right
+                kz._hi_label.get(0).set_x(time)
+                kz._lo_label.get(0).set_x(time)
+            if high > kz._hi_label.get(0).get_y()
+                kz._hi_label.get(0).set_xy(time, high)
+                if label_price
+                    update_price_string(kz._hi_label.get(0), high)
+            if low < kz._lo_label.get(0).get_y()
+                kz._lo_label.get(0).set_xy(time, low)
+                if label_price
+                    update_price_string(kz._lo_label.get(0), low)
+
+
+adjust_out_kz(kz kz, bool t, bool t_prev) =>
+    boxCount = kz._box.size()
+    if not t and boxCount > 0
+        if t_prev
+            array.unshift(kz._range_store, kz._range_current)
+            if kz._range_store.size() > range_avg
+                kz._range_store.pop()
+
+    if show_pivots and boxCount > 0
+        for i = 0 to boxCount - 1 by 1
+            if not ext_current or i == 0
+                kzHiValid = kz._hi_valid.get(i)
+                if ext_past or kzHiValid
+                    kz._hi_line.get(i).set_x2(time)
+                    if show_labels and label_right
+                        kz._hi_label.get(i).set_x(time)
+                if kzHiValid and high > kz._hi_line.get(i).get_y1()
+                    if use_alerts and i == 0
+                        alert('Broke ' + kz._title + ' High', alert.freq_once_per_bar)
+                    kz._hi_valid.set(i, false)
+                    if show_labels and label_right
+                        kz._hi_label.get(i).set_style(label.style_label_down)
+                else if use_cutoff ? t_co : false
+                    kz._hi_valid.set(i, false)
+
+                kzLoValid = kz._lo_valid.get(i)
+                if ext_past or kzLoValid
+                    kz._lo_line.get(i).set_x2(time)
+                    if show_labels and label_right
+                        kz._lo_label.get(i).set_x(time)
+                if kzLoValid and low < kz._lo_line.get(i).get_y1()
+                    if use_alerts and i == 0
+                        alert("Broke " + kz._title + " Low", alert.freq_once_per_bar)
+                    kz._lo_valid.set(i, false)
+                    if show_labels and label_right
+                        kz._lo_label.get(i).set_style(label.style_label_up)
+                else if use_cutoff ? t_co : false
+                    kz._lo_valid.set(i, false)
+
+                if show_midpoints and not t
+                    if stop_midpoints ? kz._md_valid.get(i) : true
+                        kz._md_line.get(i).set_x2(time)
+                        if kz._md_valid.get(i) and low <= kz._md_line.get(i).get_y1() and high >= kz._md_line.get(i).get_y1()
+                            kz._md_valid.set(i, false)
+
+            else
+                break
+
+method manage_kz(kz_helper this) =>
+    kz kz = this._kz    
+    c = this.c
+    string box_txt = this.box_txt
+    string hi_txt = this.hi_txt
+    string lo_txt = this.lo_txt
+
+    if tf_limit_is_equal_or_more_chart_tf
+        t = not na(time("", this.session, gmt_tz))
+        t_prev = not na(time("", this.session, gmt_tz, bars_back = 1))
+        if t and not t_prev
+            _c = get_box_color(c)
+            _t = get_text_color(c)
+            kz._box.unshift(box.new(time, high, time, low, xloc = xloc.bar_time, border_color = show_kz ? _c : na, bgcolor = show_kz ? _c : na, text = show_kz and show_kz_text ? box_txt : na, text_color = _t))
+
+            if show_pivots
+                kz._hi_line.unshift(line.new(time, high, time, high, xloc = xloc.bar_time, style = kzp_style, color = c, width = kzp_width))
+                kz._lo_line.unshift(line.new(time, low, time, low, xloc = xloc.bar_time, style = kzp_style, color = c, width = kzp_width))
+                if show_midpoints
+                    kz._md_line.unshift(line.new(time, math.avg(high, low), time, math.avg(high, low), xloc = xloc.bar_time, style = kzm_style, color = c, width = kzm_width))
+                    array.unshift(kz._md_valid, true)
+
+                array.unshift(kz._hi_valid, true)
+                array.unshift(kz._lo_valid, true)
+
+                if show_labels
+                    _hi_txt = label_price ? str.format('{0} ({1})', hi_txt, high) : hi_txt
+                    _lo_txt = label_price ? str.format('{0} ({1})', lo_txt, low) : lo_txt
+                    if label_right
+                        kz._hi_label.unshift(label.new(time, high, _hi_txt, xloc = xloc.bar_time, color = transparent, textcolor = txt_color, style = label.style_label_left, size = lbl_size))
+                        kz._lo_label.unshift(label.new(time, low, _lo_txt, xloc = xloc.bar_time, color = transparent, textcolor = txt_color, style = label.style_label_left, size = lbl_size))
+                    else
+                        kz._hi_label.unshift(label.new(time, high, _hi_txt, xloc = xloc.bar_time, color = transparent, textcolor = txt_color, style = label.style_label_down, size = lbl_size))
+                        kz._lo_label.unshift(label.new(time, low, _lo_txt, xloc = xloc.bar_time, color = transparent, textcolor = txt_color, style = label.style_label_up, size = lbl_size))
+
+            del_kz(kz)
+        adjust_in_kz(kz, t)
+        adjust_out_kz(kz, t, t_prev)
+
+for [_, value] in _kz
+    manage_kz(value)
+
+dwm()
+hz_lines()
+
+new_dow_time = dow_xloc == 'Midday' ? time - timeframe.in_seconds("D") / 2 * 1000 : time
+new_day = dayofweek(new_dow_time, gmt_tz) != dayofweek(new_dow_time, gmt_tz)[1]
+
+var dow_top = dow_yloc == 'Top'
+
+var saturday = "SATURDAY"
+var sunday = "SUNDAY"
+var monday = "MONDAY"
+var tuesday = "TUESDAY"
+var wednesday = "WEDNESDAY"
+var thursday = "THURSDAY"
+var friday = "FRIDAY"
+
+plotchar(dow_labels and timeframe.isintraday and dayofweek(new_dow_time, gmt_tz) == 1 and new_day and not dow_hide_wknd, location = dow_top ? location.top : location.bottom, char = '', textcolor = txt_color, text = sunday)
+plotchar(dow_labels and timeframe.isintraday and dayofweek(new_dow_time, gmt_tz) == 2 and new_day, location = dow_top ? location.top : location.bottom, char = '', textcolor = txt_color, text = monday)
+plotchar(dow_labels and timeframe.isintraday and dayofweek(new_dow_time, gmt_tz) == 3 and new_day, location = dow_top ? location.top : location.bottom, char = '', textcolor = txt_color, text = tuesday)
+plotchar(dow_labels and timeframe.isintraday and dayofweek(new_dow_time, gmt_tz) == 4 and new_day, location = dow_top ? location.top : location.bottom, char = '', textcolor = txt_color, text = wednesday)
+plotchar(dow_labels and timeframe.isintraday and dayofweek(new_dow_time, gmt_tz) == 5 and new_day, location = dow_top ? location.top : location.bottom, char = '', textcolor = txt_color, text = thursday)
+plotchar(dow_labels and timeframe.isintraday and dayofweek(new_dow_time, gmt_tz) == 6 and new_day, location = dow_top ? location.top : location.bottom, char = '', textcolor = txt_color, text = friday)
+plotchar(dow_labels and timeframe.isintraday and dayofweek(new_dow_time, gmt_tz) == 7 and new_day and not dow_hide_wknd, location = dow_top ? location.top : location.bottom, char = '', textcolor = txt_color, text = saturday)
+
+get_min_days_stored() =>
+    store = array.new_int()
+    for [_, value] in _kz
+        int tmpStoreSize = value._kz._range_store.size()
+        if tmpStoreSize > 0
+            store.push(tmpStoreSize) 
+    store.min()
+
+method set_table(table tbl, kz kz, int row, string txt, bool t, color col) =>
+    table.cell(tbl, 0, row, txt, text_size = range_size, bgcolor = get_box_color(col), text_color = txt_color)
+    table.cell(tbl, 1, row, str.tostring(kz._range_current), text_size = range_size, bgcolor = t ? get_box_color(col) : na, text_color = txt_color)
+    if show_range_avg
+        table.cell(tbl, 2, row, str.tostring(kz._range_store.avg()), text_size = range_size, text_color = txt_color)
+
+if show_range and barstate.islast
+    var tbl = table.new(range_pos, 10, 10, chart.bg_color, chart.fg_color, 2, chart.fg_color, 1)
+
+    table.cell(tbl, 0, 0, "Killzone", text_size = range_size, text_color = txt_color)
+    table.cell(tbl, 1, 0, "Range", text_size = range_size, text_color = txt_color)
+    if show_range_avg
+        table.cell(tbl, 2, 0, "Avg (" + str.tostring(get_min_days_stored()) + ")", text_size = range_size, text_color = txt_color)
+
+    for [index, value] in _kz
+        set_table(tbl, value._kz, index + 1, value.box_txt, not na(time("", value.session, gmt_tz)), value.c)
+// ---------------------------------------- Core Logic --------------------------------------------------
 // Session Swings — at AM (9:30-12:00 ET) and optional PM (13:30-15:30 ET) opens, snapshot
 // the last N swing highs and N swing lows from the 1h and/or 15m timeframes (each
 // independently toggleable) and draw each as a horizontal line anchored at its pivot
@@ -1743,32 +2382,12 @@ f_labelStyle(simple string pos) =>
 
 // Session & daily label styles (derived from Position dropdowns) + padded x offsets.
 // For "Left", padding moves the label to the LEFT of the anchor; otherwise to the RIGHT.
-session_label_style    = f_labelStyle(session_label_pos_in)
 daily_label_style      = f_labelStyle(daily_label_pos_in)
 // For "Left" position mode the padding's sign is flipped (so a positive padding pushes
 // further left of the anchor). For Inside-Left and all other modes the user-supplied
 // offset is taken as-is: NEGATIVE = backward (left), POSITIVE = forward (right).
-session_label_x_offset = session_label_pos_in == "Left" ? -session_label_padding : session_label_padding
 daily_label_x_offset   = daily_label_pos_in   == "Left" ? -daily_label_padding   : daily_label_padding
 
-// Resolve the x-anchor + label style for a session H/L label.
-//  - Not swept: label at the right edge using the user's Session Label Position.
-//  - Swept + enough room on the line: text reads to the LEFT of the takeout point
-//    (left-pointing callout), padded by session_taken_label_pad.
-//  - Swept + line too short (span < session_taken_center_thresh): text is CENTERED
-//    on the line (no callout arrow) so it never overflows past the tiny line.
-f_sessionLabelPos(bool taken, int level_bar, int taken_bar) =>
-    int   x   = bar_index + session_label_x_offset
-    string stl = session_label_style
-    if taken
-        int span = taken_bar - level_bar
-        if session_taken_center_thresh > 0 and span < session_taken_center_thresh
-            x   := int(math.round((level_bar + taken_bar) / 2.0))
-            stl := label.style_none
-        else
-            x   := taken_bar - session_taken_label_pad
-            stl := label.style_label_right
-    [x, stl]
 
 // Std-Dev CISD projections feature removed to keep the script under Pine's
 // compile token cap. Will be re-added later as a leaner module.
@@ -1804,127 +2423,6 @@ fvg_bear_border = color.new(fvg_bear_border_raw, fvg_bd_transparency)
 
 // IFVG (Inverse Fair Value Gap) feature removed.
 
-// +---------------------------------------------------------------+
-// | ICT OB & FVG (GK)                                             |
-// | Ported from "Simple ICT OB & FVG by Gowtham Kannakaje L".     |
-// | Adds mitigation-aware LTF Fair Value Gaps, Naked/Covered      |
-// | Order Blocks (2/3/4-bar patterns), optional bar coloring on   |
-// | OB bars, Simple mode (non-extending boxes), and alert         |
-// | conditions for Bullish/Bearish OBs and FVGs.                  |
-// +---------------------------------------------------------------+
-string GRP_GK = "ICT OB & FVG (GK)"
-gk_mitigation        = input.string("Close", "Mitigation Type", options=["Close","Wick"], group=GRP_GK, tooltip="Close = mitigated only when a candle closes through the level. Wick = mitigated if any wick pierces the level.")
-gk_simple            = input.bool(false, "Simple Mode (non-extending boxes)", group=GRP_GK, tooltip="When on, OB/FVG boxes are drawn for a single bar only and don't extend right.")
-
-gk_show_ob           = input.bool(false, "Show Order Blocks", group=GRP_GK, inline="gk_ob1", tooltip="Master toggle — turn ALL order blocks on/off. Default OFF; enable in Settings if you want OBs rendered.")
-gk_ob_delete_mit     = input.bool(true,  "Delete on Mitigation", group=GRP_GK, inline="gk_ob1", tooltip="When on, mitigated OBs are deleted. When off, mitigated OBs are frozen in place.")
-gk_ob_show_bull      = input.bool(true,  "  Show Buy-Side (Bull) OBs",  group=GRP_GK, inline="gk_ob_bull_sh", tooltip="Turn buy-side (bullish) order blocks on/off.")
-gk_ob_max_bull       = input.int(5, "  Max Buy-Side Displayed",  minval=1, maxval=10, group=GRP_GK, inline="gk_ob_bull_sh", tooltip="How many most-recent buy-side OBs to keep on the chart (1–10). Older ones are dropped.")
-gk_ob_show_bear      = input.bool(true,  "  Show Sell-Side (Bear) OBs", group=GRP_GK, inline="gk_ob_bear_sh", tooltip="Turn sell-side (bearish) order blocks on/off.")
-gk_ob_max_bear       = input.int(5, "  Max Sell-Side Displayed", minval=1, maxval=10, group=GRP_GK, inline="gk_ob_bear_sh", tooltip="How many most-recent sell-side OBs to keep on the chart (1–10). Older ones are dropped.")
-gk_ob_bull_color_raw  = input.color(color.green, "Bullish OB Fill (base)",   inline="gk_obfill", group=GRP_GK)
-gk_ob_bear_color_raw  = input.color(color.red,   "Bearish OB Fill (base)",   inline="gk_obfill", group=GRP_GK)
-gk_ob_bull_border_raw = input.color(color.green, "Bullish OB Border (base)", inline="gk_obbord", group=GRP_GK)
-gk_ob_bear_border_raw = input.color(color.red,   "Bearish OB Border (base)", inline="gk_obbord", group=GRP_GK)
-gk_ob_bg_transparency = input.int(90, "OB Fill Transparency (0 solid → 100 invisible)",   minval=0, maxval=100, group=GRP_GK, tooltip="Order-block fill transparency. Default 90 — very faded so OBs don't overwhelm the chart.")
-gk_ob_bd_transparency = input.int(30, "OB Border Transparency (0 solid → 100 invisible)", minval=0, maxval=100, group=GRP_GK, tooltip="Order-block border transparency. Default 30 — crisp visible border.")
-// Final OB colors: apply transparency on top of the user's picked base color.
-gk_ob_bull_color  = color.new(gk_ob_bull_color_raw,  gk_ob_bg_transparency)
-gk_ob_bear_color  = color.new(gk_ob_bear_color_raw,  gk_ob_bg_transparency)
-gk_ob_bull_border = color.new(gk_ob_bull_border_raw, gk_ob_bd_transparency)
-gk_ob_bear_border = color.new(gk_ob_bear_border_raw, gk_ob_bd_transparency)
-gk_ob_text           = input.color(color.new(color.white, 0),  "OB Text Color",    group=GRP_GK)
-gk_ob_barcolor       = input.bool(false, "Color OB Bars", group=GRP_GK, inline="gk_obbar")
-gk_ob_bull_bar       = input.color(color.new(color.green, 0), "Bull Bar",         inline="gk_obbar", group=GRP_GK)
-gk_ob_bear_bar       = input.color(color.new(color.red,   0), "Bear Bar",         inline="gk_obbar", group=GRP_GK)
-
-gk_show_fvg             = input.bool(false, "Show LTF FVGs (GK)", group=GRP_GK, inline="gk_fvg1")
-gk_fvg_delete_mit       = input.bool(true,  "Delete on Mitigation", group=GRP_GK, inline="gk_fvg1")
-gk_fvg_bull_color_raw   = input.color(color.white, "Bullish FVG Fill (base)",   inline="gk_fvgfill", group=GRP_GK)
-gk_fvg_bear_color_raw   = input.color(color.red,   "Bearish FVG Fill (base)",   inline="gk_fvgfill", group=GRP_GK)
-gk_fvg_bull_border_raw  = input.color(color.white, "Bullish FVG Border (base)", inline="gk_fvgbord", group=GRP_GK)
-gk_fvg_bear_border_raw  = input.color(color.red,   "Bearish FVG Border (base)", inline="gk_fvgbord", group=GRP_GK)
-gk_fvg_bg_transparency  = input.int(85, "FVG Background Transparency (0 solid → 100 invisible)", minval=0, maxval=100, group=GRP_GK)
-gk_fvg_bd_transparency  = input.int(30, "FVG Border Transparency (0 solid → 100 invisible)",     minval=0, maxval=100, group=GRP_GK)
-gk_fvg_length           = input.int(30, "FVG Length (bars to extend right, Simple mode off)", minval=1, maxval=500, group=GRP_GK)
-gk_fvg_show_ce          = input.bool(false, "Show FVG CE (Midline)", inline="gk_fvgce",  group=GRP_GK)
-gk_fvg_ce_color         = input.color(color.white, "CE Color",       inline="gk_fvgce",  group=GRP_GK)
-gk_fvg_ce_style_in      = input.string("dashed", "CE Style", options=["solid","dashed","dotted"], inline="gk_fvgce2", group=GRP_GK)
-gk_fvg_ce_width         = input.int(1, "CE Width", minval=1, maxval=4, inline="gk_fvgce2", group=GRP_GK)
-gk_fvg_ce_style = gk_fvg_ce_style_in == "dashed" ? line.style_dashed : gk_fvg_ce_style_in == "dotted" ? line.style_dotted : line.style_solid
-
-// Final LTF GK FVG colors
-gk_fvg_bull_color  = color.new(gk_fvg_bull_color_raw,  gk_fvg_bg_transparency)
-gk_fvg_bear_color  = color.new(gk_fvg_bear_color_raw,  gk_fvg_bg_transparency)
-gk_fvg_bull_border = color.new(gk_fvg_bull_border_raw, gk_fvg_bd_transparency)
-gk_fvg_bear_border = color.new(gk_fvg_bear_border_raw, gk_fvg_bd_transparency)
-
-// +---------------------------------------------------------------+
-// | ICT HTF FVG (GK)                                              |
-// | Pulls 3-bar FVGs from two higher timeframes and plots them    |
-// | on the chart. Each HTF has its own timeframe + color controls.|
-// +---------------------------------------------------------------+
-string GRP_GKHTF = "ICT HTF FVG (GK)"
-gk_htf1_show            = input.bool(false, "Show HTF1 FVG", group=GRP_GKHTF, inline="gk_htf1_on")
-gk_htf1_tf              = input.string("15 Mins", "HTF1 Timeframe", options=["3 Mins","5 Mins","15 Mins","30 Mins","1 Hour","2 Hour","3 Hour","4 Hour","1 Day","1 Week","1 Month","3 Month","6 Month","1 Year"], group=GRP_GKHTF, inline="gk_htf1_on")
-gk_htf1_max_count       = input.int(2, "Max HTF1 FVGs per direction", minval=1, maxval=10, group=GRP_GKHTF, tooltip="Keep only the latest N HTF1 FVGs of each direction (bull & bear tracked separately). Max 10.")
-gk_htf1_length          = input.int(0, "HTF1 Box Length (chart bars, 0 = extend to current)", minval=0, maxval=500, group=GRP_GKHTF, tooltip="0 = box auto-extends right to the current bar. >0 = fixed width in chart-TF bars past the FVG origin.")
-gk_htf1_bull_color_raw  = input.color(color.white, "HTF1 Bull Fill (base)",   inline="gk_htf1fill", group=GRP_GKHTF)
-gk_htf1_bear_color_raw  = input.color(color.red,   "HTF1 Bear Fill (base)",   inline="gk_htf1fill", group=GRP_GKHTF)
-gk_htf1_bull_border_raw = input.color(color.white, "HTF1 Bull Border (base)", inline="gk_htf1bord", group=GRP_GKHTF)
-gk_htf1_bear_border_raw = input.color(color.red,   "HTF1 Bear Border (base)", inline="gk_htf1bord", group=GRP_GKHTF)
-gk_htf1_bg_transparency = input.int(85, "HTF1 Background Transparency", minval=0, maxval=100, group=GRP_GKHTF)
-gk_htf1_bd_transparency = input.int(30, "HTF1 Border Transparency",     minval=0, maxval=100, group=GRP_GKHTF)
-gk_htf1_show_ce         = input.bool(false, "Show HTF1 CE (Midline)", inline="gk_htf1ce", group=GRP_GKHTF)
-gk_htf1_ce_color        = input.color(color.white, "HTF1 CE Color",   inline="gk_htf1ce", group=GRP_GKHTF)
-gk_htf1_ce_style_in     = input.string("dashed", "HTF1 CE Style", options=["solid","dashed","dotted"], inline="gk_htf1ce2", group=GRP_GKHTF)
-gk_htf1_ce_width        = input.int(1, "HTF1 CE Width", minval=1, maxval=4, inline="gk_htf1ce2", group=GRP_GKHTF)
-gk_htf1_ce_style = gk_htf1_ce_style_in == "dashed" ? line.style_dashed : gk_htf1_ce_style_in == "dotted" ? line.style_dotted : line.style_solid
-
-gk_htf2_show            = input.bool(false, "Show HTF2 FVG", group=GRP_GKHTF, inline="gk_htf2_on")
-gk_htf2_tf              = input.string("1 Hour", "HTF2 Timeframe", options=["3 Mins","5 Mins","15 Mins","30 Mins","1 Hour","2 Hour","3 Hour","4 Hour","1 Day","1 Week","1 Month","3 Month","6 Month","1 Year"], group=GRP_GKHTF, inline="gk_htf2_on")
-gk_htf2_max_count       = input.int(2, "Max HTF2 FVGs per direction", minval=1, maxval=10, group=GRP_GKHTF, tooltip="Keep only the latest N HTF2 FVGs of each direction (bull & bear tracked separately). Max 10.")
-gk_htf2_length          = input.int(0, "HTF2 Box Length (chart bars, 0 = extend to current)", minval=0, maxval=500, group=GRP_GKHTF, tooltip="0 = box auto-extends right to the current bar. >0 = fixed width in chart-TF bars past the FVG origin.")
-gk_htf2_bull_color_raw  = input.color(color.white, "HTF2 Bull Fill (base)",   inline="gk_htf2fill", group=GRP_GKHTF)
-gk_htf2_bear_color_raw  = input.color(color.red,   "HTF2 Bear Fill (base)",   inline="gk_htf2fill", group=GRP_GKHTF)
-gk_htf2_bull_border_raw = input.color(color.white, "HTF2 Bull Border (base)", inline="gk_htf2bord", group=GRP_GKHTF)
-gk_htf2_bear_border_raw = input.color(color.red,   "HTF2 Bear Border (base)", inline="gk_htf2bord", group=GRP_GKHTF)
-gk_htf2_bg_transparency = input.int(85, "HTF2 Background Transparency", minval=0, maxval=100, group=GRP_GKHTF)
-gk_htf2_bd_transparency = input.int(30, "HTF2 Border Transparency",     minval=0, maxval=100, group=GRP_GKHTF)
-gk_htf2_show_ce         = input.bool(false, "Show HTF2 CE (Midline)", inline="gk_htf2ce", group=GRP_GKHTF)
-gk_htf2_ce_color        = input.color(color.white, "HTF2 CE Color",   inline="gk_htf2ce", group=GRP_GKHTF)
-gk_htf2_ce_style_in     = input.string("dashed", "HTF2 CE Style", options=["solid","dashed","dotted"], inline="gk_htf2ce2", group=GRP_GKHTF)
-gk_htf2_ce_width        = input.int(1, "HTF2 CE Width", minval=1, maxval=4, inline="gk_htf2ce2", group=GRP_GKHTF)
-gk_htf2_ce_style = gk_htf2_ce_style_in == "dashed" ? line.style_dashed : gk_htf2_ce_style_in == "dotted" ? line.style_dotted : line.style_solid
-
-// Final HTF GK FVG colors
-gk_htf1_bull_color  = color.new(gk_htf1_bull_color_raw,  gk_htf1_bg_transparency)
-gk_htf1_bear_color  = color.new(gk_htf1_bear_color_raw,  gk_htf1_bg_transparency)
-gk_htf1_bull_border = color.new(gk_htf1_bull_border_raw, gk_htf1_bd_transparency)
-gk_htf1_bear_border = color.new(gk_htf1_bear_border_raw, gk_htf1_bd_transparency)
-gk_htf2_bull_color  = color.new(gk_htf2_bull_color_raw,  gk_htf2_bg_transparency)
-gk_htf2_bear_color  = color.new(gk_htf2_bear_color_raw,  gk_htf2_bg_transparency)
-gk_htf2_bull_border = color.new(gk_htf2_bull_border_raw, gk_htf2_bd_transparency)
-gk_htf2_bear_border = color.new(gk_htf2_bear_border_raw, gk_htf2_bd_transparency)
-
-// Friendly-name → Pine timeframe code. Mirrors v5 source options.
-f_gkTF(simple string _htf) =>
-    switch _htf
-        "3 Mins"   => "3"
-        "5 Mins"   => "5"
-        "15 Mins"  => "15"
-        "30 Mins"  => "30"
-        "1 Hour"   => "60"
-        "2 Hour"   => "120"
-        "3 Hour"   => "180"
-        "4 Hour"   => "240"
-        "1 Day"    => "D"
-        "1 Week"   => "W"
-        "1 Month"  => "M"
-        "3 Month"  => "3M"
-        "6 Month"  => "6M"
-        "1 Year"   => "12M"
-        => "60"
 
 // +---------------------------------------------------------------+
 // | Global Text & Color Control                                   |
@@ -1937,314 +2435,7 @@ show_session_text      = input.bool(true,  "Show Session Text (duplicate of per-
 show_daily_text        = input.bool(true,  "Show Daily/PDH/PDL Text (duplicate of per-daily setting)", group=GRP_TEXT)
 
 // Master-resolved flags. Master override wins over any individual toggle.
-text_session_visible = not hide_all_labels and show_session_text and show_session_labels
 text_daily_visible   = not hide_all_labels and show_daily_text   and show_daily_labels
-
-
-//+------------------------------------------------------------------------------------------------------------+//
-//+--- Session Levels: NY AM Range (07:00-09:30), Asia, London, Midnight & 8:30 Opens                      ---+//
-//+------------------------------------------------------------------------------------------------------------+//
-
-// --- Session state (NY AM 07:00-09:30) ---
-var float ny_am_high = na
-var float ny_am_low  = na
-var int   ny_am_high_bar = na
-var int   ny_am_low_bar  = na
-var line  ny_am_high_line  = na
-var line  ny_am_low_line   = na
-var label ny_am_high_label = na
-var label ny_am_low_label  = na
-// "Taken" state: once session ended and a later wick reaches the level, freeze line at that bar
-var bool  ny_am_high_taken     = false
-var int   ny_am_high_taken_bar = na
-var bool  ny_am_low_taken      = false
-var int   ny_am_low_taken_bar  = na
-
-// --- Asia session state ---
-var float asia_high = na
-var float asia_low  = na
-var int   asia_high_bar = na
-var int   asia_low_bar  = na
-var line  asia_high_line  = na
-var line  asia_low_line   = na
-var label asia_high_label = na
-var label asia_low_label  = na
-var bool  asia_high_taken     = false
-var int   asia_high_taken_bar = na
-var bool  asia_low_taken      = false
-var int   asia_low_taken_bar  = na
-
-// --- London session state ---
-var float london_high = na
-var float london_low  = na
-var int   london_high_bar = na
-var int   london_low_bar  = na
-var line  london_high_line  = na
-var line  london_low_line   = na
-var label london_high_label = na
-var label london_low_label  = na
-var bool  london_high_taken     = false
-var int   london_high_taken_bar = na
-var bool  london_low_taken      = false
-var int   london_low_taken_bar  = na
-
-// --- Midnight open state ---
-var float midnight_open_price = na
-var int   midnight_open_bar   = na
-var line  midnight_open_line  = na
-var label midnight_open_label = na
-
-// --- 8:30 open state ---
-var float open_830_price = na
-var int   open_830_bar   = na
-var line  open_830_line  = na
-var label open_830_label = na
-
-// Session detection via time() -- returns non-na bar time when inside the session, na otherwise
-ny_am_time  = time(timeframe.period, "0700-0930", "America/New_York")
-asia_time   = time(timeframe.period, asia_session_in, "America/New_York")
-london_time = time(timeframe.period, london_session_in, "America/New_York")
-
-is_ny_am  = not na(ny_am_time)
-is_asia   = not na(asia_time)
-is_london = not na(london_time)
-
-is_ny_am_start  = is_ny_am  and not (is_ny_am[1])
-is_asia_start   = is_asia   and not (is_asia[1])
-is_london_start = is_london and not (is_london[1])
-
-// Narrow session-window triggers for midnight and 8:30 opens (first bar of the minute-window)
-midnight_sess_time = time(timeframe.period, "0000-0002", "America/New_York")
-open830_sess_time  = time(timeframe.period, "0830-0832", "America/New_York")
-
-is_midnight_start = not na(midnight_sess_time) and na(midnight_sess_time[1])
-is_830_start      = not na(open830_sess_time)  and na(open830_sess_time[1])
-
-// --- NY AM (07:00-09:30 ET) BSL/SSL ---
-if show_ny_am_range and not sessions_hidden_by_tf
-    if is_ny_am_start
-        ny_am_high := high
-        ny_am_low  := low
-        ny_am_high_bar := bar_index
-        ny_am_low_bar  := bar_index
-        ny_am_high_taken     := false
-        ny_am_high_taken_bar := na
-        ny_am_low_taken      := false
-        ny_am_low_taken_bar  := na
-        if not na(ny_am_high_line)
-            line.delete(ny_am_high_line)
-            line.delete(ny_am_low_line)
-            if not na(ny_am_high_label)
-                label.delete(ny_am_high_label)
-                ny_am_high_label := na
-            if not na(ny_am_low_label)
-                label.delete(ny_am_low_label)
-                ny_am_low_label  := na
-        ny_am_high_line  := line.new(bar_index, high, bar_index, high, color=ny_am_bsl_color, width=session_line_width, style=session_line_style)
-        ny_am_low_line   := line.new(bar_index, low,  bar_index, low,  color=ny_am_ssl_color, width=session_line_width, style=session_line_style)
-        // NOTE: labels are NOT created here. They are rebuilt fresh on barstate.islast
-        // (see end of this block) so they can never get "stuck" at a stale bar_index.
-    else if is_ny_am
-        if high > ny_am_high
-            ny_am_high := high
-            ny_am_high_bar := bar_index
-            ny_am_high_taken     := false
-            ny_am_high_taken_bar := na
-        if low < ny_am_low
-            ny_am_low := low
-            ny_am_low_bar := bar_index
-            ny_am_low_taken     := false
-            ny_am_low_taken_bar := na
-    // Takeout detection: only AFTER the session has finalized the level
-    if not is_ny_am and not na(ny_am_high_line)
-        if not ny_am_high_taken and not na(ny_am_high) and high >= ny_am_high
-            ny_am_high_taken     := true
-            ny_am_high_taken_bar := bar_index
-        if not ny_am_low_taken and not na(ny_am_low) and low <= ny_am_low
-            ny_am_low_taken     := true
-            ny_am_low_taken_bar := bar_index
-    if not na(ny_am_high_line)
-        int ny_am_h_x2 = ny_am_high_taken ? ny_am_high_taken_bar : bar_index
-        int ny_am_l_x2 = ny_am_low_taken  ? ny_am_low_taken_bar  : bar_index
-        line.set_xy1(ny_am_high_line, ny_am_high_bar, ny_am_high)
-        line.set_xy2(ny_am_high_line, ny_am_h_x2,     ny_am_high)
-        line.set_xy1(ny_am_low_line,  ny_am_low_bar,  ny_am_low)
-        line.set_xy2(ny_am_low_line,  ny_am_l_x2,     ny_am_low)
-    // Label rebuild on the latest bar.
-    //  - If the line is FROZEN at takeout: anchor the label at the line's x2 (takeout bar)
-    //    with text floating ABOVE the line for highs / BELOW for lows so it never lands on
-    //    candles that traded after the sweep.
-    //  - If the line is still EXTENDING to the right edge: anchor at the right edge using
-    //    the user-selected session label position style.
-    if barstate.islast and not na(ny_am_high_line)
-        if not na(ny_am_high_label)
-            label.delete(ny_am_high_label)
-        if not na(ny_am_low_label)
-            label.delete(ny_am_low_label)
-        [ny_h_lbl_x, ny_h_lbl_stl] = f_sessionLabelPos(ny_am_high_taken, ny_am_high_bar, ny_am_high_taken_bar)
-        [ny_l_lbl_x, ny_l_lbl_stl] = f_sessionLabelPos(ny_am_low_taken,  ny_am_low_bar,  ny_am_low_taken_bar)
-        ny_am_high_label := label.new(ny_h_lbl_x, ny_am_high, text_session_visible ? ny_am_bsl_label_text : "", color=color.new(color.white, 100), textcolor=ny_am_bsl_color, style=ny_h_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
-        ny_am_low_label  := label.new(ny_l_lbl_x, ny_am_low,  text_session_visible ? ny_am_ssl_label_text : "", color=color.new(color.white, 100), textcolor=ny_am_ssl_color, style=ny_l_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
-
-// --- Asia High/Low ---
-if show_asia_range and not sessions_hidden_by_tf
-    if is_asia_start
-        asia_high := high
-        asia_low  := low
-        asia_high_bar := bar_index
-        asia_low_bar  := bar_index
-        asia_high_taken     := false
-        asia_high_taken_bar := na
-        asia_low_taken      := false
-        asia_low_taken_bar  := na
-        if not na(asia_high_line)
-            line.delete(asia_high_line)
-            line.delete(asia_low_line)
-            if not na(asia_high_label)
-                label.delete(asia_high_label)
-                asia_high_label := na
-            if not na(asia_low_label)
-                label.delete(asia_low_label)
-                asia_low_label  := na
-        asia_high_line  := line.new(bar_index, high, bar_index, high, color=asia_color, width=session_line_width, style=session_line_style)
-        asia_low_line   := line.new(bar_index, low,  bar_index, low,  color=asia_color, width=session_line_width, style=session_line_style)
-        // Labels rebuilt on barstate.islast at end of block.
-    else if is_asia
-        if high > asia_high
-            asia_high := high
-            asia_high_bar := bar_index
-            asia_high_taken     := false
-            asia_high_taken_bar := na
-        if low < asia_low
-            asia_low := low
-            asia_low_bar := bar_index
-            asia_low_taken     := false
-            asia_low_taken_bar := na
-    // Takeout detection: only AFTER the Asia session has finalized the level
-    if not is_asia and not na(asia_high_line)
-        if not asia_high_taken and not na(asia_high) and high >= asia_high
-            asia_high_taken     := true
-            asia_high_taken_bar := bar_index
-        if not asia_low_taken and not na(asia_low) and low <= asia_low
-            asia_low_taken     := true
-            asia_low_taken_bar := bar_index
-    if not na(asia_high_line)
-        int asia_h_x2 = asia_high_taken ? asia_high_taken_bar : bar_index
-        int asia_l_x2 = asia_low_taken  ? asia_low_taken_bar  : bar_index
-        line.set_xy1(asia_high_line, asia_high_bar, asia_high)
-        line.set_xy2(asia_high_line, asia_h_x2,     asia_high)
-        line.set_xy1(asia_low_line,  asia_low_bar,  asia_low)
-        line.set_xy2(asia_low_line,  asia_l_x2,     asia_low)
-    // Label rebuild on the latest bar (frozen → at line end above/below; active → right edge).
-    if barstate.islast and not na(asia_high_line)
-        if not na(asia_high_label)
-            label.delete(asia_high_label)
-        if not na(asia_low_label)
-            label.delete(asia_low_label)
-        [asia_h_lbl_x, asia_h_lbl_stl] = f_sessionLabelPos(asia_high_taken, asia_high_bar, asia_high_taken_bar)
-        [asia_l_lbl_x, asia_l_lbl_stl] = f_sessionLabelPos(asia_low_taken,  asia_low_bar,  asia_low_taken_bar)
-        asia_high_label := label.new(asia_h_lbl_x, asia_high, text_session_visible ? asia_high_label_text : "", color=color.new(color.white, 100), textcolor=asia_color, style=asia_h_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
-        asia_low_label  := label.new(asia_l_lbl_x, asia_low,  text_session_visible ? asia_low_label_text  : "", color=color.new(color.white, 100), textcolor=asia_color, style=asia_l_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
-
-// --- London High/Low ---
-if show_london_range and not sessions_hidden_by_tf
-    if is_london_start
-        london_high := high
-        london_low  := low
-        london_high_bar := bar_index
-        london_low_bar  := bar_index
-        london_high_taken     := false
-        london_high_taken_bar := na
-        london_low_taken      := false
-        london_low_taken_bar  := na
-        if not na(london_high_line)
-            line.delete(london_high_line)
-            line.delete(london_low_line)
-            if not na(london_high_label)
-                label.delete(london_high_label)
-                london_high_label := na
-            if not na(london_low_label)
-                label.delete(london_low_label)
-                london_low_label  := na
-        london_high_line  := line.new(bar_index, high, bar_index, high, color=london_color, width=session_line_width, style=session_line_style)
-        london_low_line   := line.new(bar_index, low,  bar_index, low,  color=london_color, width=session_line_width, style=session_line_style)
-        // Labels rebuilt on barstate.islast at end of block.
-    else if is_london
-        if high > london_high
-            london_high := high
-            london_high_bar := bar_index
-            london_high_taken     := false
-            london_high_taken_bar := na
-        if low < london_low
-            london_low := low
-            london_low_bar := bar_index
-            london_low_taken     := false
-            london_low_taken_bar := na
-    // Takeout detection: only AFTER the London session has finalized the level
-    if not is_london and not na(london_high_line)
-        if not london_high_taken and not na(london_high) and high >= london_high
-            london_high_taken     := true
-            london_high_taken_bar := bar_index
-        if not london_low_taken and not na(london_low) and low <= london_low
-            london_low_taken     := true
-            london_low_taken_bar := bar_index
-    if not na(london_high_line)
-        int london_h_x2 = london_high_taken ? london_high_taken_bar : bar_index
-        int london_l_x2 = london_low_taken  ? london_low_taken_bar  : bar_index
-        line.set_xy1(london_high_line, london_high_bar, london_high)
-        line.set_xy2(london_high_line, london_h_x2,     london_high)
-        line.set_xy1(london_low_line,  london_low_bar,  london_low)
-        line.set_xy2(london_low_line,  london_l_x2,     london_low)
-    // Label rebuild on the latest bar (frozen → at line end above/below; active → right edge).
-    if barstate.islast and not na(london_high_line)
-        if not na(london_high_label)
-            label.delete(london_high_label)
-        if not na(london_low_label)
-            label.delete(london_low_label)
-        [london_h_lbl_x, london_h_lbl_stl] = f_sessionLabelPos(london_high_taken, london_high_bar, london_high_taken_bar)
-        [london_l_lbl_x, london_l_lbl_stl] = f_sessionLabelPos(london_low_taken,  london_low_bar,  london_low_taken_bar)
-        london_high_label := label.new(london_h_lbl_x, london_high, text_session_visible ? london_high_label_text : "", color=color.new(color.white, 100), textcolor=london_color, style=london_h_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
-        london_low_label  := label.new(london_l_lbl_x, london_low,  text_session_visible ? london_low_label_text  : "", color=color.new(color.white, 100), textcolor=london_color, style=london_l_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
-
-// --- Midnight Open (00:00 ET) ---
-if show_midnight_open
-    if is_midnight_start
-        midnight_open_price := open
-        midnight_open_bar   := bar_index
-        if not na(midnight_open_line)
-            line.delete(midnight_open_line)
-            if not na(midnight_open_label)
-                label.delete(midnight_open_label)
-                midnight_open_label := na
-        midnight_open_line  := line.new(bar_index, open, bar_index, open, color=midnight_color, width=session_line_width, style=session_line_style)
-        // Label rebuilt fresh on barstate.islast (right-edge anchor pattern).
-    if not na(midnight_open_line)
-        line.set_xy1(midnight_open_line, midnight_open_bar, midnight_open_price)
-        line.set_xy2(midnight_open_line, bar_index, midnight_open_price)
-    if barstate.islast and not na(midnight_open_line)
-        if not na(midnight_open_label)
-            label.delete(midnight_open_label)
-        midnight_open_label := label.new(bar_index + session_label_x_offset, midnight_open_price, text_session_visible ? midnight_label_text : "", color=color.new(color.white, 100), textcolor=midnight_color, style=session_label_style, size=session_label_size, text_font_family=font.family_monospace)
-
-// --- 8:30 AM Open (ET) ---
-if show_830_open
-    if is_830_start
-        open_830_price := open
-        open_830_bar   := bar_index
-        if not na(open_830_line)
-            line.delete(open_830_line)
-            if not na(open_830_label)
-                label.delete(open_830_label)
-                open_830_label := na
-        open_830_line  := line.new(bar_index, open, bar_index, open, color=open_830_color, width=session_line_width, style=session_line_style)
-        // Label rebuilt fresh on barstate.islast (right-edge anchor pattern).
-    if not na(open_830_line)
-        line.set_xy1(open_830_line, open_830_bar, open_830_price)
-        line.set_xy2(open_830_line, bar_index, open_830_price)
-    if barstate.islast and not na(open_830_line)
-        if not na(open_830_label)
-            label.delete(open_830_label)
-        open_830_label := label.new(bar_index + session_label_x_offset, open_830_price, text_session_visible ? open_830_label_text : "", color=color.new(color.white, 100), textcolor=open_830_color, style=session_label_style, size=session_label_size, text_font_family=font.family_monospace)
 
 
 //+------------------------------------------------------------------------------------------------------------+//
@@ -2597,217 +2788,6 @@ if array.size(main_fvgs) > fvg_max_display or not show_fvg_main
         if not na(oldf.ce)
             line.delete(oldf.ce)
 
-
-//+------------------------------------------------------------------------------------------------------------+//
-//+--- ICT OB & FVG (GK) — ported from "Simple ICT OB & FVG by Gowtham Kannakaje L"                           ---+//
-//+------------------------------------------------------------------------------------------------------------+//
-// LTF Fair Value Gaps and Order Blocks on the chart timeframe. Order Blocks use the classic GK
-// patterns: Naked OB (2-bar), Covered OB (3-bar with validity), Covered OB (4-bar with validity).
-// Mitigation type (Close/Wick) is user-selectable; on mitigation the box is either deleted or
-// frozen (no longer extends right), depending on the "Delete on Mitigation" toggle. Optional bar
-// coloring on OB origin bars. HTF1 + HTF2 FVGs below via request.security.
-
-// --- Mitigation reference levels
-gk_mit_lo = gk_mitigation == "Close" ? close[1] : low
-gk_mit_hi = gk_mitigation == "Close" ? close[1] : high
-
-// --- LTF FVG detection (3-bar, standard)
-gk_bull_fvg_raw = (low - high[2]) > 0 and open[1] < close[1]
-gk_bear_fvg_raw = (low[2] - high) > 0 and open[1] > close[1]
-
-// --- Order Block detection (bullish variants)
-// 2-bar Naked OB: bearish candle followed by bullish engulfing-style push, new FVG above
-gk_ob_bull_2 = close[2] < open[2] and low[0] - high[2] > 0 and open[1] < close[1]
-// 3-bar Covered OB candidate + validity
-gk_ob_bull_3     = close[3] < open[3] and low[0] - high[3] > 0 and close[2] > open[2]
-gk_ob_bull_3_ok  = close[2] > high[3]
-// 4-bar Covered OB candidate + validity
-gk_ob_bull_4     = close[4] < open[4] and low[0] - high[4] > 0 and close[3] > open[3] and close[2] > open[2]
-gk_ob_bull_4_ok  = close[3] > high[4] or close[2] > high[4]
-
-// --- Order Block detection (bearish variants)
-gk_ob_bear_2 = close[2] > open[2] and low[2] - high[0] > 0 and open[1] > close[1]
-gk_ob_bear_3     = close[3] > open[3] and low[3] - high[0] > 0 and close[2] < open[2]
-gk_ob_bear_3_ok  = close[2] < low[3]
-gk_ob_bear_4     = close[4] > open[4] and low[4] - high[0] > 0 and close[3] < open[3] and close[2] < open[2]
-gk_ob_bear_4_ok  = close[3] < low[4] or close[2] < low[4]
-
-// --- Persistent box arrays (box + parallel CE line array for FVGs)
-var array<box>  gk_bull_fvg_boxes = array.new<box>()
-var array<box>  gk_bear_fvg_boxes = array.new<box>()
-var array<line> gk_bull_fvg_ces   = array.new<line>()
-var array<line> gk_bear_fvg_ces   = array.new<line>()
-var array<box>  gk_bull_ob_boxes  = array.new<box>()
-var array<box>  gk_bear_ob_boxes  = array.new<box>()
-
-gk_ext = gk_simple ? extend.none : extend.right
-
-// --- LTF FVG: create boxes (and CE midlines) on new detection
-if gk_show_fvg and gk_bull_fvg_raw and barstate.isconfirmed
-    bx = box.new(bar_index - 2, high[2], bar_index, low, bgcolor=gk_fvg_bull_color, border_color=gk_fvg_bull_border, extend=gk_ext, text=gk_simple ? "" : "Bullish FVG", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
-    array.unshift(gk_bull_fvg_boxes, bx)
-    ce_y = (high[2] + low) / 2.0
-    line ce_ln = gk_fvg_show_ce ? line.new(bar_index - 2, ce_y, bar_index, ce_y, xloc=xloc.bar_index, extend=gk_ext, color=gk_fvg_ce_color, style=gk_fvg_ce_style, width=gk_fvg_ce_width) : na
-    array.unshift(gk_bull_fvg_ces, ce_ln)
-
-if gk_show_fvg and gk_bear_fvg_raw and barstate.isconfirmed
-    bx = box.new(bar_index - 2, high, bar_index, low[2], bgcolor=gk_fvg_bear_color, border_color=gk_fvg_bear_border, extend=gk_ext, text=gk_simple ? "" : "Bearish FVG", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
-    array.unshift(gk_bear_fvg_boxes, bx)
-    ce_y = (high + low[2]) / 2.0
-    line ce_ln = gk_fvg_show_ce ? line.new(bar_index - 2, ce_y, bar_index, ce_y, xloc=xloc.bar_index, extend=gk_ext, color=gk_fvg_ce_color, style=gk_fvg_ce_style, width=gk_fvg_ce_width) : na
-    array.unshift(gk_bear_fvg_ces, ce_ln)
-
-// --- LTF OB: create boxes on new detection
-if gk_show_ob and barstate.isconfirmed
-    // ---- Buy-side (Bullish) OBs ----
-    if gk_ob_show_bull
-        // 2-bar Naked Bullish OB — origin bar is index-2
-        if gk_ob_bull_2
-            bx = box.new(bar_index - 2, high[2], bar_index, low[2], bgcolor=gk_ob_bull_color, border_color=gk_ob_bull_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
-            array.unshift(gk_bull_ob_boxes, bx)
-        // 3-bar Covered Bullish OB — origin bar is index-3
-        if gk_ob_bull_3 and gk_ob_bull_3_ok
-            bx = box.new(bar_index - 3, high[3], bar_index, low[3], bgcolor=gk_ob_bull_color, border_color=gk_ob_bull_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
-            array.unshift(gk_bull_ob_boxes, bx)
-        // 4-bar Covered Bullish OB — origin bar is index-4
-        if gk_ob_bull_4 and gk_ob_bull_4_ok
-            bx = box.new(bar_index - 4, high[4], bar_index, low[4], bgcolor=gk_ob_bull_color, border_color=gk_ob_bull_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
-            array.unshift(gk_bull_ob_boxes, bx)
-        // Trim to max count — drop oldest (tail) so the freshest N survive
-        while array.size(gk_bull_ob_boxes) > gk_ob_max_bull
-            box.delete(array.pop(gk_bull_ob_boxes))
-
-    // ---- Sell-side (Bearish) OBs ----
-    if gk_ob_show_bear
-        if gk_ob_bear_2
-            bx = box.new(bar_index - 2, high[2], bar_index, low[2], bgcolor=gk_ob_bear_color, border_color=gk_ob_bear_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
-            array.unshift(gk_bear_ob_boxes, bx)
-        if gk_ob_bear_3 and gk_ob_bear_3_ok
-            bx = box.new(bar_index - 3, high[3], bar_index, low[3], bgcolor=gk_ob_bear_color, border_color=gk_ob_bear_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
-            array.unshift(gk_bear_ob_boxes, bx)
-        if gk_ob_bear_4 and gk_ob_bear_4_ok
-            bx = box.new(bar_index - 4, high[4], bar_index, low[4], bgcolor=gk_ob_bear_color, border_color=gk_ob_bear_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
-            array.unshift(gk_bear_ob_boxes, bx)
-        while array.size(gk_bear_ob_boxes) > gk_ob_max_bear
-            box.delete(array.pop(gk_bear_ob_boxes))
-
-// --- If a side is turned off or master is off, purge any lingering boxes of that side ---
-if not gk_show_ob or not gk_ob_show_bull
-    while array.size(gk_bull_ob_boxes) > 0
-        box.delete(array.pop(gk_bull_ob_boxes))
-if not gk_show_ob or not gk_ob_show_bear
-    while array.size(gk_bear_ob_boxes) > 0
-        box.delete(array.pop(gk_bear_ob_boxes))
-// If show_ob is on but max was lowered at runtime, trim to the new cap
-if gk_show_ob and gk_ob_show_bull
-    while array.size(gk_bull_ob_boxes) > gk_ob_max_bull
-        box.delete(array.pop(gk_bull_ob_boxes))
-if gk_show_ob and gk_ob_show_bear
-    while array.size(gk_bear_ob_boxes) > gk_ob_max_bear
-        box.delete(array.pop(gk_bear_ob_boxes))
-
-// --- Extend right edge of active boxes + CE lines to current bar
-if not gk_simple
-    if array.size(gk_bull_fvg_boxes) > 0
-        for i = 0 to array.size(gk_bull_fvg_boxes) - 1
-            box.set_right(array.get(gk_bull_fvg_boxes, i), bar_index)
-            ln = array.get(gk_bull_fvg_ces, i)
-            if not na(ln)
-                line.set_x2(ln, bar_index)
-    if array.size(gk_bear_fvg_boxes) > 0
-        for i = 0 to array.size(gk_bear_fvg_boxes) - 1
-            box.set_right(array.get(gk_bear_fvg_boxes, i), bar_index)
-            ln = array.get(gk_bear_fvg_ces, i)
-            if not na(ln)
-                line.set_x2(ln, bar_index)
-    if array.size(gk_bull_ob_boxes) > 0
-        for i = 0 to array.size(gk_bull_ob_boxes) - 1
-            box.set_right(array.get(gk_bull_ob_boxes, i), bar_index)
-    if array.size(gk_bear_ob_boxes) > 0
-        for i = 0 to array.size(gk_bear_ob_boxes) - 1
-            box.set_right(array.get(gk_bear_ob_boxes, i), bar_index)
-
-// --- Mitigation sweep: bullish zones are mitigated when price trades back through their TOP (or bottom for bearish)
-// For Bullish FVG: mitigated when gk_mit_lo <= box.top (price back-filled the gap from above)
-// For Bearish FVG: mitigated when gk_mit_hi >= box.bottom
-if array.size(gk_bull_fvg_boxes) > 0
-    for i = array.size(gk_bull_fvg_boxes) - 1 to 0
-        bx = array.get(gk_bull_fvg_boxes, i)
-        if gk_mit_lo <= box.get_bottom(bx)
-            ln_del = array.get(gk_bull_fvg_ces, i)
-            if not na(ln_del)
-                line.delete(ln_del)
-            array.remove(gk_bull_fvg_ces, i)
-            if gk_fvg_delete_mit
-                box.delete(bx)
-                array.remove(gk_bull_fvg_boxes, i)
-            else
-                box.set_right(bx, bar_index)
-                box.set_extend(bx, extend.none)
-                array.remove(gk_bull_fvg_boxes, i)
-
-if array.size(gk_bear_fvg_boxes) > 0
-    for i = array.size(gk_bear_fvg_boxes) - 1 to 0
-        bx = array.get(gk_bear_fvg_boxes, i)
-        if gk_mit_hi >= box.get_top(bx)
-            ln_del = array.get(gk_bear_fvg_ces, i)
-            if not na(ln_del)
-                line.delete(ln_del)
-            array.remove(gk_bear_fvg_ces, i)
-            if gk_fvg_delete_mit
-                box.delete(bx)
-                array.remove(gk_bear_fvg_boxes, i)
-            else
-                box.set_right(bx, bar_index)
-                box.set_extend(bx, extend.none)
-                array.remove(gk_bear_fvg_boxes, i)
-
-if array.size(gk_bull_ob_boxes) > 0
-    for i = array.size(gk_bull_ob_boxes) - 1 to 0
-        bx = array.get(gk_bull_ob_boxes, i)
-        if gk_mit_lo <= box.get_bottom(bx)
-            if gk_ob_delete_mit
-                box.delete(bx)
-                array.remove(gk_bull_ob_boxes, i)
-            else
-                box.set_right(bx, bar_index)
-                box.set_extend(bx, extend.none)
-                array.remove(gk_bull_ob_boxes, i)
-
-if array.size(gk_bear_ob_boxes) > 0
-    for i = array.size(gk_bear_ob_boxes) - 1 to 0
-        bx = array.get(gk_bear_ob_boxes, i)
-        if gk_mit_hi >= box.get_top(bx)
-            if gk_ob_delete_mit
-                box.delete(bx)
-                array.remove(gk_bear_ob_boxes, i)
-            else
-                box.set_right(bx, bar_index)
-                box.set_extend(bx, extend.none)
-                array.remove(gk_bear_ob_boxes, i)
-
-// --- Bar coloring on OB origin bars
-gk_bar_col_bull_2 = gk_ob_barcolor and gk_ob_bull_2
-gk_bar_col_bull_3 = gk_ob_barcolor and gk_ob_bull_3 and gk_ob_bull_3_ok
-gk_bar_col_bull_4 = gk_ob_barcolor and gk_ob_bull_4 and gk_ob_bull_4_ok
-gk_bar_col_bear_2 = gk_ob_barcolor and gk_ob_bear_2
-gk_bar_col_bear_3 = gk_ob_barcolor and gk_ob_bear_3 and gk_ob_bear_3_ok
-gk_bar_col_bear_4 = gk_ob_barcolor and gk_ob_bear_4 and gk_ob_bear_4_ok
-
-barcolor(gk_bar_col_bull_2 ? gk_ob_bull_bar : na, offset=-2)
-barcolor(gk_bar_col_bull_3 ? gk_ob_bull_bar : na, offset=-3)
-barcolor(gk_bar_col_bull_4 ? gk_ob_bull_bar : na, offset=-4)
-barcolor(gk_bar_col_bear_2 ? gk_ob_bear_bar : na, offset=-2)
-barcolor(gk_bar_col_bear_3 ? gk_ob_bear_bar : na, offset=-3)
-barcolor(gk_bar_col_bear_4 ? gk_ob_bear_bar : na, offset=-4)
-
-// --- Alerts
-gk_any_bull_ob = gk_ob_bull_2 or (gk_ob_bull_3 and gk_ob_bull_3_ok) or (gk_ob_bull_4 and gk_ob_bull_4_ok)
-gk_any_bear_ob = gk_ob_bear_2 or (gk_ob_bear_3 and gk_ob_bear_3_ok) or (gk_ob_bear_4 and gk_ob_bear_4_ok)
-alertcondition(gk_any_bull_ob, title="GK Bullish OB", message="Bullish Order Block detected")
-alertcondition(gk_any_bear_ob, title="GK Bearish OB", message="Bearish Order Block detected")
-alertcondition(gk_bull_fvg_raw, title="GK Bullish FVG", message="Bullish Fair Value Gap detected")
-alertcondition(gk_bear_fvg_raw, title="GK Bearish FVG", message="Bearish Fair Value Gap detected")
 
 //+------------------------------------------------------------------------------------------------------------+//
 //+--- Opening Range Gap (9:30 AM ET) — ported from ICT Open Range Gap (fadi)                                 ---+//
@@ -4136,86 +4116,6 @@ hfvg_FVG_5.AdjustMargins(hfvg_TF_5)
 [hfvg_o2_6, hfvg_h2_6, hfvg_l2_6, hfvg_c2_6, hfvg_t2_6]      = request.security(syminfo.tickerid, hfvg_htf_6, [open[3], high[3], low[3], close[3], time[3]])
 hfvg_TF_6 := hfvg_TF_5 + hfvg_FVG_6.Process(hfvg_o_6, hfvg_h_6, hfvg_l_6, hfvg_c_6, hfvg_t_6, hfvg_o1_6, hfvg_h1_6, hfvg_l1_6, hfvg_c1_6, hfvg_t1_6, hfvg_o2_6, hfvg_h2_6, hfvg_l2_6, hfvg_c2_6, hfvg_t2_6)
 hfvg_FVG_6.AdjustMargins(hfvg_TF_6)
-
-
-//+------------------------------------------------------------------------------------------------------------+//
-//+--- ICT Fair Value Gaps (from "Simple ICT OB & FVG" by Gowtham Kannakaje L)                              ---+//
-//+------------------------------------------------------------------------------------------------------------+//
-// FVG-only port (behavior-preserving) — the Order Blocks and HTF-FVG parts of the source are intentionally
-// NOT included, per request. All identifiers namespaced with `gkf_` to avoid collisions with the host script.
-// © Gowtham Kannakaje L.
-
-// --- Inputs ---
-var gkf_GRP = "ICT FVG (GK)"
-
-gkf_mitType = input.string("Close", title="Mitigation Type", options=["Close", "Wick"], tooltip="Choose how Fair Value Gaps are mitigated", inline="gkf_first", group=gkf_GRP)
-gkf_mitLow  = gkf_mitType == "Close" ? close[1] : low
-gkf_mitHigh = gkf_mitType == "Close" ? close[1] : high
-
-gkf_simple  = input(true, title='Show simple version of the FVGs', tooltip="Select this to keep chart clean (box will not be extended)", inline="gkf_first", group=gkf_GRP)
-
-gkf_show       = input(true,  title='Show FVG Boxes', group=gkf_GRP, inline='gkf_3')
-gkf_delMit     = input(false, title='Delete Mitigated FVG', group=gkf_GRP, tooltip="Removes the mitigated Fair Value Gaps from the chart based on the Mitigation Type specified.", inline='gkf_3')
-gkf_bullBorder = input.color(color.rgb(76, 175, 80, 80),  title="FVG border: Bullish ", group=gkf_GRP, inline="gkf_4")
-gkf_bearBorder = input.color(color.rgb(255, 82, 82, 80),  title="Bearish", group=gkf_GRP, inline="gkf_4")
-gkf_bullBox    = input.color(color.rgb(76, 175, 80, 97),  title="FVG box:", group=gkf_GRP, inline="gkf_4")
-gkf_bearBox    = input.color(color.rgb(255, 82, 82, 97),  title="Bearish", group=gkf_GRP, inline="gkf_4")
-
-// --- Detection ---
-gkf_bullFVG = low - high[2] > 0  and open[1] < close[1]
-gkf_bearFVG = low[2] - high > 0  and open[1] > close[1]
-
-// --- Box arrays ---
-var box gkf_bull = na
-var box gkf_bear = na
-var gkf_bullArr = array.new_box()
-var gkf_bearArr = array.new_box()
-var box[] gkf_bullMit = array.new_box()
-var box[] gkf_bearMit = array.new_box()
-
-// --- Draw new FVGs ---
-if (gkf_bullFVG and gkf_show)
-    gkf_bull := box.new(bar_index-2, high[2], bar_index, low, border_color = gkf_simple ? color.rgb(76, 175, 79, 50) : gkf_bullBorder, bgcolor = gkf_bullBox, text = "", text_color = color.rgb(255, 255, 255, 80), text_size = size.small, extend = gkf_simple ? extend.none : extend.right)
-    array.push(gkf_bullArr, gkf_bull)
-
-if (gkf_bearFVG and gkf_show)
-    gkf_bear := box.new(bar_index-2, low[2], bar_index, high, border_color = gkf_simple ? color.rgb(255, 82, 82, 50) : gkf_bearBorder, bgcolor = gkf_bearBox, text = "", text_color = color.rgb(255, 255, 255, 80), text_size = size.small, extend = gkf_simple ? extend.none : extend.right)
-    array.push(gkf_bearArr, gkf_bear)
-
-// --- Bullish clean up / mitigation ---
-if array.size(gkf_bullArr) > 0 and not gkf_simple
-    for i = array.size(gkf_bullArr) - 1 to 0 by 1
-        XX = array.get(gkf_bullArr, i)
-        XXxx = box.get_bottom(XX)
-        XXx = box.get_top(XX)
-        // If the last close/low is below the low of the bullish FVG - remove the FVG
-        if gkf_mitLow < XXxx
-            box.set_right(XX, bar_index)
-            box.set_extend(XX, extend.none)
-            array.unshift(gkf_bullMit, XX)
-            array.remove(gkf_bullArr, i)
-            if gkf_delMit
-                box.delete(XX)
-
-// --- Bearish clean up / mitigation ---
-if array.size(gkf_bearArr) > 0 and not gkf_simple
-    for i = array.size(gkf_bearArr) - 1 to 0 by 1
-        XX = array.get(gkf_bearArr, i)
-        XXx = box.get_top(XX)
-        XXxx = box.get_bottom(XX)
-        // If the last close/high is above the high of the bearish FVG - remove the FVG
-        if gkf_mitHigh > XXx
-            box.set_right(XX, bar_index)
-            box.set_extend(XX, extend.none)
-            array.unshift(gkf_bearMit, XX)
-            array.remove(gkf_bearArr, i)
-            if gkf_delMit
-                box.delete(XX)
-
-// --- Alerts ---
-alertcondition((gkf_bullFVG),                 "Bullish FVG", "Bullish FVG")
-alertcondition((gkf_bearFVG),                 "Bearish FVG", "Bearish FVG")
-alertcondition((gkf_bullFVG or gkf_bearFVG),  "All FVG",     "All FVG")
 
 
 //+------------------------------------------------------------------------------------------------------------+//
