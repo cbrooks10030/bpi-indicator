@@ -8,9 +8,11 @@ export function Footer() {
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/15 font-mono text-accent">B</span>
           <span>{site.name}</span>
         </div>
-        <p className="max-w-md text-center text-xs sm:text-right">
+        <p className="max-w-lg text-center text-xs sm:text-right">
           For educational and informational purposes only. Not financial advice.
-          Trading futures carries a substantial risk of loss. © {new Date().getFullYear()} {site.name}.
+          BPI implements publicly-taught ICT concepts and is an independent tool —
+          not affiliated with or endorsed by ICT or any educator. Trading futures
+          carries a substantial risk of loss. © {new Date().getFullYear()} {site.name}.
         </p>
       </div>
     </footer>

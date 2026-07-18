@@ -38,8 +38,9 @@ The site renders fully without any keys — checkout buttons just show a friendl
    lifetime) and copy their `price_...` ids into `STRIPE_PRICE_*`.
 2. Copy a **Restricted** secret key into `STRIPE_SECRET_KEY`.
 3. Create a webhook endpoint at `https://YOUR_DOMAIN/api/stripe/webhook`,
-   subscribe to `customer.subscription.deleted`, and copy the signing secret into
-   `STRIPE_WEBHOOK_SECRET`.
+   subscribe to `customer.subscription.deleted` **and** `checkout.session.completed`
+   (the latter tags lifetime buyers so they show up in the admin list), and copy
+   the signing secret into `STRIPE_WEBHOOK_SECRET`.
 
 ### 2. Discord
 1. Create an application at the Discord Developer Portal.
@@ -64,6 +65,31 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" https://YOUR_DOMAIN/api/admin/membe
 2. Add every variable from `.env.example` in Vercel's Environment Variables.
 3. Deploy, then point the Stripe webhook and Discord redirect URLs at the live
    domain.
+
+## Security
+
+Hardening applied (see `src/lib/security.ts`):
+
+- **Security headers** on every response (`next.config.mjs`): strict CSP,
+  `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, HSTS,
+  `Referrer-Policy`, `Permissions-Policy`, and `poweredByHeader` disabled.
+- **Stripe webhook** verifies the signature against `STRIPE_WEBHOOK_SECRET`; the
+  raw body is used so verification can't be bypassed.
+- **Admin endpoint** uses a constant-time token comparison and is rate-limited.
+- **OAuth CSRF**: the Discord flow binds an httpOnly nonce cookie to the `state`
+  parameter and rejects mismatches (prevents login-CSRF / account fixation).
+- **Activation ownership**: the first browser to link a purchase gets an httpOnly
+  activation cookie; a leaked Stripe `session_id` cannot overwrite an already
+  linked buyer's Discord/TradingView from a different browser.
+- **Input validation** + **rate limiting** on all API routes; `session_id` and
+  TradingView usernames are format-checked.
+- **No secrets in the client** — all keys are server-only env vars; access is
+  granted only after server-side verification that the Stripe session is paid.
+
+> The rate limiter is in-memory (per serverless instance) — a first line of
+> defence. For production, also enable your platform's WAF / edge rate limiting
+> (e.g. Vercel) and use a **Restricted** Stripe key. No system is unhackable;
+> this follows current best practice to make the site a hard target.
 
 ## Customising
 

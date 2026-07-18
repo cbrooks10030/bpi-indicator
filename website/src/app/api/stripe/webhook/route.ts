@@ -29,6 +29,18 @@ export async function POST(req: NextRequest) {
 
   try {
     switch (event.type) {
+      // Tag one-time (lifetime) buyers on their customer so the admin endpoint
+      // can surface them — they have no Subscription object to list.
+      case "checkout.session.completed": {
+        const s = event.data.object as Stripe.Checkout.Session;
+        const customerId = s.customer as string | null;
+        if (s.mode === "payment" && customerId && s.payment_status === "paid") {
+          await stripe.customers.update(customerId, {
+            metadata: { plan: (s.metadata?.plan as string) || "lifetime" },
+          });
+        }
+        break;
+      }
       // A member cancelled / their subscription lapsed — revoke Discord access.
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;

@@ -89,6 +89,14 @@ export const features = [
 
 export const faqs = [
   {
+    q: "Which ICT models does BPI support?",
+    a: "BPI implements a wide range of ICT concepts in one overlay — the Unicorn model, the ATM model, the Fractal model, CISD, breaker blocks, FVGs and many more. Most traders don't rely on a single model; they combine a few together to build confluence for their setups, and BPI is designed to make that easy.",
+  },
+  {
+    q: "Do you own these models or concepts?",
+    a: "No. The Unicorn, ATM, Fractal and other ICT models are publicly taught trading concepts — we do not claim to own or have invented any of them. BPI is an independent tool that implements these well-known concepts on TradingView so traders can apply them faster and more consistently. It is not affiliated with, endorsed by, or officially connected to ICT or any other educator.",
+  },
+  {
     q: "What markets does BPI work on?",
     a: "BPI is built for ICT-style trading and works on any TradingView symbol — futures like NQ and ES, forex, crypto and equities. It shines on intraday futures.",
   },
@@ -106,6 +114,6 @@ export const faqs = [
   },
   {
     q: "Is this financial advice?",
-    a: "No. BPI is a charting tool. It does not place trades or guarantee results. Trading futures involves substantial risk of loss.",
+    a: "No. BPI is a charting tool — it does not place trades, give financial advice, or guarantee results. You are responsible for your own trading decisions, and trading futures involves substantial risk of loss.",
   },
 ];

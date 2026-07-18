@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { plans, site } from "@/lib/config";
+import { rateLimit, clientIp } from "@/lib/security";
 
 export async function POST(req: NextRequest) {
+  const limit = rateLimit(`checkout:${clientIp(req.headers)}`, 20, 60_000);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Too many requests. Please slow down." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
+    );
+  }
+
   const stripe = getStripe();
   if (!stripe) {
     return NextResponse.json(
@@ -43,7 +52,7 @@ export async function POST(req: NextRequest) {
       metadata: { plan: plan.id },
       ...(plan.mode === "subscription"
         ? { subscription_data: { metadata: { plan: plan.id } } }
-        : {}),
+        : { customer_creation: "always" }),
     });
     return NextResponse.json({ url: session.url });
   } catch (e) {
