@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #ffffff;
+  --ink: #0b0d12;
+  --accent: #0d9488;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Subtle dotted background used on hero / section bands. */
+.dot-bg {
+  background-image: radial-gradient(rgba(11, 13, 18, 0.06) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+.card-shadow {
+  box-shadow: 0 1px 2px rgba(11, 13, 18, 0.04), 0 8px 30px -12px rgba(11, 13, 18, 0.12);
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.animate-float { animation: float 6s ease-in-out infinite; }
