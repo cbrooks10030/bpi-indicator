@@ -1,90 +1,142 @@
 export const site = {
   name: "BPI Indicator",
-  tagline: "Trade ICT with confidence.",
+  tagline: "Master the market with BPI.",
   description:
-    "The BPI Indicator brings a complete ICT toolkit to TradingView — HTF fractal models, CISD, breaker blocks, unicorn FVGs and more — in one clean overlay.",
+    "A complete ICT toolkit for TradingView — HTF fractal models, Unicorn, ATM, CISD, breaker blocks and FVGs — in one clean, automated overlay.",
   // Public site URL, used for OG tags + Stripe redirect fallbacks.
   url: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
-  discordInvite: process.env.NEXT_PUBLIC_DISCORD_INVITE || "#",
   supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@bpi-indicator.com",
 };
 
-export type Plan = {
-  id: "monthly" | "annual" | "lifetime";
-  name: string;
-  price: string;
-  cadence: string;
-  blurb: string;
-  highlight?: boolean;
-  badge?: string;
-  // Stripe Price ID, provided via env. Falls back to empty (checkout disabled).
-  priceEnvKey: string;
-  mode: "subscription" | "payment";
+export const socials = {
+  x: process.env.NEXT_PUBLIC_SOCIAL_X || "#",
+  youtube: process.env.NEXT_PUBLIC_SOCIAL_YOUTUBE || "#",
+  instagram: process.env.NEXT_PUBLIC_SOCIAL_INSTAGRAM || "#",
+  telegram: process.env.NEXT_PUBLIC_SOCIAL_TELEGRAM || "#",
+  discord: process.env.NEXT_PUBLIC_DISCORD_INVITE || "#",
 };
 
+export type Plan = {
+  id: "monthly" | "quarterly" | "yearly";
+  name: string;
+  monthly: string; // monthly-equivalent price shown large
+  billed: string; // e.g. "Billed monthly" / "Billed quarterly ($120)"
+  save?: string;
+  highlight?: boolean;
+  priceEnvKey: string;
+};
+
+// Pricing mirrors the TTrades monthly-equivalent structure. All are recurring
+// subscriptions; quarterly/yearly are billed up-front for the period.
 export const plans: Plan[] = [
   {
     id: "monthly",
     name: "Monthly",
-    price: "$29",
-    cadence: "/month",
-    blurb: "Full access, billed monthly. Cancel anytime.",
+    monthly: "$45",
+    billed: "Billed monthly",
     priceEnvKey: "STRIPE_PRICE_MONTHLY",
-    mode: "subscription",
   },
   {
-    id: "annual",
-    name: "Annual",
-    price: "$199",
-    cadence: "/year",
-    blurb: "Save 43% vs monthly. Best value for serious traders.",
+    id: "quarterly",
+    name: "Quarterly",
+    monthly: "$40",
+    billed: "Billed quarterly ($120)",
+    save: "Save 12%",
+    priceEnvKey: "STRIPE_PRICE_QUARTERLY",
+  },
+  {
+    id: "yearly",
+    name: "Yearly",
+    monthly: "$36.50",
+    billed: "Billed yearly ($438)",
+    save: "Save 19%",
     highlight: true,
-    badge: "Most popular",
-    priceEnvKey: "STRIPE_PRICE_ANNUAL",
-    mode: "subscription",
-  },
-  {
-    id: "lifetime",
-    name: "Lifetime",
-    price: "$399",
-    cadence: "one-time",
-    blurb: "Pay once, keep access forever. No recurring fees.",
-    priceEnvKey: "STRIPE_PRICE_LIFETIME",
-    mode: "payment",
+    priceEnvKey: "STRIPE_PRICE_YEARLY",
   },
 ];
 
-export const features = [
+export const planPerks = [
+  "Access to TradingView indicator",
+  "Customizable TradingView alerts",
+  "Automated charting",
+  "Automatic timeframe adjustment",
+  "Private Discord community",
+  "Tailored customer support",
+];
+
+export const whyChoose = [
   {
-    title: "HTF Fractal Models",
-    body: "Auto higher-timeframe candles with C2/C3/C4 fractal flow, bias filtering and XC2/XC4 invalidation drawn right on your chart.",
-    icon: "chart",
+    title: "Adaptive to all assets & timeframes",
+    body: "Works on futures, forex, crypto and equities, from the 1-minute to the monthly.",
   },
   {
-    title: "CISD neo",
-    body: "Change-in-state-of-delivery tracking with Pending / Faded / Confirmed / Hybrid states so you never miss a shift.",
-    icon: "pulse",
+    title: "Clear HTF → LTF framework",
+    body: "Higher-timeframe context drawn directly on your execution chart.",
+  },
+  {
+    title: "No repainting",
+    body: "Levels are fixed once printed — what you backtest is what you trade.",
+  },
+  {
+    title: "Streamlined for execution",
+    body: "Only the signals that matter, so you act with confidence, not clutter.",
+  },
+];
+
+// Feature-by-feature walkthrough (TTrades style). `image` points to an asset in
+// /public — drop a GIF/screenshot there to replace the placeholder.
+export const walkthrough = [
+  {
+    title: "Indicator Overview",
+    body: "Every model on one chart — the full BPI toolkit working together.",
+    image: "/features/overview.png",
+  },
+  {
+    title: "Higher Timeframe Candles",
+    body: "View HTF candles, FVGs and swings right on your entry timeframe.",
+    image: "/features/htf-candles.png",
+  },
+  {
+    title: "Unicorn Model",
+    body: "Breaker block overlapping an FVG — high-confluence reversal spots, auto-detected.",
+    image: "/features/unicorn.png",
+  },
+  {
+    title: "ATM Model",
+    body: "Time-restricted NY AM session model for precise intraday entries.",
+    image: "/features/atm.png",
+  },
+  {
+    title: "Fractal Model",
+    body: "C2 / C3 / C4 fractal flow with bias filtering and XC2/XC4 invalidation.",
+    image: "/features/fractal.png",
+  },
+  {
+    title: "Trend Shift (CISD)",
+    body: "Change-in-state-of-delivery with Pending / Faded / Confirmed / Hybrid states.",
+    image: "/features/cisd.png",
   },
   {
     title: "Breaker Blocks",
-    body: "Automatic breaker block zones with unicorn FVG overlap detection to pinpoint high-probability reversals.",
-    icon: "layers",
+    body: "Failed order blocks that swept liquidity, plotted with their zones automatically.",
+    image: "/features/breakers.png",
   },
   {
-    title: "FVG & Volume Imbalance",
-    body: "HTF fair value gaps, hidden FVGs, and volume imbalances mapped automatically across timeframes.",
-    icon: "gap",
+    title: "Fair Value Gaps",
+    body: "HTF FVGs, hidden FVGs and volume imbalances mapped across timeframes.",
+    image: "/features/fvg.png",
   },
   {
-    title: "Liquidity & Sweeps",
-    body: "Swing highs/lows, sweep markers, HH/HL/LH/LL structure labels and standard-deviation projections off each C2.",
-    icon: "target",
+    title: "Auto Bias",
+    body: "Directional bias that only prints setups aligned with the higher-timeframe trend.",
+    image: "/features/bias.png",
   },
-  {
-    title: "Alerts Built In",
-    body: "Custom-formatted alerts on your key models so you can step away and let BPI watch the tape for you.",
-    icon: "bell",
-  },
+];
+
+export const propFirms = [
+  { name: "Add your partner", blurb: "Best-in-class funding for futures traders.", discount: "Exclusive discount", href: "#" },
+  { name: "Add your partner", blurb: "Fast payouts and trader-friendly rules.", discount: "Exclusive discount", href: "#" },
+  { name: "Add your partner", blurb: "Scale to six figures in funded capital.", discount: "Exclusive discount", href: "#" },
 ];
 
 export const faqs = [
@@ -110,7 +162,7 @@ export const faqs = [
   },
   {
     q: "Can I cancel anytime?",
-    a: "Yes. Monthly and annual plans can be cancelled anytime from the billing portal and you keep access until the period ends. Lifetime is a one-time purchase with no recurring fees.",
+    a: "Yes. Every plan can be cancelled anytime from the billing portal and you keep access until the end of the period you paid for.",
   },
   {
     q: "Is this financial advice?",

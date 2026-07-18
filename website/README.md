@@ -34,13 +34,13 @@ The site renders fully without any keys — checkout buttons just show a friendl
 ## Setup checklist
 
 ### 1. Stripe
-1. Create three Products/Prices in the Stripe Dashboard (monthly, annual,
-   lifetime) and copy their `price_...` ids into `STRIPE_PRICE_*`.
+1. Create three **recurring** Products/Prices in the Stripe Dashboard — monthly,
+   quarterly and yearly — and copy their `price_...` ids into
+   `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_QUARTERLY`, `STRIPE_PRICE_YEARLY`.
 2. Copy a **Restricted** secret key into `STRIPE_SECRET_KEY`.
 3. Create a webhook endpoint at `https://YOUR_DOMAIN/api/stripe/webhook`,
-   subscribe to `customer.subscription.deleted` **and** `checkout.session.completed`
-   (the latter tags lifetime buyers so they show up in the admin list), and copy
-   the signing secret into `STRIPE_WEBHOOK_SECRET`.
+   subscribe to `customer.subscription.deleted` (revokes Discord access when a
+   member cancels), and copy the signing secret into `STRIPE_WEBHOOK_SECRET`.
 
 ### 2. Discord
 1. Create an application at the Discord Developer Portal.
@@ -93,6 +93,14 @@ Hardening applied (see `src/lib/security.ts`):
 
 ## Customising
 
-- Copy, pricing and features live in `src/lib/config.ts`.
-- Swap the mock chart in `src/components/ChartMock.tsx` for a real screenshot
-  (drop an image in `public/` and render it).
+- Copy, pricing, features, walkthrough, prop-firm partners and socials all live
+  in `src/lib/config.ts`.
+- The feature walkthrough uses placeholder image paths (e.g.
+  `/features/unicorn.png`). Drop real GIFs/screenshots into
+  `public/features/` with matching names to replace the placeholders.
+- Add your social links via the `NEXT_PUBLIC_SOCIAL_*` env vars.
+- Prop Firms (`/prop-firms`) and Education (`/education`) are hub pages — add
+  your affiliate links and articles in `src/lib/config.ts` / the page files.
+- Newsletter signups hit `POST /api/newsletter`; wire it to your email provider
+  (Mailchimp/ConvertKit/Beehiiv/Resend) with a server-only API key.
+- Swap the mock chart in `src/components/ChartMock.tsx` for a real screenshot.

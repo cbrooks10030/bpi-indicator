@@ -16,7 +16,7 @@ export function ChartMock() {
     { x: 284, o: 36, c: 58, h: 30, l: 68, up: false },
   ];
   return (
-    <div className="relative rounded-xl border border-white/10 bg-panel p-3 glow">
+    <div className="relative rounded-2xl border border-line bg-[#0c0e14] p-3 card-shadow">
       <div className="mb-2 flex items-center gap-2 px-1">
         <span className="h-3 w-3 rounded-full bg-red-400/70" />
         <span className="h-3 w-3 rounded-full bg-yellow-400/70" />

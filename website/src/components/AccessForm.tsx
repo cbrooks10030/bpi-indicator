@@ -40,19 +40,19 @@ export function AccessForm({
   return (
     <div className="mt-8 space-y-5">
       {/* Step 1: Discord */}
-      <div className="rounded-2xl border border-white/10 bg-panel p-6">
+      <div className="rounded-2xl border border-line bg-paper p-6 card-shadow">
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 className="flex items-center gap-2 text-lg font-semibold">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-xs">1</span>
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-subtle text-xs">1</span>
               Connect your Discord
             </h2>
-            <p className="mt-1 text-sm text-white/60">
+            <p className="mt-1 text-sm text-ink/60">
               Join the members server and unlock the private channels.
             </p>
           </div>
           {discordConnected ? (
-            <span className="flex items-center gap-1.5 rounded-lg bg-accent/15 px-3 py-2 text-sm font-medium text-accent">
+            <span className="flex items-center gap-1.5 rounded-lg bg-accent/15 px-3 py-2 text-sm font-medium text-accent-ink">
               <Check className="h-4 w-4" /> Connected
             </span>
           ) : (
@@ -67,12 +67,12 @@ export function AccessForm({
       </div>
 
       {/* Step 2: TradingView */}
-      <div className="rounded-2xl border border-white/10 bg-panel p-6">
+      <div className="rounded-2xl border border-line bg-paper p-6 card-shadow">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-xs">2</span>
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-subtle text-xs">2</span>
           Enter your TradingView username
         </h2>
-        <p className="mt-1 text-sm text-white/60">
+        <p className="mt-1 text-sm text-ink/60">
           We add the invite-only BPI Indicator to this account.
         </p>
         <form onSubmit={saveTv} className="mt-4 flex flex-col gap-3 sm:flex-row">
@@ -81,22 +81,22 @@ export function AccessForm({
             onChange={(e) => setTv(e.target.value)}
             placeholder="your_tradingview_username"
             required
-            className="flex-1 rounded-lg border border-white/15 bg-bg px-4 py-2.5 text-sm outline-none focus:border-accent"
+            className="flex-1 rounded-lg border border-line bg-paper px-4 py-2.5 text-sm outline-none focus:border-accent"
           />
           <button
             type="submit"
             disabled={saving || !tv.trim()}
-            className="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-accent-soft disabled:opacity-60"
+            className="rounded-lg bg-ink px-5 py-2.5 text-sm font-semibold text-paper transition hover:bg-ink/85 disabled:opacity-60"
           >
             {saving ? "Saving…" : saved ? "Saved ✓" : "Save"}
           </button>
         </form>
         {saved && !saving && (
-          <p className="mt-3 flex items-center gap-1.5 text-sm text-accent">
+          <p className="mt-3 flex items-center gap-1.5 text-sm text-accent-ink">
             <Check className="h-4 w-4" /> Got it — access will be granted shortly.
           </p>
         )}
-        {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+        {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
       </div>
     </div>
   );

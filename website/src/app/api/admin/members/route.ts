@@ -15,9 +15,9 @@ type Member = {
   renews_or_expires: string | null;
 };
 
-// Lists paying members (subscriptions + lifetime one-time buyers) with their
-// TradingView username + Discord status so you know who to grant invite-only
-// script access to. Protect with ADMIN_TOKEN:
+// Lists active paying members with their TradingView username + Discord status
+// so you know who to grant invite-only script access to. Protect with
+// ADMIN_TOKEN:
 //   GET /api/admin/members  (header: Authorization: Bearer <ADMIN_TOKEN>)
 export async function GET(req: NextRequest) {
   const rl = rateLimit(`admin:${clientIp(req.headers)}`, 30, 60_000);
@@ -56,22 +56,6 @@ export async function GET(req: NextRequest) {
         plan: s.metadata?.plan ?? "subscription",
         status: "active",
         renews_or_expires: new Date(s.current_period_end * 1000).toISOString(),
-      });
-    }
-
-    // Lifetime (one-time) buyers — tagged by the checkout webhook. No sub object.
-    const customers = await stripe.customers.list({ limit: 100 });
-    for (const c of customers.data) {
-      if (byId.has(c.id)) continue;
-      if (c.metadata?.plan !== "lifetime") continue;
-      byId.set(c.id, {
-        email: c.email,
-        tradingview_username: c.metadata?.tradingview_username ?? null,
-        discord_username: c.metadata?.discord_username ?? null,
-        discord_connected: Boolean(c.metadata?.discord_id),
-        plan: "lifetime",
-        status: "active",
-        renews_or_expires: null,
       });
     }
 

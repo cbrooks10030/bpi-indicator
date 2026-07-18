@@ -39,30 +39,30 @@ export default async function SuccessPage({ searchParams }: Props) {
   return (
     <div className="mx-auto flex min-h-screen max-w-2xl flex-col px-6 py-16">
       <Link href="/" className="mb-10 flex items-center gap-2 font-semibold">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/15 font-mono text-accent">B</span>
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-ink font-mono text-paper">B</span>
         {site.name}
       </Link>
 
       {!paid ? (
-        <div className="rounded-2xl border border-white/10 bg-panel p-8">
+        <div className="rounded-2xl border border-line bg-paper p-8 card-shadow">
           <h1 className="text-2xl font-bold">We couldn&apos;t confirm your payment</h1>
-          <p className="mt-3 text-white/60">
+          <p className="mt-3 text-ink/60">
             If you just paid, give it a moment and refresh. Otherwise head back and
             try again, or email{" "}
-            <a className="text-accent" href={`mailto:${site.supportEmail}`}>
+            <a className="text-accent-ink" href={`mailto:${site.supportEmail}`}>
               {site.supportEmail}
             </a>
             .
           </p>
-          <Link href="/#pricing" className="mt-6 inline-block rounded-lg bg-accent px-5 py-2.5 font-semibold text-black">
+          <Link href="/#pricing" className="mt-6 inline-block rounded-full bg-ink px-5 py-2.5 font-semibold text-paper">
             Back to pricing
           </Link>
         </div>
       ) : (
         <div>
           <div className="rounded-2xl border border-accent/30 bg-accent/10 p-6">
-            <h1 className="text-2xl font-bold text-accent">You&apos;re in. 🎉</h1>
-            <p className="mt-2 text-white/70">
+            <h1 className="text-2xl font-bold text-accent-ink">You&apos;re in.</h1>
+            <p className="mt-2 text-ink/70">
               Payment confirmed{email ? ` for ${email}` : ""}. Two quick steps to
               activate your access.
             </p>
@@ -74,10 +74,10 @@ export default async function SuccessPage({ searchParams }: Props) {
             tradingview={tradingview}
           />
 
-          <p className="mt-8 text-center text-xs text-white/40">
+          <p className="mt-8 text-center text-xs text-ink/40">
             TradingView access is granted manually, usually within a few hours.
             Questions? {""}
-            <a className="text-accent" href={`mailto:${site.supportEmail}`}>
+            <a className="text-accent-ink" href={`mailto:${site.supportEmail}`}>
               {site.supportEmail}
             </a>
           </p>

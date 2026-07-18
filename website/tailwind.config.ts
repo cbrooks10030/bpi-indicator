@@ -9,12 +9,14 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: "#0a0b0f",
-        panel: "#12141c",
-        panel2: "#171a24",
+        ink: "#0b0d12",
+        paper: "#ffffff",
+        subtle: "#f6f7f9",
+        line: "#e6e8ec",
         accent: {
-          DEFAULT: "#22d3a5",
-          soft: "#2dd4bf",
+          DEFAULT: "#0d9488",
+          soft: "#14b8a6",
+          ink: "#0f766e",
         },
       },
       fontFamily: {
