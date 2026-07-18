@@ -1638,9 +1638,10 @@ f_touchedAnyHTFFVG(float lo, float hi) =>
 //+--- ICT Killzones & Pivots [TFO] — replaces the old Session Levels visuals (© tradeforopp, MPL-2.0)      ---+//
 //+------------------------------------------------------------------------------------------------------------+//
 // Ported from the standalone "ICT Killzones & Pivots [TFO]" indicator. Draws killzone boxes (Asia/London/
-// NY AM/NY Lunch/NY PM), session pivot lines + labels, killzone range table, D/W/M opens & separators,
-// opening-price lines, and day-of-week labels. Only the opening-price session var h1 was renamed to kz_h1
-// to avoid colliding with the host script's global h1; all other identifiers were collision-free.
+// NY AM/NY Lunch/NY PM), session pivot lines + labels, and the killzone range table.
+// The Opening-Prices and Day/Week/Month subsystems were dropped: they duplicated the host's own
+// "Daily Levels" group and were off by default, and removing them keeps the script under TradingView's
+// compiled-token limit while preserving the killzone boxes/pivots/labels.
 
 // --- NY AM 07:00-09:30 ET high/low tracker (kept headless: feeds the model detection below; the killzone
 // --- boxes above cover the visual NY session). Do NOT remove — models reference ny_am_high / ny_am_low.
@@ -1772,79 +1773,6 @@ range_pos           = get_table_pos(input.string('Top Right', "Table Position", 
 range_size          = get_size(input.string('Normal', "Table Size", options = ['Auto', 'Tiny', 'Small', 'Normal', 'Large', 'Huge'], group = g_RNG))
 
 
-var g_DWM           = "Day - Week - Month"
-sep_unlimited       = input.bool(false, "Unlimited", tooltip = "Unlimited will show as many of the selected lines as possible. Otherwise, the session drawing limit will be used", group = g_DWM)
-alert_HL            = input.bool(false, "Alert High/Low Break", tooltip = "Alert when any selected highs and lows are traded through. The desired timeframe's high/low option must be enabled at the time that an alert is created", group = g_DWM)
-
-show_d_open         = input.bool(false, "D Open", inline = "DO", group = g_DWM)
-dhl                 = input.bool(false, "High/Low", inline = "DO", tooltip = "", group = g_DWM)
-ds                  = input.bool(false, "Separators", inline = "DO", tooltip = "Mark where a new day begins", group = g_DWM)
-d_color             = input.color(color.blue, "", inline = "DO", group = g_DWM)
-
-show_w_open         = input.bool(false, "W Open", inline = "WO", group = g_DWM)
-whl                 = input.bool(false, "High/Low", inline = "WO", tooltip = "", group = g_DWM)
-ws                  = input.bool(false, "Separators", inline = "WO", tooltip = "Mark where a new week begins", group = g_DWM)
-w_color             = input.color(#089981, "", inline = "WO", group = g_DWM)
-
-show_m_open         = input.bool(false, "M Open", inline = "MO", group = g_DWM)
-mhl                 = input.bool(false, "High/Low", inline = "MO", tooltip = "", group = g_DWM)
-ms                  = input.bool(false, "Separators", inline = "MO", tooltip = "Mark where a new month begins", group = g_DWM)
-m_color             = input.color(color.red, "", inline = "MO", group = g_DWM)
-
-htf_style           = get_line_type(input.string(defval = 'Solid', title = "Style", options = ['Solid', 'Dotted', 'Dashed'], inline = "D0", group = g_DWM))
-htf_width           = input.int(1, "", inline = "D0", group = g_DWM)
-
-dow_labels          = input.bool(true, "Day of Week Labels", inline = "DOW", group = g_DWM)
-dow_yloc            = input.string('Bottom', "", options = ['Top', 'Bottom'], inline = "DOW", group = g_DWM)
-dow_xloc            = input.string('Midnight', "", options = ['Midnight', 'Midday'], inline = "DOW", group = g_DWM)
-dow_hide_wknd       = input.bool(true, "Hide Weekend Labels", group = g_DWM)
-
-
-var g_OPEN          = "Opening Prices"
-open_unlimited      = input.bool(false, "Unlimited", tooltip = "Unlimited will show as many of the selected lines as possible. Otherwise, the session drawing limit will be used", group = g_OPEN)
-
-use_h1              = input.bool(false, "", inline = "H1", group = g_OPEN)
-h1_text             = input.string("True Day Open", "", inline = "H1", group = g_OPEN)
-kz_h1                  = input.session("0000-0001", "", inline = "H1", group = g_OPEN)
-h1_color            = input.color(color.black, "", inline = "H1", group = g_OPEN)
-
-use_h2              = input.bool(false, "", inline = "H2", group = g_OPEN)
-h2_text             = input.string("06:00", "", inline = "H2", group = g_OPEN)
-h2                  = input.session("0600-0601", "", inline = "H2", group = g_OPEN)
-h2_color            = input.color(color.black, "", inline = "H2", group = g_OPEN)
-
-use_h3              = input.bool(false, "", inline = "H3", group = g_OPEN)
-h3_text             = input.string("10:00", "", inline = "H3", group = g_OPEN)
-h3                  = input.session("1000-1001", "", inline = "H3", group = g_OPEN)
-h3_color            = input.color(color.black, "", inline = "H3", group = g_OPEN)
-
-use_h4              = input.bool(false, "", inline = "H4", group = g_OPEN)
-h4_text             = input.string("14:00", "", inline = "H4", group = g_OPEN)
-h4                  = input.session("1400-1401", "", inline = "H4", group = g_OPEN)
-h4_color            = input.color(color.black, "", inline = "H4", group = g_OPEN)
-
-use_h5              = input.bool(false, "", inline = "H5", group = g_OPEN)
-h5_text             = input.string("00:00", "", inline = "H5", group = g_OPEN)
-h5                  = input.session("0000-0001", "", inline = "H5", group = g_OPEN)
-h5_color            = input.color(color.black, "", inline = "H5", group = g_OPEN)
-
-use_h6              = input.bool(false, "", inline = "H6", group = g_OPEN)
-h6_text             = input.string("00:00", "", inline = "H6", group = g_OPEN)
-h6                  = input.session("0000-0001", "", inline = "H6", group = g_OPEN)
-h6_color            = input.color(color.black, "", inline = "H6", group = g_OPEN)
-
-use_h7              = input.bool(false, "", inline = "H7", group = g_OPEN)
-h7_text             = input.string("00:00", "", inline = "H7", group = g_OPEN)
-h7                  = input.session("0000-0001", "", inline = "H7", group = g_OPEN)
-h7_color            = input.color(color.black, "", inline = "H7", group = g_OPEN)
-
-use_h8              = input.bool(false, "", inline = "H8", group = g_OPEN)
-h8_text             = input.string("00:00", "", inline = "H8", group = g_OPEN)
-h8                  = input.session("0000-0001", "", inline = "H8", group = g_OPEN)
-h8_color            = input.color(color.black, "", inline = "H8", group = g_OPEN)
-
-hz_style            = get_line_type(input.string(defval = 'Dotted', title = "Style", options = ['Solid', 'Dotted', 'Dashed'], inline = "H0", group = g_OPEN))
-hz_width            = input.int(1, "", inline = "H0", group = g_OPEN)
 
 
 
@@ -1869,54 +1797,7 @@ type kz
     array<float> _range_store
     float _range_current
 
-type hz
-    array<line> LN
-    array<label> LB
-    array<bool> CO
 
-type dwm_hl
-    array<line> hi_line
-    array<line> lo_line
-    array<label> hi_label
-    array<label> lo_label
-    bool hit_high = false
-    bool hit_low = false
-
-type dwm_info
-    string tf
-    float o = na
-    float h = na
-    float l = na
-    float ph = na
-    float pl = na
-
-type lines_helper
-    hz _hz
-    string h
-    string h_text
-    color h_color
-
-initLines() => 
-    array<lines_helper> res = array.new<lines_helper>()
-    if use_h1
-        res.push(lines_helper.new(hz.new(array.new_line(), array.new_label(), array.new_bool()), kz_h1, h1_text, h1_color))
-    if use_h2
-        res.push(lines_helper.new(hz.new(array.new_line(), array.new_label(), array.new_bool()), h2, h2_text, h2_color))
-    if use_h3
-        res.push(lines_helper.new(hz.new(array.new_line(), array.new_label(), array.new_bool()), h3, h3_text, h3_color))
-    if use_h4
-        res.push(lines_helper.new(hz.new(array.new_line(), array.new_label(), array.new_bool()), h4, h4_text, h4_color))
-    if use_h5
-        res.push(lines_helper.new(hz.new(array.new_line(), array.new_label(), array.new_bool()), h5, h5_text, h5_color))
-    if use_h6
-        res.push(lines_helper.new(hz.new(array.new_line(), array.new_label(), array.new_bool()), h6, h6_text, h6_color))
-    if use_h7
-        res.push(lines_helper.new(hz.new(array.new_line(), array.new_label(), array.new_bool()), h7, h7_text, h7_color))
-    if use_h8
-        res.push(lines_helper.new(hz.new(array.new_line(), array.new_label(), array.new_bool()), h8, h8_text, h8_color))
-    res
-
-var array<lines_helper> lines = initLines()
 
 type kz_helper
     kz _kz
@@ -1958,50 +1839,15 @@ initKZ() =>
 var array<kz_helper> _kz = initKZ()
 
 
-var d_hl = dwm_hl.new(array.new_line(), array.new_line(), array.new_label(), array.new_label())
-var w_hl = dwm_hl.new(array.new_line(), array.new_line(), array.new_label(), array.new_label())
-var m_hl = dwm_hl.new(array.new_line(), array.new_line(), array.new_label(), array.new_label())
-
-var d_info = dwm_info.new("D")
-var w_info = dwm_info.new("W")
-var m_info = dwm_info.new("M")
 
 t_co = not na(time("", cutoff, gmt_tz))
 
 
-var d_sep_line = array.new_line()
-var w_sep_line = array.new_line()
-var m_sep_line = array.new_line()
-
-var d_line = array.new_line()
-var w_line = array.new_line()
-var m_line = array.new_line()
-
-var d_label = array.new_label()
-var w_label = array.new_label()
-var m_label = array.new_label()
 
 var transparent = #ffffff00
 var ext_current = ext_which == 'Most Recent'
 var ext_past = ext_pivots == 'Past Mitigation'
 
-update_dwm_info(dwm_info n) =>
-    if timeframe.change(n.tf)
-        n.ph := n.h
-        n.pl := n.l
-        n.o := open
-        n.h := high
-        n.l := low
-    else
-        n.h := math.max(high, n.h)
-        n.l := math.min(low, n.l)
-
-if dhl or show_d_open
-    update_dwm_info(d_info)
-if whl or show_w_open
-    update_dwm_info(w_info)
-if mhl or show_m_open
-    update_dwm_info(m_info)
 // ---------------------------------------- Variables & Constants --------------------------------------------------
 
 
@@ -2015,100 +1861,6 @@ get_text_color(color c) =>
 
 
 // ---------------------------------------- Core Logic --------------------------------------------------
-dwm_sep(string tf, bool use, array<line> arr, color col) =>
-    if use
-        if timeframe.change(tf)
-            arr.unshift(line.new(bar_index, high * 1.0001, bar_index, low, style = htf_style, width = htf_width, extend = extend.both, color = col))
-            if not sep_unlimited and arr.size() > max_days
-                arr.pop().delete()
-
-
-dwm_open(string tf, bool use, array<line> lns, array<label> lbls, dwm_info n, color col) =>
-    if use
-        if lns.size() > 0
-            lns.get(0).set_x2(time)
-            lbls.get(0).set_x(time)
-        if timeframe.change(tf)
-            lns.unshift(line.new(time, n.o, time, n.o, xloc = xloc.bar_time, style = htf_style, width = htf_width, color = col))
-            lbls.unshift(label.new(time, n.o, tf + " OPEN", xloc = xloc.bar_time, style = label.style_label_left, color = transparent, textcolor = txt_color, size = lbl_size))
-            if not sep_unlimited and lns.size() > max_days
-                lns.pop().delete()
-                lbls.pop().delete()
-
-
-dwm_hl(string tf, bool use, dwm_hl hl, dwm_info n, color col) =>
-    if use
-        if hl.hi_line.size() > 0
-            hl.hi_line.get(0).set_x2(time)
-            hl.lo_line.get(0).set_x2(time)
-            hl.hi_label.get(0).set_x(time)
-            hl.lo_label.get(0).set_x(time)
-        if timeframe.change(tf)
-            hl.hi_line.unshift(line.new(time, n.ph, time, n.ph, xloc = xloc.bar_time, style = htf_style, width = htf_width, color = col))
-            hl.lo_line.unshift(line.new(time, n.pl, time, n.pl, xloc = xloc.bar_time, style = htf_style, width = htf_width, color = col))
-            hl.hi_label.unshift(label.new(time, n.ph, "P" + tf + "H", xloc = xloc.bar_time, style = label.style_label_left, color = transparent, textcolor = txt_color, size = lbl_size))
-            hl.lo_label.unshift(label.new(time, n.pl, "P" + tf + "L", xloc = xloc.bar_time, style = label.style_label_left, color = transparent, textcolor = txt_color, size = lbl_size))
-            hl.hit_high := false
-            hl.hit_low := false
-            if not sep_unlimited and hl.hi_line.size() > max_days
-                hl.hi_line.pop().delete()
-                hl.lo_line.pop().delete()
-                hl.hi_label.pop().delete()
-                hl.lo_label.pop().delete()
-        if hl.hi_line.size() > 0 and alert_HL
-            if not hl.hit_high and high > hl.hi_line.get(0).get_y1()
-                hl.hit_high := true
-                alert(str.format("Hit P{0}H", tf))
-            if not hl.hit_low and low < hl.lo_line.get(0).get_y1()
-                hl.hit_low := true
-                alert(str.format("Hit P{0}L", tf))
-
-
-dwm() =>
-    if tf_limit_is_equal_or_more_chart_tf
-        // DWM - Separators
-        dwm_sep("D", ds, d_sep_line, d_color)
-        dwm_sep("W", ws, w_sep_line, w_color)
-        dwm_sep("M", ms, m_sep_line, m_color)
-
-        // DWM - Open Lines
-        dwm_open("D", show_d_open, d_line, d_label, d_info, d_color)
-        dwm_open("W", show_w_open, w_line, w_label, w_info, w_color)
-        dwm_open("M", show_m_open, m_line, m_label, m_info, m_color)
-
-        // DWM - Highs and Lows
-        dwm_hl("D", dhl, d_hl, d_info, d_color)
-        dwm_hl("W", whl, w_hl, w_info, w_color)
-        dwm_hl("M", mhl, m_hl, m_info, m_color)
-
-
-method hz_line(lines_helper this) =>
-    bool t = not na(time("", this.h, gmt_tz))
-    bool t_prev = not na(time("", this.h, gmt_tz, bars_back = 1))
-    hz hz = this._hz
-    string txt = this.h_text
-    color col = this.h_color
-
-    if t and not t_prev
-        hz.LN.unshift(line.new(bar_index, open, bar_index, open, style = hz_style, width = hz_width, color = col))
-        hz.LB.unshift(label.new(bar_index, open, txt, style = label.style_label_left, color = transparent, textcolor = txt_color, size = lbl_size))
-        array.unshift(hz.CO, false)
-        if not open_unlimited and hz.LN.size() > max_days
-            hz.LN.pop().delete()
-            hz.LB.pop().delete()
-            hz.CO.pop()
-    if not t and hz.CO.size() > 0
-        if not hz.CO.get(0)
-            hz.LN.get(0).set_x2(bar_index)
-            hz.LB.get(0).set_x(bar_index)
-            if (use_cutoff ? t_co : false)
-                hz.CO.set(0, true)
-
-
-hz_lines() =>
-    if tf_limit_is_equal_or_more_chart_tf
-        for [_, value] in lines
-            hz_line(value)
 
 
 del_kz(kz k) =>
@@ -2266,29 +2018,7 @@ method manage_kz(kz_helper this) =>
 for [_, value] in _kz
     manage_kz(value)
 
-dwm()
-hz_lines()
 
-new_dow_time = dow_xloc == 'Midday' ? time - timeframe.in_seconds("D") / 2 * 1000 : time
-new_day = dayofweek(new_dow_time, gmt_tz) != dayofweek(new_dow_time, gmt_tz)[1]
-
-var dow_top = dow_yloc == 'Top'
-
-var saturday = "SATURDAY"
-var sunday = "SUNDAY"
-var monday = "MONDAY"
-var tuesday = "TUESDAY"
-var wednesday = "WEDNESDAY"
-var thursday = "THURSDAY"
-var friday = "FRIDAY"
-
-plotchar(dow_labels and timeframe.isintraday and dayofweek(new_dow_time, gmt_tz) == 1 and new_day and not dow_hide_wknd, location = dow_top ? location.top : location.bottom, char = '', textcolor = txt_color, text = sunday)
-plotchar(dow_labels and timeframe.isintraday and dayofweek(new_dow_time, gmt_tz) == 2 and new_day, location = dow_top ? location.top : location.bottom, char = '', textcolor = txt_color, text = monday)
-plotchar(dow_labels and timeframe.isintraday and dayofweek(new_dow_time, gmt_tz) == 3 and new_day, location = dow_top ? location.top : location.bottom, char = '', textcolor = txt_color, text = tuesday)
-plotchar(dow_labels and timeframe.isintraday and dayofweek(new_dow_time, gmt_tz) == 4 and new_day, location = dow_top ? location.top : location.bottom, char = '', textcolor = txt_color, text = wednesday)
-plotchar(dow_labels and timeframe.isintraday and dayofweek(new_dow_time, gmt_tz) == 5 and new_day, location = dow_top ? location.top : location.bottom, char = '', textcolor = txt_color, text = thursday)
-plotchar(dow_labels and timeframe.isintraday and dayofweek(new_dow_time, gmt_tz) == 6 and new_day, location = dow_top ? location.top : location.bottom, char = '', textcolor = txt_color, text = friday)
-plotchar(dow_labels and timeframe.isintraday and dayofweek(new_dow_time, gmt_tz) == 7 and new_day and not dow_hide_wknd, location = dow_top ? location.top : location.bottom, char = '', textcolor = txt_color, text = saturday)
 
 get_min_days_stored() =>
     store = array.new_int()
