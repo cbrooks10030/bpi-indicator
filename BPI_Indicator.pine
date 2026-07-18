@@ -132,7 +132,7 @@ ocLineColor = input.color(color.new(color.gray, 50), "", group="HTF O/C Lines", 
 ocLineStyle = input.string("Solid", "", options=["Solid", "Dotted", "Dashed"], group="HTF O/C Lines", inline="oc2")
 ocLineWidth = input.int(1, "Width", minval=1, maxval=10, group="HTF O/C Lines", inline="oc2")
 
-stdDevColor       = input.color(color.white, "", group="Standard Deviations", inline="std")
+stdDevColor       = input.color(color.black, "", group="Standard Deviations", inline="std")
 showStdDev        = input.bool(true, "Std dev", group="Standard Deviations", tooltip='Project standard-deviation targets off the fractal manipulation range (swept swing → CISD reclaim level), in the trade direction.', inline="std")
 stdDevWidth       = input.int(1, " Width", minval=1, maxval=10, group="Standard Deviations", inline="std")
 stdDevCount       = input.int(1, "Deviations to show", minval=1, maxval=3, group="Standard Deviations", tooltip="How many standard-deviation targets to project (1σ, 2σ, 3σ). Only one is shown by default; maximum three.")
@@ -142,8 +142,8 @@ showStdDevLabels  = input.bool(true, "Show Labels", group="Standard Deviations")
 show_htfswing_lines       = input.bool(true, title="Show Confirmed Swing Lines", group="HTF Swings", tooltip="Draws horizontal lines at confirmed swing highs and lows on the HTF strip")
 htfswing_line_width       = input.int(1, title="Line Width", minval=1, maxval=5, group="HTF Swings")
 htfswing_line_style_input = input.string("Solid", title="Line Style", options=["Solid", "Dashed", "Dotted"], group="HTF Swings")
-htfswing_high_color       = input.color(color.white, title="High Line Color", group="HTF Swings", inline="swing_col")
-htfswing_low_color        = input.color(color.white, title="Low Line Color", group="HTF Swings", inline="swing_col")
+htfswing_high_color       = input.color(color.black, title="High Line Color", group="HTF Swings", inline="swing_col")
+htfswing_low_color        = input.color(color.black, title="Low Line Color", group="HTF Swings", inline="swing_col")
 htfswing_overshoot        = input.int(1, title="Overshoot (bars)", minval=0, maxval=50, group="HTF Swings")
 
 htfswing_line_style    = htfswing_line_style_input == "Solid" ? line.style_solid : htfswing_line_style_input == "Dashed" ? line.style_dashed : line.style_dotted
@@ -2060,8 +2060,8 @@ ss_per_side               = input.int(2, "Swings per side (per TF)", minval=1, m
 ss_pivot_len              = input.int(1, "Pivot length", minval=1, maxval=10, group=GRP_SWINGS, tooltip="Bars on each side of the pivot. 1 = middle candle has lower high on both sides for a swing high (ICT/BPI style).")
 ss_h1_prefix              = input.string("1hr", "1h label prefix",  inline="pfx", group=GRP_SWINGS)
 ss_m15_prefix             = input.string("15m", "15m label prefix", inline="pfx", group=GRP_SWINGS)
-ss_line_color             = input.color(color.new(color.white, 0), "Line color", inline="col", group=GRP_SWINGS)
-ss_text_color             = input.color(color.new(color.white, 0), "Text color", inline="col", group=GRP_SWINGS)
+ss_line_color             = input.color(color.new(color.black, 0), "Line color", inline="col", group=GRP_SWINGS)
+ss_text_color             = input.color(color.new(color.black, 0), "Text color", inline="col", group=GRP_SWINGS)
 ss_line_width             = input.int(1, "Line width", minval=1, maxval=4, inline="ln", group=GRP_SWINGS)
 ss_line_style_s           = input.string("solid", "Line style", options=["solid","dashed","dotted"], inline="ln", group=GRP_SWINGS)
 ss_show_text              = input.bool(true,  "Show labels", group=GRP_SWINGS)
@@ -2130,17 +2130,17 @@ daily_label_x_offset   = daily_label_pos_in   == "Left" ? -daily_label_padding  
 // | Hidden by default — toggle "Show Fair Value Gaps" to enable.  |
 // +---------------------------------------------------------------+
 string GRP_FVG = "Main Chart FVG"
-show_fvg_main        = input.bool(false, "Show Fair Value Gaps on Main Chart", group=GRP_FVG, inline="fvg_on")
+show_fvg_main        = input.bool(true, "Show Fair Value Gaps on Main Chart", group=GRP_FVG, inline="fvg_on")
 fvg_max_display      = input.int(9, "Max FVGs on Chart", minval=0, maxval=50, group=GRP_FVG, inline="fvg_on", tooltip="0 = hide all. Max 50. Also uncheck 'Show Fair Value Gaps on Main Chart' to disable entirely.")
-fvg_bull_color_raw   = input.color(color.white, "Bull FVG Fill (base)", inline="fvgfill", group=GRP_FVG)
+fvg_bull_color_raw   = input.color(color.black, "Bull FVG Fill (base)", inline="fvgfill", group=GRP_FVG)
 fvg_bear_color_raw   = input.color(color.red,   "Bear FVG Fill (base)", inline="fvgfill", group=GRP_FVG)
-fvg_bull_border_raw  = input.color(color.white, "Bull Border (base)",   inline="fvgbord", group=GRP_FVG)
+fvg_bull_border_raw  = input.color(color.black, "Bull Border (base)",   inline="fvgbord", group=GRP_FVG)
 fvg_bear_border_raw  = input.color(color.red,   "Bear Border (base)",   inline="fvgbord", group=GRP_FVG)
 fvg_bg_transparency  = input.int(90, "Background Transparency (0 solid → 100 invisible)", minval=0, maxval=100, group=GRP_FVG)
 fvg_bd_transparency  = input.int(80, "Border Transparency (0 solid → 100 invisible)",     minval=0, maxval=100, group=GRP_FVG)
 fvg_length           = input.int(3, "FVG Length (bars to extend right)", minval=1, maxval=500, group=GRP_FVG)
 fvg_show_ce          = input.bool(true, "Show CE (Midline)", inline="ce",  group=GRP_FVG)
-fvg_ce_color         = input.color(color.white, "CE Color",   inline="ce", group=GRP_FVG)
+fvg_ce_color         = input.color(color.black, "CE Color",   inline="ce", group=GRP_FVG)
 fvg_ce_style_in      = input.string("dotted", "CE Style", options=["solid","dashed","dotted"], inline="ce2", group=GRP_FVG)
 fvg_ce_width         = input.int(1, "CE Width", minval=1, maxval=4, inline="ce2", group=GRP_FVG)
 fvg_ce_style = fvg_ce_style_in == "dashed" ? line.style_dashed : fvg_ce_style_in == "dotted" ? line.style_dotted : line.style_solid
@@ -2166,6 +2166,110 @@ show_daily_text        = input.bool(true,  "Show Daily/PDH/PDL Text (duplicate o
 
 // Master-resolved flags. Master override wins over any individual toggle.
 text_daily_visible   = not hide_all_labels and show_daily_text   and show_daily_labels
+
+
+//+------------------------------------------------------------------------------------------------------------+//
+//+--- Session Levels: NY AM Range (07:00-09:30) BSL/SSL, Midnight & 8:30 Opens                             ---+//
+//+------------------------------------------------------------------------------------------------------------+//
+// Restored from the pre-killzones version: horizontal liquidity lines at the NY AM 07:00-09:30 ET high (BSL)
+// and low (SSL), plus the Midnight (00:00 ET) and 8:30 ET opens. Asia/London high-low were dropped because
+// the killzone boxes above already cover those sessions. The 07:00-09:30 high/low come from ny_am_high /
+// ny_am_low computed in the killzones block above (also consumed by the model detection).
+string GRP_SESSIONS = "Session Levels"
+show_ny_am_range     = input.bool(true, "Show NY AM Range (07:00-09:30 ET) BSL/SSL", group=GRP_SESSIONS)
+ny_am_bsl_color      = input.color(color.new(color.red,   0), "NY AM High (BSL)", inline="nyam", group=GRP_SESSIONS)
+ny_am_ssl_color      = input.color(color.new(color.green, 0), "NY AM Low (SSL)",  inline="nyam", group=GRP_SESSIONS)
+ny_am_bsl_label_text = input.string("NY AM BSL", "NY AM High Label", inline="nyamtxt", group=GRP_SESSIONS)
+ny_am_ssl_label_text = input.string("NY AM SSL", "NY AM Low Label",  inline="nyamtxt", group=GRP_SESSIONS)
+show_midnight_open   = input.bool(true, "Show Midnight Open (00:00 ET)", group=GRP_SESSIONS)
+midnight_color       = input.color(color.new(color.purple, 0), "Midnight Open Color", group=GRP_SESSIONS)
+midnight_label_text  = input.string("Midnight", "Midnight Open Label", group=GRP_SESSIONS)
+show_830_open        = input.bool(true, "Show 8:30 AM Open (ET)", group=GRP_SESSIONS)
+open_830_color       = input.color(color.new(color.fuchsia, 0), "8:30 Open Color", group=GRP_SESSIONS)
+open_830_label_text  = input.string("8:30", "8:30 Open Label", group=GRP_SESSIONS)
+show_session_labels  = input.bool(true, "Show Session Text Labels", group=GRP_SESSIONS)
+session_line_width   = input.int(1, "Session Line Width", minval=1, maxval=4, group=GRP_SESSIONS)
+session_line_style_in = input.string("solid", "Session Line Style", options=["solid","dashed","dotted"], group=GRP_SESSIONS)
+session_line_style   = session_line_style_in == "dashed" ? line.style_dashed : session_line_style_in == "dotted" ? line.style_dotted : line.style_solid
+text_session_visible = not hide_all_labels and show_session_text and show_session_labels
+
+// --- NY AM (07:00-09:30 ET) BSL/SSL lines ---
+var int   ny_am_high_bar = na
+var int   ny_am_low_bar  = na
+var line  ny_am_high_line  = na
+var line  ny_am_low_line   = na
+var label ny_am_high_label = na
+var label ny_am_low_label  = na
+if show_ny_am_range
+    if is_ny_am_kz and not is_ny_am_kz[1]
+        ny_am_high_bar := bar_index
+        ny_am_low_bar  := bar_index
+        if not na(ny_am_high_line)
+            line.delete(ny_am_high_line)
+            line.delete(ny_am_low_line)
+        ny_am_high_line := line.new(bar_index, high, bar_index, high, color=ny_am_bsl_color, width=session_line_width, style=session_line_style)
+        ny_am_low_line  := line.new(bar_index, low,  bar_index, low,  color=ny_am_ssl_color, width=session_line_width, style=session_line_style)
+    else if is_ny_am_kz
+        if high >= ny_am_high
+            ny_am_high_bar := bar_index
+        if low <= ny_am_low
+            ny_am_low_bar := bar_index
+    if not na(ny_am_high_line)
+        line.set_xy1(ny_am_high_line, ny_am_high_bar, ny_am_high)
+        line.set_xy2(ny_am_high_line, bar_index,      ny_am_high)
+        line.set_xy1(ny_am_low_line,  ny_am_low_bar,  ny_am_low)
+        line.set_xy2(ny_am_low_line,  bar_index,      ny_am_low)
+    if barstate.islast and not na(ny_am_high_line)
+        if not na(ny_am_high_label)
+            label.delete(ny_am_high_label)
+        if not na(ny_am_low_label)
+            label.delete(ny_am_low_label)
+        ny_am_high_label := label.new(bar_index, ny_am_high, text_session_visible ? ny_am_bsl_label_text : "", color=color.new(color.white, 100), textcolor=ny_am_bsl_color, style=label.style_label_left, size=size.small, text_font_family=font.family_monospace)
+        ny_am_low_label  := label.new(bar_index, ny_am_low,  text_session_visible ? ny_am_ssl_label_text : "", color=color.new(color.white, 100), textcolor=ny_am_ssl_color, style=label.style_label_left, size=size.small, text_font_family=font.family_monospace)
+
+// --- Midnight (00:00 ET) & 8:30 ET opens ---
+midnight_sess_time = time(timeframe.period, "0000-0002", "America/New_York")
+open830_sess_time  = time(timeframe.period, "0830-0832", "America/New_York")
+is_midnight_start  = not na(midnight_sess_time) and na(midnight_sess_time[1])
+is_830_start       = not na(open830_sess_time)  and na(open830_sess_time[1])
+
+var float midnight_open_price = na
+var int   midnight_open_bar   = na
+var line  midnight_open_line  = na
+var label midnight_open_label = na
+if show_midnight_open
+    if is_midnight_start
+        midnight_open_price := open
+        midnight_open_bar   := bar_index
+        if not na(midnight_open_line)
+            line.delete(midnight_open_line)
+        midnight_open_line := line.new(bar_index, open, bar_index, open, color=midnight_color, width=session_line_width, style=session_line_style)
+    if not na(midnight_open_line)
+        line.set_xy1(midnight_open_line, midnight_open_bar, midnight_open_price)
+        line.set_xy2(midnight_open_line, bar_index,         midnight_open_price)
+    if barstate.islast and not na(midnight_open_line)
+        if not na(midnight_open_label)
+            label.delete(midnight_open_label)
+        midnight_open_label := label.new(bar_index, midnight_open_price, text_session_visible ? midnight_label_text : "", color=color.new(color.white, 100), textcolor=midnight_color, style=label.style_label_left, size=size.small, text_font_family=font.family_monospace)
+
+var float open_830_price = na
+var int   open_830_bar   = na
+var line  open_830_line   = na
+var label open_830_label  = na
+if show_830_open
+    if is_830_start
+        open_830_price := open
+        open_830_bar   := bar_index
+        if not na(open_830_line)
+            line.delete(open_830_line)
+        open_830_line := line.new(bar_index, open, bar_index, open, color=open_830_color, width=session_line_width, style=session_line_style)
+    if not na(open_830_line)
+        line.set_xy1(open_830_line, open_830_bar, open_830_price)
+        line.set_xy2(open_830_line, bar_index,    open_830_price)
+    if barstate.islast and not na(open_830_line)
+        if not na(open_830_label)
+            label.delete(open_830_label)
+        open_830_label := label.new(bar_index, open_830_price, text_session_visible ? open_830_label_text : "", color=color.new(color.white, 100), textcolor=open_830_color, style=label.style_label_left, size=size.small, text_font_family=font.family_monospace)
 
 
 //+------------------------------------------------------------------------------------------------------------+//
@@ -3607,7 +3711,7 @@ hfvg_settings.CE_color             := input.color(color.new(color.black,60), "",
 hfvg_settings.CE_style             := input.string('····', '', options = ['', '----', '····'], group=hfvg_GRP, inline="3")
 hfvg_settings.label_show           := input.bool(true, "Show Label", group=hfvg_GRP, inline="label")
 hfvg_settings.label_color          := input.color(color.new(color.black, 10), "", group=hfvg_GRP, inline='label')
-hfvg_settings.label_bgcolor        := input.color(color.new(color.white, 100), "", group=hfvg_GRP, inline='label')
+hfvg_settings.label_bgcolor        := input.color(color.new(color.black, 100), "", group=hfvg_GRP, inline='label')
 hfvg_settings.label_size           := input.string(size.small, "", [size.tiny, size.small, size.normal, size.large, size.huge], group=hfvg_GRP, inline="label")
 hfvg_settings.padding              := input.int(4, "Distance from current candle", minval=0, group=hfvg_GRP)
 hfvg_settings.buffer               := input.int(6, "Spacing between timeframes", minval=0, group=hfvg_GRP)
