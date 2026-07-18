@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0a0b0f;
+  --panel: #12141c;
+  --accent: #22d3a5;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: #e6e8ee;
+  -webkit-font-smoothing: antialiased;
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(34, 211, 165, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 165, 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.glow {
+  box-shadow: 0 0 80px -20px rgba(34, 211, 165, 0.45);
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.animate-float { animation: float 6s ease-in-out infinite; }
