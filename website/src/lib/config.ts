@@ -61,7 +61,7 @@ export const plans: Plan[] = [
 // show a friendly "not configured" note. Whop handles billing, Discord role
 // gating and TradingView access automatically after purchase.
 export const whop = {
-  storeUrl: process.env.NEXT_PUBLIC_WHOP_URL || "",
+  storeUrl: process.env.NEXT_PUBLIC_WHOP_URL || "https://whop.com/bpi-indicator",
   checkout: {
     monthly: process.env.NEXT_PUBLIC_WHOP_MONTHLY || "",
     quarterly: process.env.NEXT_PUBLIC_WHOP_QUARTERLY || "",
