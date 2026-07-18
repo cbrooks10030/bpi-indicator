@@ -63,9 +63,15 @@ export const plans: Plan[] = [
 export const whop = {
   storeUrl: process.env.NEXT_PUBLIC_WHOP_URL || "https://whop.com/bpi-indicator",
   checkout: {
-    monthly: process.env.NEXT_PUBLIC_WHOP_MONTHLY || "",
-    quarterly: process.env.NEXT_PUBLIC_WHOP_QUARTERLY || "",
-    yearly: process.env.NEXT_PUBLIC_WHOP_YEARLY || "",
+    monthly:
+      process.env.NEXT_PUBLIC_WHOP_MONTHLY ||
+      "https://whop.com/bpi-indicator/bpi-smart-money-indicator-monthly/",
+    quarterly:
+      process.env.NEXT_PUBLIC_WHOP_QUARTERLY ||
+      "https://whop.com/bpi-indicator/bpi-smart-money-indicator-quarterly/",
+    yearly:
+      process.env.NEXT_PUBLIC_WHOP_YEARLY ||
+      "https://whop.com/bpi-indicator/bpi-smart-money-indicator-yearly/",
   } as Record<Plan["id"], string>,
 };
 
