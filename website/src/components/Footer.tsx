@@ -19,14 +19,24 @@ export function Footer() {
               <Socials variant="footer" />
             </div>
           </div>
-          <nav className="grid grid-cols-2 gap-x-12 gap-y-2 text-sm text-ink/60">
-            <Link href="/#features" className="hover:text-ink">Indicator</Link>
-            <Link href="/prop-firms" className="hover:text-ink">Prop Firms</Link>
-            <Link href="/#pricing" className="hover:text-ink">Pricing</Link>
-            <Link href="/education" className="hover:text-ink">Education</Link>
-            <Link href="/#faq" className="hover:text-ink">FAQ</Link>
-            <a href={`mailto:${site.supportEmail}`} className="hover:text-ink">Support</a>
-          </nav>
+          <div className="flex gap-16">
+            <nav className="grid gap-2 text-sm text-ink/60">
+              <span className="text-xs font-semibold uppercase tracking-widest text-ink/40">Explore</span>
+              <Link href="/#features" className="hover:text-ink">Indicator</Link>
+              <Link href="/mentorship" className="hover:text-ink">Mentorship</Link>
+              <Link href="/prop-firms" className="hover:text-ink">Prop Firms</Link>
+              <Link href="/education" className="hover:text-ink">Education</Link>
+              <Link href="/#pricing" className="hover:text-ink">Pricing</Link>
+              <Link href="/#faq" className="hover:text-ink">FAQ</Link>
+            </nav>
+            <nav className="grid gap-2 text-sm text-ink/60">
+              <span className="text-xs font-semibold uppercase tracking-widest text-ink/40">Legal</span>
+              <Link href="/terms" className="hover:text-ink">Terms</Link>
+              <Link href="/privacy" className="hover:text-ink">Privacy</Link>
+              <Link href="/refunds" className="hover:text-ink">Refunds</Link>
+              <a href={`mailto:${site.supportEmail}`} className="hover:text-ink">Support</a>
+            </nav>
+          </div>
         </div>
 
         <p className="mt-12 max-w-3xl text-xs leading-relaxed text-ink/45">

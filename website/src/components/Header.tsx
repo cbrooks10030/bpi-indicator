@@ -12,6 +12,7 @@ export function Header() {
         <nav className="hidden items-center gap-8 text-sm font-medium text-ink/70 md:flex">
           <Link href="/#features" className="hover:text-ink">Indicator</Link>
           <Link href="/#pricing" className="hover:text-ink">Pricing</Link>
+          <Link href="/mentorship" className="hover:text-ink">Mentorship</Link>
           <Link href="/prop-firms" className="hover:text-ink">Prop Firms</Link>
           <Link href="/education" className="hover:text-ink">Education</Link>
           <Link href="/#faq" className="hover:text-ink">FAQ</Link>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Chart, Layers, Bell, Pulse, Arrow } from "./Icons";
+import { Chart, Layers, Bell, Pulse, Users, Arrow } from "./Icons";
 
 const cards = [
   {
@@ -7,6 +7,12 @@ const cards = [
     body: "An automatic tool to spot high-probability setups.",
     href: "/#features",
     Icon: Chart,
+  },
+  {
+    title: "Mentorship",
+    body: "Learn to trade the models with live guidance.",
+    href: "/mentorship",
+    Icon: Users,
   },
   {
     title: "Prop Firms",
@@ -31,7 +37,7 @@ const cards = [
 export function Hub() {
   return (
     <section className="mx-auto max-w-6xl px-6 pb-8">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {cards.map(({ title, body, href, Icon }) => (
           <Link
             key={title}
