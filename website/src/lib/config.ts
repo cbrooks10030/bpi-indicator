@@ -13,7 +13,7 @@ export const socials = {
   youtube: process.env.NEXT_PUBLIC_SOCIAL_YOUTUBE || "#",
   instagram: process.env.NEXT_PUBLIC_SOCIAL_INSTAGRAM || "#",
   telegram: process.env.NEXT_PUBLIC_SOCIAL_TELEGRAM || "#",
-  discord: process.env.NEXT_PUBLIC_DISCORD_INVITE || "#",
+  discord: process.env.NEXT_PUBLIC_DISCORD_INVITE || "https://discord.gg/Tq4WZQxEQr",
 };
 
 export type Plan = {
