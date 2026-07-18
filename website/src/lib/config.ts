@@ -55,6 +55,24 @@ export const plans: Plan[] = [
   },
 ];
 
+// Whop is the checkout + membership platform. Each tier links to its Whop
+// checkout URL (set these once you create the products in Whop). If a per-tier
+// URL is missing we fall back to the store URL; if nothing is set the buttons
+// show a friendly "not configured" note. Whop handles billing, Discord role
+// gating and TradingView access automatically after purchase.
+export const whop = {
+  storeUrl: process.env.NEXT_PUBLIC_WHOP_URL || "",
+  checkout: {
+    monthly: process.env.NEXT_PUBLIC_WHOP_MONTHLY || "",
+    quarterly: process.env.NEXT_PUBLIC_WHOP_QUARTERLY || "",
+    yearly: process.env.NEXT_PUBLIC_WHOP_YEARLY || "",
+  } as Record<Plan["id"], string>,
+};
+
+export function whopUrl(planId: Plan["id"]): string {
+  return whop.checkout[planId] || whop.storeUrl || "";
+}
+
 export const planPerks = [
   "Access to TradingView indicator",
   "Customizable TradingView alerts",
@@ -264,7 +282,7 @@ export const termsSections = [
   {
     heading: "3. Subscriptions and billing",
     body: [
-      "Plans are recurring subscriptions billed through Stripe on a monthly, quarterly or yearly cycle. By subscribing you authorize us to charge your payment method on each renewal until you cancel.",
+      "Plans are recurring subscriptions sold and billed through Whop (our checkout and membership platform) on a monthly, quarterly or yearly cycle. By subscribing you authorize charges to your payment method on each renewal until you cancel.",
       "You can cancel at any time; access continues until the end of the period you have already paid for. Prices may change with notice; changes do not affect the period you have already paid for.",
     ],
   },
@@ -303,7 +321,7 @@ export const privacySections = [
   {
     heading: "1. Information we collect",
     body: [
-      "We collect the information you provide to deliver the service: your email address, your TradingView username, and your Discord identity (when you connect it). Payment details are collected and processed by Stripe — we never see or store your full card number.",
+      "We collect the information you provide to deliver the service: your email address, your TradingView username, and your Discord identity (when you connect it). Payment details are collected and processed by Whop and its payment processors — we never see or store your full card number.",
       "We may also collect basic technical data such as IP address and request metadata for security and rate-limiting.",
     ],
   },
@@ -316,7 +334,7 @@ export const privacySections = [
   {
     heading: "3. Third-party processors",
     body: [
-      "We rely on trusted processors to run the service, including Stripe (payments), Discord (community access and OAuth), and TradingView (indicator delivery). Your data is shared with them only as needed to provide the service, and each has its own privacy policy.",
+      "We rely on trusted processors to run the service, including Whop (checkout, billing and membership access), Discord (community access), and TradingView (indicator delivery). Your data is shared with them only as needed to provide the service, and each has its own privacy policy.",
     ],
   },
   {
@@ -375,7 +393,7 @@ export const faqs = [
   },
   {
     q: "How do I get access after I subscribe?",
-    a: "After checkout you'll connect your Discord and enter your TradingView username. We add the invite-only BPI script to your TradingView account and grant your Discord members role, usually within a few hours.",
+    a: "Checkout is handled by Whop. Right after you subscribe, Whop connects your Discord and grants your members role automatically, and you'll provide your TradingView username so we can add the invite-only BPI script to your account — usually within a few hours. Everything is managed from your Whop account.",
   },
   {
     q: "Do I need anything besides TradingView?",
@@ -383,7 +401,7 @@ export const faqs = [
   },
   {
     q: "Can I cancel anytime?",
-    a: "Yes. Every plan can be cancelled anytime from the billing portal and you keep access until the end of the period you paid for.",
+    a: "Yes. Every plan can be cancelled anytime from your Whop account and you keep access until the end of the period you paid for.",
   },
   {
     q: "Is this financial advice?",
