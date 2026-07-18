@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { headers } from "next/headers";
 import "./globals.css";
 import { site } from "@/lib/config";
 
@@ -30,6 +31,12 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Reading a header opts every route into dynamic rendering, which is required
+  // for the per-request CSP nonce (set in middleware) to be applied to Next's
+  // inline hydration scripts. Without this, statically prerendered pages would
+  // have no nonce and 'strict-dynamic' would block their scripts.
+  headers();
+
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} font-sans`}>

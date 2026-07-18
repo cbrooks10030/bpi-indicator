@@ -1,24 +1,11 @@
 /** @type {import('next').NextConfig} */
 
-// Content Security Policy. Stripe Checkout is a redirect (not embedded), so we
-// don't need to allow their frames here. Tailwind + Next inject inline styles,
-// hence 'unsafe-inline' for style-src only.
-const csp = [
-  "default-src 'self'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  "object-src 'none'",
-  "img-src 'self' data: blob:",
-  "style-src 'self' 'unsafe-inline'",
-  "script-src 'self'" + (process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""),
-  "connect-src 'self' https://api.stripe.com https://discord.com",
-  "font-src 'self'",
-  "upgrade-insecure-requests",
-].join("; ");
-
+// Note: the Content-Security-Policy is set per-request in `src/middleware.ts`
+// with a fresh nonce, so Next.js can attach that nonce to its own inline
+// hydration scripts. A static `script-src 'self'` here would block those
+// scripts and break hydration (blank pages), so CSP is intentionally NOT set
+// in this static header list.
 const securityHeaders = [
-  { key: "Content-Security-Policy", value: csp },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
