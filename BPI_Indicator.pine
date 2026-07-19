@@ -12,12 +12,12 @@ indicator("BPI Indicator", shorttitle = "BPI", overlay = true, max_bars_back = 5
 
 
 // === MASTER DISPLAY TOGGLES (always shown at top of Settings for easy access) ===
-string GRP_DISPLAY = "Display"
+string GRP_DISPLAY = "General"
 use_light_theme   = input.bool(false, "Use Light Theme (White Background)", group=GRP_DISPLAY, tooltip="Toggle between dark theme (black background) and light theme (white background). Light theme: green/red candles, black lines, black text.")
-show_top_infobox  = input.bool(true, "Show Top-Right Model Info Box", group=GRP_DISPLAY, tooltip="Master toggle for the top-right BPI Models info box (ATM, Unicorn 1m, Unicorn 5m, Fractal).")
+show_top_infobox  = input.bool(true, "Show Top-Right Model Info Box", group="Panel — Top-Right Info Box", tooltip="Master toggle for the top-right BPI Models info box (ATM, Unicorn 1m, Unicorn 5m, Fractal).")
 
 // Alert Settings
-alertFormat = input.text_area('{"ticker":"{ticker}", "interval":"{interval}", "alert":"{default}"}', "Custom alert message format", group="Alert Settings")
+alertFormat = input.text_area('{"ticker":"{ticker}", "interval":"{interval}", "alert":"{default}"}', "Custom alert message format", group="Alerts")
 
 
 // Line Styles
@@ -59,149 +59,150 @@ f_resolveSize(simple string sz) =>
 
 C2 = true
 
-showmarkers = input.bool(true, "Show LQ Markers", group="Marker Settings", inline="a")
-MQmarkers   = input.bool(false, "Show Market Structure", group="Marker Settings", inline="b", tooltip='turn off LQ Markers to avoid clutter')
+showmarkers = input.bool(true, "Show LQ Markers", group="Markers — Liquidity & Structure", inline="a")
+MQmarkers   = input.bool(false, "Show Market Structure", group="Markers — Liquidity & Structure", inline="b", tooltip='turn off LQ Markers to avoid clutter')
 coloroftext = color.new(color.gray, 0)
 
-biasFilter = input.string("Neutral", "Bias", options=["Neutral", "Bullish", "Bearish"], group="BIAS", inline="k")
+biasFilter = input.string("Neutral", "Bias", options=["Neutral", "Bullish", "Bearish"], group="Bias", inline="k")
 
 // === Fractal Model controls ===
-max_c2_setups   = input.int(2, "Max active fractal models on chart (C2/C3/C4)", minval=1, maxval=5, group="Fractal Model", tooltip="Cap on fractal-model setups drawn at once. 1 = show only the current setup; 2 = current + previous; up to 5.")
-show_multiple_fractals = input.bool(false, "Show Multiple Fractal Models", group="Fractal Model", tooltip="When OFF, displays only the current active fractal model. When ON, shows multiple active models.")
-max_stddev_sets = input.int(1, "Max std-dev sets shown",                       minval=1, maxval=5, group="Standard Deviations", tooltip="Cap on std-dev projection sets drawn at once. New setups still create their projections; older sets have their std-dev lines removed when the cap is exceeded.")
+max_c2_setups   = input.int(2, "Max active fractal models on chart (C2/C3/C4)", minval=1, maxval=5, group="Models — Fractal", tooltip="Cap on fractal-model setups drawn at once. 1 = show only the current setup; 2 = current + previous; up to 5.")
+show_multiple_fractals = input.bool(false, "Show Multiple Fractal Models", group="Models — Fractal", tooltip="When OFF, displays only the current active fractal model. When ON, shows multiple active models.")
+max_stddev_sets = input.int(1, "Max std-dev sets shown",                       minval=1, maxval=5, group="Models — Standard Deviations", tooltip="Cap on std-dev projection sets drawn at once. New setups still create their projections; older sets have their std-dev lines removed when the cap is exceeded.")
 
 // Effective max based on toggle
 effective_max = show_multiple_fractals ? max_c2_setups : 1
 
-useAutoTF = input.bool(true, "Use Auto Timeframe Selection", group="HTF Settings")
-manualTF  = input.timeframe("240", "Manual HTF (If Auto is Off)", group="HTF Settings")
+useAutoTF = input.bool(true, "Use Auto Timeframe Selection", group="HTF Candles — Settings")
+manualTF  = input.timeframe("240", "Manual HTF (If Auto is Off)", group="HTF Candles — Settings")
 
-boxColor = input.color(color.new(color.gray, 90), "", group="HTF Lines and Boxes", inline="Spot")
-showBox  = input.bool(true, "Show Trading Zone", group="HTF Lines and Boxes", inline="Spot", tooltip='shows the zone between HTF open and HTF EQ')
+boxColor = input.color(color.new(color.gray, 90), "", group="HTF Candles — Lines & Boxes", inline="Spot")
+showBox  = input.bool(true, "Show Trading Zone", group="HTF Candles — Lines & Boxes", inline="Spot", tooltip='shows the zone between HTF open and HTF EQ')
 
-htfOpenColor = input.color(color.gray, "", group="HTF Lines and Boxes", inline="Solid")
-showHTFOpen  = input.bool(true, "HTF Open", group="HTF Lines and Boxes", inline="Solid", tooltip='shows the HTF open line after LQ marker')
-htfOpenStyle = input.string("Solid", "", options=["Solid", "Dotted", "Dashed"], group="HTF Lines and Boxes", inline="Solid")
-htfOpenWidth = input.int(1, "Width", minval=1, maxval=10, group="HTF Lines and Boxes", inline="Solid")
+htfOpenColor = input.color(color.gray, "", group="HTF Candles — Lines & Boxes", inline="Solid")
+showHTFOpen  = input.bool(true, "HTF Open", group="HTF Candles — Lines & Boxes", inline="Solid", tooltip='shows the HTF open line after LQ marker')
+htfOpenStyle = input.string("Solid", "", options=["Solid", "Dotted", "Dashed"], group="HTF Candles — Lines & Boxes", inline="Solid")
+htfOpenWidth = input.int(1, "Width", minval=1, maxval=10, group="HTF Candles — Lines & Boxes", inline="Solid")
 
-prevHTFMidColor = input.color(color.gray, "", group="HTF Lines and Boxes", inline="Dotted")
-showPrevHTFMid  = input.bool(true, "HTF EQ", group="HTF Lines and Boxes", inline="Dotted", tooltip='shows the HTF EQ line after LQ marker')
-prevHTFMidStyle = input.string("Dotted", "", options=["Solid", "Dotted", "Dashed"], group="HTF Lines and Boxes", inline="Dotted")
-prevHTFMidWidth = input.int(1, "Width", minval=1, maxval=10, group="HTF Lines and Boxes", inline="Dotted")
+prevHTFMidColor = input.color(color.gray, "", group="HTF Candles — Lines & Boxes", inline="Dotted")
+showPrevHTFMid  = input.bool(true, "HTF EQ", group="HTF Candles — Lines & Boxes", inline="Dotted", tooltip='shows the HTF EQ line after LQ marker')
+prevHTFMidStyle = input.string("Dotted", "", options=["Solid", "Dotted", "Dashed"], group="HTF Candles — Lines & Boxes", inline="Dotted")
+prevHTFMidWidth = input.int(1, "Width", minval=1, maxval=10, group="HTF Candles — Lines & Boxes", inline="Dotted")
 
-showCISDNeo = input.bool(true, "Show CISD neo labels", group="CISD neo")
+showCISDNeo = input.bool(true, "Show CISD neo labels", group="CISD (neo) — Lines & Text")
 
-cisdMode = input.string("Confirmed", "CISD Mode", options=["Confirmed", "Hybrid"], group="CISD neo")
+cisdMode = input.string("Confirmed", "CISD Mode", options=["Confirmed", "Hybrid"], group="CISD (neo) — Lines & Text")
 
-showPending  = input.bool(true,  "Pending",   group="CISD neo")
-pendingColor = input.color(color.orange, "", inline="p", group="CISD neo")
-pendingWidth = input.int(2, "W", minval=1, maxval=5, inline="p", group="CISD neo")
+showPending  = input.bool(true,  "Pending",   group="CISD (neo) — Lines & Text")
+pendingColor = input.color(color.orange, "", inline="p", group="CISD (neo) — Lines & Text")
+pendingWidth = input.int(2, "W", minval=1, maxval=5, inline="p", group="CISD (neo) — Lines & Text")
 
-showFaded  = input.bool(true,  "Faded Box", group="CISD neo")
-fadedColor = input.color(color.red, "", inline="f", group="CISD neo")
-fadedWidth = input.int(2, "W", minval=1, maxval=5, inline="f", group="CISD neo")
+showFaded  = input.bool(true,  "Faded Box", group="CISD (neo) — Lines & Text")
+fadedColor = input.color(color.red, "", inline="f", group="CISD (neo) — Lines & Text")
+fadedWidth = input.int(2, "W", minval=1, maxval=5, inline="f", group="CISD (neo) — Lines & Text")
 
-confirmedColor = input.color(color.yellow, "Confirmed", group="CISD neo")
-confirmedWidth = input.int(2, "W", minval=1, maxval=5, group="CISD neo")
-bullishBreakColor = input.color(color.rgb(3, 95, 255), "Bull CISD", inline="bup", group="CISD neo")
-bearishBreakColor = input.color(color.rgb(3, 95, 255), "Bear CISD", inline="bep", group="CISD neo")
+confirmedColor = input.color(color.yellow, "Confirmed", group="CISD (neo) — Lines & Text")
+confirmedWidth = input.int(2, "W", minval=1, maxval=5, group="CISD (neo) — Lines & Text")
+bullishBreakColor = input.color(color.rgb(3, 95, 255), "Bull CISD", inline="bup", group="CISD (neo) — Lines & Text")
+bearishBreakColor = input.color(color.rgb(3, 95, 255), "Bear CISD", inline="bep", group="CISD (neo) — Lines & Text")
 
-bullStr = input.string("+CISD", " ", tooltip="Text displayed next to the CISD level.", inline="bup", group="CISD neo")
-bearStr = input.string("-CISD", " ", tooltip="Text displayed next to the CISD level.", inline="bep", group="CISD neo")
+bullStr = input.string("+CISD", " ", tooltip="Text displayed next to the CISD level.", inline="bup", group="CISD (neo) — Lines & Text")
+bearStr = input.string("-CISD", " ", tooltip="Text displayed next to the CISD level.", inline="bep", group="CISD (neo) — Lines & Text")
 
-bullishAlerts = input.bool(false, "Alert?", "Alert when price breaks the current +CISD level.", inline="bup", group="CISD neo")
-bearishAlerts = input.bool(false, "Alert?", "Alert when price breaks the current -CISD level.", inline="bep", group="CISD neo")
+bullishAlerts = input.bool(false, "Alert?", "Alert when price breaks the current +CISD level.", inline="bup", group="CISD (neo) — Lines & Text")
+bearishAlerts = input.bool(false, "Alert?", "Alert when price breaks the current -CISD level.", inline="bep", group="CISD (neo) — Lines & Text")
 
-cisdLineWidth = input.int(1, "Line Width", minval=1, maxval=5, group="CISD neo")
-lookAheadBars = input.int(5, "Line Extension Bars (forward, neg shortens)", minval=-20, maxval=50, group="CISD neo")
-styleOption   = input.string("Solid (─)", title="Line Style", options=["Solid (─)", "Dotted (┈)", "Dashed (╌)"], group="CISD neo")
-keepLevels    = input.bool(false, "Keep old CISD levels", group="CISD neo")
-max_cisd_keep = input.int(2, "Max CISD lines per direction (0 = hide)", minval=0, maxval=5, group="CISD neo", tooltip="Cap on CISD lines kept per direction. 0 hides all CISD lines.")
-cisd_text_show = input.bool(true, "Show CISD Text", group="CISD neo")
-cisd_text_size_s = input.string(SIZE_SMALL, "CISD Text Size", options=[SIZE_TINY, SIZE_SMALL, SIZE_NORMAL, SIZE_LARGE, SIZE_HUGE], group="CISD neo")
-cisd_label_pos = input.string("Right", "CISD Label Position", options=["Top","Bottom","Left","Right","Center"], group="CISD neo", tooltip="Where the CISD text sits relative to the line's right end.")
-cisd_label_pad = input.int(0, "CISD Label Padding (bars)", minval=-50, maxval=50, group="CISD neo", tooltip="Extra bars added to the label's x position. Positive pushes right, negative pulls left.")
+cisdLineWidth = input.int(1, "Line Width", minval=1, maxval=5, group="CISD (neo) — Lines & Text")
+lookAheadBars = input.int(5, "Line Extension Bars (forward, neg shortens)", minval=-20, maxval=50, group="CISD (neo) — Lines & Text")
+styleOption   = input.string("Solid (─)", title="Line Style", options=["Solid (─)", "Dotted (┈)", "Dashed (╌)"], group="CISD (neo) — Lines & Text")
+keepLevels    = input.bool(false, "Keep old CISD levels", group="CISD (neo) — Lines & Text")
+max_cisd_keep = input.int(2, "Max CISD lines per direction (0 = hide)", minval=0, maxval=5, group="CISD (neo) — Lines & Text", tooltip="Cap on CISD lines kept per direction. 0 hides all CISD lines.")
+cisd_text_show_in = input.bool(true, "Show CISD Text", group="CISD (neo) — Lines & Text", tooltip="CISD text is automatically hidden on the Daily timeframe (line still shows).")
+cisd_text_show    = cisd_text_show_in and not timeframe.isdaily
+cisd_text_size_s = input.string(SIZE_SMALL, "CISD Text Size", options=[SIZE_TINY, SIZE_SMALL, SIZE_NORMAL, SIZE_LARGE, SIZE_HUGE], group="CISD (neo) — Lines & Text")
+cisd_label_pos = input.string("Right", "CISD Label Position", options=["Top","Bottom","Left","Right","Center"], group="CISD (neo) — Lines & Text", tooltip="Where the CISD text sits relative to the line's right end.")
+cisd_label_pad = input.int(0, "CISD Label Padding (bars)", minval=-50, maxval=50, group="CISD (neo) — Lines & Text", tooltip="Extra bars added to the label's x position. Positive pushes right, negative pulls left.")
 
 cisdLineStyle =
      styleOption == "Dotted (┈)" ? line.style_dotted :
      styleOption == "Dashed (╌)" ? line.style_dashed :
      line.style_solid
 
-showOCLines = input.bool(true, "Show O/C Lines", group="HTF O/C Lines", inline="oc1", tooltip='vertical lines marking HTF candle open/close range')
-ocLineColor = input.color(color.new(color.gray, 50), "", group="HTF O/C Lines", inline="oc2")
-ocLineStyle = input.string("Solid", "", options=["Solid", "Dotted", "Dashed"], group="HTF O/C Lines", inline="oc2")
-ocLineWidth = input.int(1, "Width", minval=1, maxval=10, group="HTF O/C Lines", inline="oc2")
+showOCLines = input.bool(true, "Show O/C Lines", group="HTF Candles — Open/Close Lines", inline="oc1", tooltip='vertical lines marking HTF candle open/close range')
+ocLineColor = input.color(color.new(color.gray, 50), "", group="HTF Candles — Open/Close Lines", inline="oc2")
+ocLineStyle = input.string("Solid", "", options=["Solid", "Dotted", "Dashed"], group="HTF Candles — Open/Close Lines", inline="oc2")
+ocLineWidth = input.int(1, "Width", minval=1, maxval=10, group="HTF Candles — Open/Close Lines", inline="oc2")
 
-stdDevColor       = input.color(color.black, "", group="Standard Deviations", inline="std")
-showStdDev        = input.bool(true, "Std dev", group="Standard Deviations", tooltip='Project standard-deviation targets off the fractal manipulation range (swept swing → CISD reclaim level), in the trade direction.', inline="std")
-stdDevWidth       = input.int(1, " Width", minval=1, maxval=10, group="Standard Deviations", inline="std")
-stdDevCount       = input.int(1, "Deviations to show", minval=1, maxval=3, group="Standard Deviations", tooltip="How many standard-deviation targets to project (1σ, 2σ, 3σ). Only one is shown by default; maximum three.")
-stdDevProjBars    = input.int(24, "Projection length (bars)", minval=1, maxval=500, group="Standard Deviations", tooltip="How far to the right the standard-deviation target lines extend.")
-showStdDevLabels  = input.bool(true, "Show Labels", group="Standard Deviations")
+stdDevColor       = input.color(color.black, "", group="Models — Standard Deviations", inline="std")
+showStdDev        = input.bool(true, "Std dev", group="Models — Standard Deviations", tooltip='Project standard-deviation targets off the fractal manipulation range (swept swing → CISD reclaim level), in the trade direction.', inline="std")
+stdDevWidth       = input.int(1, " Width", minval=1, maxval=10, group="Models — Standard Deviations", inline="std")
+stdDevCount       = input.int(1, "Deviations to show", minval=1, maxval=3, group="Models — Standard Deviations", tooltip="How many standard-deviation targets to project (1σ, 2σ, 3σ). Only one is shown by default; maximum three.")
+stdDevProjBars    = input.int(24, "Projection length (bars)", minval=1, maxval=500, group="Models — Standard Deviations", tooltip="How far to the right the standard-deviation target lines extend.")
+showStdDevLabels  = input.bool(true, "Show Labels", group="Models — Standard Deviations")
 
-show_htfswing_lines       = input.bool(true, title="Show Confirmed Swing Lines", group="HTF Swings", tooltip="Draws horizontal lines at confirmed swing highs and lows on the HTF strip")
-htfswing_line_width       = input.int(1, title="Line Width", minval=1, maxval=5, group="HTF Swings")
-htfswing_line_style_input = input.string("Solid", title="Line Style", options=["Solid", "Dashed", "Dotted"], group="HTF Swings")
-htfswing_high_color       = input.color(color.black, title="High Line Color", group="HTF Swings", inline="swing_col")
-htfswing_low_color        = input.color(color.black, title="Low Line Color", group="HTF Swings", inline="swing_col")
-htfswing_overshoot        = input.int(1, title="Overshoot (bars)", minval=0, maxval=50, group="HTF Swings")
+show_htfswing_lines       = input.bool(true, title="Show Confirmed Swing Lines", group="HTF Candles — Swings", tooltip="Draws horizontal lines at confirmed swing highs and lows on the HTF strip")
+htfswing_line_width       = input.int(1, title="Line Width", minval=1, maxval=5, group="HTF Candles — Swings")
+htfswing_line_style_input = input.string("Solid", title="Line Style", options=["Solid", "Dashed", "Dotted"], group="HTF Candles — Swings")
+htfswing_high_color       = input.color(color.black, title="High Line Color", group="HTF Candles — Swings", inline="swing_col")
+htfswing_low_color        = input.color(color.black, title="Low Line Color", group="HTF Candles — Swings", inline="swing_col")
+htfswing_overshoot        = input.int(1, title="Overshoot (bars)", minval=0, maxval=50, group="HTF Candles — Swings")
 
 htfswing_line_style    = htfswing_line_style_input == "Solid" ? line.style_solid : htfswing_line_style_input == "Dashed" ? line.style_dashed : line.style_dotted
 
-showHTFCandles = input.bool(true, "Show HTF Candles (Primary HTF1 — auto/manual TF, drives C2/C3/C4 + CISD + std-dev)", group="HTF Candles")
-htf2_show      = input.bool(true,  "Show HTF 2",  inline="htf2_row", group="HTF Candles")
-htf2_tf        = input.timeframe("30", "TF",      inline="htf2_row", group="HTF Candles")
-htf3_show      = input.bool(true,  "Show HTF 3",  inline="htf3_row", group="HTF Candles")
-htf3_tf        = input.timeframe("60", "TF",      inline="htf3_row", group="HTF Candles")
-htf4_show      = input.bool(true,  "Show HTF 4",  inline="htf4_row", group="HTF Candles")
-htf5_show      = input.bool(false, "Show HTF 5",  inline="htf5_row", group="HTF Candles")
-htf4_tf        = input.timeframe("240", "TF",      inline="htf4_row", group="HTF Candles")
-htf5_tf        = input.timeframe("1D", "TF",      inline="htf5_row", group="HTF Candles")
-bull_body   = input.color(color.new(#1819e7, 0), "Body",   inline="body",   group="HTF Candles")
-bear_body   = input.color(color.black, "",       inline="body",   group="HTF Candles")
-bull_border = input.color(color.new(#1819e7, 0), "Border", inline="border", group="HTF Candles")
-bear_border = input.color(color.black, "",       inline="border", group="HTF Candles")
-bull_wick   = input.color(color.new(#1819e7, 0), "Wick",   inline="wick",   group="HTF Candles")
-bear_wick   = input.color(color.black, "",       inline="wick",   group="HTF Candles")
+showHTFCandles = input.bool(true, "Show HTF Candles (Primary HTF1 — auto/manual TF, drives C2/C3/C4 + CISD + std-dev)", group="HTF Candles — Display")
+htf2_show      = input.bool(true,  "Show HTF 2",  inline="htf2_row", group="HTF Candles — Display")
+htf2_tf        = input.timeframe("30", "TF",      inline="htf2_row", group="HTF Candles — Display")
+htf3_show      = input.bool(true,  "Show HTF 3",  inline="htf3_row", group="HTF Candles — Display")
+htf3_tf        = input.timeframe("60", "TF",      inline="htf3_row", group="HTF Candles — Display")
+htf4_show      = input.bool(true,  "Show HTF 4",  inline="htf4_row", group="HTF Candles — Display")
+htf5_show      = input.bool(false, "Show HTF 5",  inline="htf5_row", group="HTF Candles — Display")
+htf4_tf        = input.timeframe("240", "TF",      inline="htf4_row", group="HTF Candles — Display")
+htf5_tf        = input.timeframe("1D", "TF",      inline="htf5_row", group="HTF Candles — Display")
+bull_body   = input.color(color.new(#1819e7, 0), "Body",   inline="body",   group="HTF Candles — Display")
+bear_body   = input.color(color.black, "",       inline="body",   group="HTF Candles — Display")
+bull_border = input.color(color.new(#1819e7, 0), "Border", inline="border", group="HTF Candles — Display")
+bear_border = input.color(color.black, "",       inline="border", group="HTF Candles — Display")
+bull_wick   = input.color(color.new(#1819e7, 0), "Wick",   inline="wick",   group="HTF Candles — Display")
+bear_wick   = input.color(color.black, "",       inline="wick",   group="HTF Candles — Display")
 
-show_candle_time   = input.bool(false, "Show Candle Time", group="HTF Candles", inline="time")
-candle_time_color  = input.color(color.black, "", group="HTF Candles", inline="time")
-candle_time_size   = input.string("Tiny", "", options=["Tiny", "Small", "Normal"], group="HTF Candles", inline="time")
+show_candle_time   = input.bool(false, "Show Candle Time", group="HTF Candles — Display", inline="time")
+candle_time_color  = input.color(color.black, "", group="HTF Candles — Display", inline="time")
+candle_time_size   = input.string("Tiny", "", options=["Tiny", "Small", "Normal"], group="HTF Candles — Display", inline="time")
 
-show_fvg  = input.bool(true, "Show FVG", group="HTF Candles", inline="fvg")
-fvg_color = input.color(color.new(color.gray, 80), "", group="HTF Candles", inline="fvg")
+show_fvg  = input.bool(true, "Show FVG", group="HTF Candles — Display", inline="fvg")
+fvg_color = input.color(color.new(color.gray, 80), "", group="HTF Candles — Display", inline="fvg")
 
-htfLabelShow      = input.bool(true,  "HTF Label",        group="Label Settings", inline="htf")
-htfLabelColor     = input.color(color.black, "", group="Label Settings", inline="htf")
-htfLabelSizeOpt   = input.string("normal", "", options=["tiny","small","normal","large"], group="Label Settings", inline="htf")
-labelPositions    = input.string("Top", "Label Positions", options=["Top","Bottom"], group="Label Settings")
-labelAlignment    = input.string("Center", "Label Alignment", options=["Left","Center","Right"], group="Label Settings")
-remainingTimeShow = input.bool(true,  "Remaining time",  group="Label Settings", inline="rem")
-remainingTimeColor= input.color(color.black, "", group="Label Settings", inline="rem")
-remainingTimeSizeOpt = input.string("normal", "", options=["tiny","small","normal","large"], group="Label Settings", inline="rem")
-intervalValueShow = input.bool(true,  "Interval Value",  group="Label Settings", inline="int")
-intervalValueSizeOpt = input.string("small", "", options=["tiny","small","normal","large"], group="Label Settings", inline="int")
-htfLabelBG        = input.color(color.new(#000000, 100), "", group="Label Settings")
-htfLabelYOffsetTicks = input.int(10, "Y Offset (ticks)", minval=0, maxval=500, group="Label Settings")
+htfLabelShow      = input.bool(true,  "HTF Label",        group="HTF Candles — Labels", inline="htf")
+htfLabelColor     = input.color(color.black, "", group="HTF Candles — Labels", inline="htf")
+htfLabelSizeOpt   = input.string("normal", "", options=["tiny","small","normal","large"], group="HTF Candles — Labels", inline="htf")
+labelPositions    = input.string("Top", "Label Positions", options=["Top","Bottom"], group="HTF Candles — Labels")
+labelAlignment    = input.string("Center", "Label Alignment", options=["Left","Center","Right"], group="HTF Candles — Labels")
+remainingTimeShow = input.bool(true,  "Remaining time",  group="HTF Candles — Labels", inline="rem")
+remainingTimeColor= input.color(color.black, "", group="HTF Candles — Labels", inline="rem")
+remainingTimeSizeOpt = input.string("normal", "", options=["tiny","small","normal","large"], group="HTF Candles — Labels", inline="rem")
+intervalValueShow = input.bool(true,  "Interval Value",  group="HTF Candles — Labels", inline="int")
+intervalValueSizeOpt = input.string("small", "", options=["tiny","small","normal","large"], group="HTF Candles — Labels", inline="int")
+htfLabelBG        = input.color(color.new(#000000, 100), "", group="HTF Candles — Labels")
+htfLabelYOffsetTicks = input.int(10, "Y Offset (ticks)", minval=0, maxval=500, group="HTF Candles — Labels")
 
-htf_padding      = input.int(40,  "Padding from current candles", minval=0, maxval=200, group="HTF Candles Layout")
-htf_candle_width = input.int(4,   "Candle width (bars)",         minval=1, maxval=20,  group="HTF Candles Layout")
-max_htf_candles  = input.int(4,   "Max HTF Candles",             minval=1, maxval=100, group="HTF Candles Layout", tooltip="Sets how many HTF candles are displayed on the right side.")
+htf_padding      = input.int(40,  "Padding from current candles", minval=0, maxval=200, group="HTF Candles — Layout")
+htf_candle_width = input.int(4,   "Candle width (bars)",         minval=1, maxval=20,  group="HTF Candles — Layout")
+max_htf_candles  = input.int(4,   "Max HTF Candles",             minval=1, maxval=100, group="HTF Candles — Layout", tooltip="Sets how many HTF candles are displayed on the right side.")
 
-htf_space        = input.int(2,   "Space between candles",       minval=0, maxval=20,  group="HTF Candles Layout")
-htf_space_htf    = input.int(10,  "Space between higher timeframes", minval=0, maxval=200, group="HTF Candles Layout", tooltip="For multi-HTF layouts; kept for compatibility")
-vi_show  = input.bool(true, "Show Volume Imbalance", group="HTF Candles Layout", inline="vi")
-vi_color = input.color(color.new(color.orange, 85), "", group="HTF Candles Layout", inline="vi")
+htf_space        = input.int(2,   "Space between candles",       minval=0, maxval=20,  group="HTF Candles — Layout")
+htf_space_htf    = input.int(10,  "Space between higher timeframes", minval=0, maxval=200, group="HTF Candles — Layout", tooltip="For multi-HTF layouts; kept for compatibility")
+vi_show  = input.bool(true, "Show Volume Imbalance", group="HTF Candles — Layout", inline="vi")
+vi_color = input.color(color.new(color.orange, 85), "", group="HTF Candles — Layout", inline="vi")
 
 // --- CE (Consequent Encroachment) midlines for HTF candles and HTF FVGs (all 4 HTFs)
-show_htf_candle_ce   = input.bool(true,         "Show HTF Candle CE", inline="hcce1", group="HTF Candles Layout")
-htf_candle_ce_color  = input.color(color.gray, "",                     inline="hcce1", group="HTF Candles Layout")
-htf_candle_ce_style_s= input.string("Dotted",   "Style",               options=["Line","Dashed","Dotted"], inline="hcce2", group="HTF Candles Layout")
-htf_candle_ce_width  = input.int(1,             "Width",               minval=1, maxval=3, inline="hcce2", group="HTF Candles Layout")
-show_htf_fvg_ce      = input.bool(true,         "Show HTF FVG CE",    inline="hfce1", group="HTF Candles Layout")
-htf_fvg_ce_color     = input.color(color.gray, "",                     inline="hfce1", group="HTF Candles Layout")
-htf_fvg_ce_style_s   = input.string("Dotted",   "Style",               options=["Line","Dashed","Dotted"], inline="hfce2", group="HTF Candles Layout")
-htf_fvg_ce_width     = input.int(1,             "Width",               minval=1, maxval=3, inline="hfce2", group="HTF Candles Layout")
+show_htf_candle_ce   = input.bool(true,         "Show HTF Candle CE", inline="hcce1", group="HTF Candles — Layout")
+htf_candle_ce_color  = input.color(color.gray, "",                     inline="hcce1", group="HTF Candles — Layout")
+htf_candle_ce_style_s= input.string("Dotted",   "Style",               options=["Line","Dashed","Dotted"], inline="hcce2", group="HTF Candles — Layout")
+htf_candle_ce_width  = input.int(1,             "Width",               minval=1, maxval=3, inline="hcce2", group="HTF Candles — Layout")
+show_htf_fvg_ce      = input.bool(true,         "Show HTF FVG CE",    inline="hfce1", group="HTF Candles — Layout")
+htf_fvg_ce_color     = input.color(color.gray, "",                     inline="hfce1", group="HTF Candles — Layout")
+htf_fvg_ce_style_s   = input.string("Dotted",   "Style",               options=["Line","Dashed","Dotted"], inline="hfce2", group="HTF Candles — Layout")
+htf_fvg_ce_width     = input.int(1,             "Width",               minval=1, maxval=3, inline="hfce2", group="HTF Candles — Layout")
 htf_candle_ce_style  = htf_candle_ce_style_s == "Line" ? line.style_solid : htf_candle_ce_style_s == "Dashed" ? line.style_dashed : line.style_dotted
 htf_fvg_ce_style     = htf_fvg_ce_style_s    == "Line" ? line.style_solid : htf_fvg_ce_style_s    == "Dashed" ? line.style_dashed : line.style_dotted
 
@@ -1701,7 +1702,7 @@ cutoff              = input.session("1800-1801", "", inline = "CO", group = g_SE
 var tf_limit_is_equal_or_more_chart_tf = timeframe.in_seconds('') <= timeframe.in_seconds(tf_limit)
 
 var g_KZ            = "Killzones"
-show_kz             = input.bool(true, "Show Killzone Boxes", inline = "KZ", group = g_KZ)
+show_kz             = input.bool(false, "Show Killzone Boxes", inline = "KZ", group = g_KZ)
 show_kz_text        = input.bool(true, "Display Text", inline = "KZ", group = g_KZ)
 
 use_asia            = input.bool(true, "", inline = "ASIA", group = g_KZ)
@@ -2050,7 +2051,7 @@ if show_range and barstate.islast
 // independently toggleable) and draw each as a horizontal line anchored at its pivot
 // bar's time, extending right until session end OR taken out (wick or body close).
 // Lines do NOT carry over to the next day.
-string GRP_SWINGS         = "Session Swings"
+string GRP_SWINGS         = "Swings — Session (1h / 15m)"
 ss_show                   = input.bool(true,  "Show session swings", group=GRP_SWINGS, tooltip="Master toggle. Off = no lines/labels drawn.")
 ss_show_h1                = input.bool(true,  "1h source",   inline="src",  group=GRP_SWINGS, tooltip="Detect swings on the 1-hour timeframe.")
 ss_show_m15               = input.bool(true,  "15m source",  inline="src",  group=GRP_SWINGS, tooltip="Detect swings on the 15-minute timeframe.")
@@ -2071,7 +2072,7 @@ ss_text_pad               = input.int(0, "Label Padding (bars)", minval=-50, max
 ss_line_style             = ss_line_style_s == "dashed" ? line.style_dashed : ss_line_style_s == "dotted" ? line.style_dotted : line.style_solid
 
 // Daily & Previous Day Levels
-string GRP_DAILY = "Daily Levels"
+string GRP_DAILY = "Levels — Daily & Previous Day"
 show_daily_high     = input.bool(true,  "Show Daily High",          inline="dhl",  group=GRP_DAILY)
 show_daily_low      = input.bool(true,  "Show Daily Low",           inline="dhl",  group=GRP_DAILY)
 daily_high_color    = input.color(color.new(color.red, 0), "Daily High Color", inline="dhlc", group=GRP_DAILY)
@@ -2129,7 +2130,7 @@ daily_label_x_offset   = daily_label_pos_in   == "Left" ? -daily_label_padding  
 // | style/color/width, background transparency, and realtime cap. |
 // | Hidden by default — toggle "Show Fair Value Gaps" to enable.  |
 // +---------------------------------------------------------------+
-string GRP_FVG = "Main Chart FVG"
+string GRP_FVG = "FVG — Main Chart"
 show_fvg_main        = input.bool(true, "Show Fair Value Gaps on Main Chart", group=GRP_FVG, inline="fvg_on")
 fvg_max_display      = input.int(9, "Max FVGs on Chart", minval=0, maxval=50, group=GRP_FVG, inline="fvg_on", tooltip="0 = hide all. Max 50. Also uncheck 'Show Fair Value Gaps on Main Chart' to disable entirely.")
 fvg_bull_color_raw   = input.color(color.black, "Bull FVG Fill (base)", inline="fvgfill", group=GRP_FVG)
@@ -2159,7 +2160,7 @@ fvg_bear_border = color.new(fvg_bear_border_raw, fvg_bd_transparency)
 // | Master override to hide every text label the indicator draws, |
 // | plus per-category toggles and color pickers.                  |
 // +---------------------------------------------------------------+
-string GRP_TEXT = "Text & Color Control"
+string GRP_TEXT = "Global Text & Color Control"
 hide_all_labels        = input.bool(false, "Hide ALL Text Labels (master override)", group=GRP_TEXT, tooltip="When on, every text label drawn by this indicator is hidden. Lines, boxes and fills still render.")
 show_session_text      = input.bool(true,  "Show Session Text (duplicate of per-session setting)", group=GRP_TEXT)
 show_daily_text        = input.bool(true,  "Show Daily/PDH/PDL Text (duplicate of per-daily setting)", group=GRP_TEXT)
@@ -2175,7 +2176,7 @@ text_daily_visible   = not hide_all_labels and show_daily_text   and show_daily_
 // and low (SSL), plus the Midnight (00:00 ET) and 8:30 ET opens. Asia/London high-low were dropped because
 // the killzone boxes above already cover those sessions. The 07:00-09:30 high/low come from ny_am_high /
 // ny_am_low computed in the killzones block above (also consumed by the model detection).
-string GRP_SESSIONS = "Session Levels"
+string GRP_SESSIONS = "Levels — NY AM / Midnight / 8:30"
 show_ny_am_range     = input.bool(true, "Show NY AM Range (07:00-09:30 ET) BSL/SSL", group=GRP_SESSIONS)
 ny_am_bsl_color      = input.color(color.new(color.red,   0), "NY AM High (BSL)", inline="nyam", group=GRP_SESSIONS)
 ny_am_ssl_color      = input.color(color.new(color.green, 0), "NY AM Low (SSL)",  inline="nyam", group=GRP_SESSIONS)
@@ -2532,7 +2533,7 @@ else
     cur_day_start_bar := na(cur_day_start_bar) ? bar_index : cur_day_start_bar
 
 // Draw / update current-day high
-if show_daily_high and not na(cur_day_high)
+if show_daily_high and not timeframe.isdaily and not na(cur_day_high)
     if na(dh_line)
         dh_line  := line.new(cur_day_start_bar, cur_day_high, bar_index, cur_day_high, color=daily_high_color, width=daily_line_width, style=daily_line_style)
         dh_label := label.new(bar_index + daily_label_x_offset, cur_day_high, text_daily_visible ? "Daily High" : "", color=color.new(color.white, 100), textcolor=daily_high_color, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
@@ -2541,7 +2542,7 @@ if show_daily_high and not na(cur_day_high)
     label.set_xy(dh_label, bar_index + daily_label_x_offset, cur_day_high)
 
 // Draw / update current-day low
-if show_daily_low and not na(cur_day_low)
+if show_daily_low and not timeframe.isdaily and not na(cur_day_low)
     if na(dl_line)
         dl_line  := line.new(cur_day_start_bar, cur_day_low, bar_index, cur_day_low, color=daily_low_color, width=daily_line_width, style=daily_line_style)
         dl_label := label.new(bar_index + daily_label_x_offset, cur_day_low, text_daily_visible ? "Daily Low" : "", color=color.new(color.white, 100), textcolor=daily_low_color, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
@@ -2550,7 +2551,7 @@ if show_daily_low and not na(cur_day_low)
     label.set_xy(dl_label, bar_index + daily_label_x_offset, cur_day_low)
 
 // Draw / update previous-day high (horizontal, extends to current bar)
-if show_pdh and not na(prev_day_high)
+if show_pdh and not timeframe.isdaily and not na(prev_day_high)
     if na(pdh_line)
         pdh_line  := line.new(prev_day_start_bar, prev_day_high, bar_index, prev_day_high, color=pdh_color, width=daily_line_width, style=daily_line_style)
         pdh_label := label.new(bar_index + daily_label_x_offset, prev_day_high, text_daily_visible ? "PDH" : "", color=color.new(color.white, 100), textcolor=pdh_color, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
@@ -2558,7 +2559,7 @@ if show_pdh and not na(prev_day_high)
     label.set_xy(pdh_label, bar_index + daily_label_x_offset, prev_day_high)
 
 // Draw / update previous-day low
-if show_pdl and not na(prev_day_low)
+if show_pdl and not timeframe.isdaily and not na(prev_day_low)
     if na(pdl_line)
         pdl_line  := line.new(prev_day_start_bar, prev_day_low, bar_index, prev_day_low, color=pdl_color, width=daily_line_width, style=daily_line_style)
         pdl_label := label.new(bar_index + daily_label_x_offset, prev_day_low, text_daily_visible ? "PDL" : "", color=color.new(color.white, 100), textcolor=pdl_color, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
@@ -2630,7 +2631,7 @@ if array.size(main_fvgs) > fvg_max_display or not show_fvg_main
 // open (09:30 ET). Inputs mirror the fadi ORG indicator: open line, close line, C.E., quadrants,
 // backgrounds, fills, labels, trace, and "extend to end of day".
 
-string GRP_ORG = "Opening Range Gap (9:30 AM)"
+string GRP_ORG = "Levels — Opening Range Gap (9:30)"
 org_show_openrange   = input.bool(true,  "Show Open Range Gap",                        group=GRP_ORG, inline="org_on")
 org_hide_above       = input.timeframe("15", "Hide above timeframe",                   group=GRP_ORG, inline="org_on")
 org_max              = input.int(5, "Limit to last X days", minval=1, maxval=100,      group=GRP_ORG)
@@ -2927,7 +2928,7 @@ if orgValidTF() and org_show_openrange
 // Multiple models can be active simultaneously — the info-box renders each row independently.
 
 // ---- Model toggle inputs (kept independent of the info-box toggle so power users can mute one model) ----
-string GRP_MODELS = "Model Detection"
+string GRP_MODELS = "Models — Detection"
 show_model_atm       = input.bool(true,  "Enable ATM Model (1m / 3m / 5m, 9:30-11:00 ET)", group=GRP_MODELS)
 show_model_unicorn5  = input.bool(true,  "Enable Unicorn Model (shows on all TFs except 1m)", group=GRP_MODELS)
 model_poi_tolerance  = input.float(0.05, "POI Proximity % (tap tolerance)", minval=0.0, maxval=5.0, step=0.01, group=GRP_MODELS, tooltip="How close price has to come to a POI level (as % of level price) to count as a 'tap'. Small values = stricter.")
@@ -3101,7 +3102,7 @@ if show_model_atm and (tf_is_1m or tf_is_3m or tf_is_5m)
 // direction (Bullish/Bearish) and the POI/liquidity that was taken. No time
 // window. Does NOT touch the CISD model feed or the ATM model.
 // ============================================================================
-string GRP_UNI = "Unicorn Model (info-box only)"
+string GRP_UNI = "Models — Unicorn"
 uni_swing    = input.int(5,    "Swing Detection (pivot bars)",     minval=1, maxval=50,  group=GRP_UNI, tooltip="Left/right bars for the swing pivots that define structure, sweeps and MSS on each monitored timeframe.")
 uni_lookback = input.int(20,   "Sweep / Breaker Lookback (bars)",  minval=3, maxval=200, group=GRP_UNI, tooltip="How far back a liquidity sweep and its breaker candle may be from the confirming displacement.")
 uni_dispATR  = input.float(0.0,"Min Displacement (ATR x, 0 = off)",minval=0.0, step=0.1, group=GRP_UNI, tooltip="Require the displacement FVG gap to span at least this many ATR(14). 0 disables the size filter.")
@@ -3298,7 +3299,7 @@ alertcondition(uni_anyBear, title="Unicorn Bearish", message="Bearish Unicorn mo
 //+------------------------------------------------------------------------------------------------------------+//
 //+--- Info-box (top-right corner)                                                                          ---+//
 //+------------------------------------------------------------------------------------------------------------+//
-string GRP_INFOBOX = "Info Box"
+string GRP_INFOBOX = "Panel — Top-Right Info Box"
 // (master toggle "Show Top-Right Model Info Box" lives in the top-of-settings Display group)
 infobox_bg            = input.color(color.new(color.black, 20), "Background",       group=GRP_INFOBOX)
 infobox_text_color    = input.color(color.new(color.white, 0),  "Text Color",       group=GRP_INFOBOX)
@@ -3645,7 +3646,7 @@ type hfvg_Helper
     string name = "Helper"
 
 //+--- Settings ---+//
-var hfvg_GRP = "HTF FVG (ICT)"
+var hfvg_GRP = "FVG — Higher-Timeframe (ICT)"
 
 hfvg_Settings          hfvg_settings        = hfvg_Settings.new()
 hfvg_Imbalance_Settings hfvg_HTF_1_Settings = hfvg_Imbalance_Settings.new()
@@ -3960,10 +3961,10 @@ hfvg_FVG_6.AdjustMargins(hfvg_TF_6)
 // MTF trend table and does NOT feed the C2/C3/C4/ATM models (those keep using bull_cisd_confirmed/bear_cisd_confirmed).
 // All identifiers namespaced with `tcisd_`.
 
-var string tcisd_grpVisual = "CISD (tncylyv) — Visual"
+var string tcisd_grpVisual = "CISD (tncylyv) — Lines & Text"
 var string tcisd_grpColors = "CISD (tncylyv) — Colors"
 var string tcisd_grpDebug  = "CISD (tncylyv) — Debug"
-var string tcisd_grpPanel  = "CISD (tncylyv) — HTF Trend Panel"
+var string tcisd_grpPanel  = "Panel — MTF Trend Table (bottom-right)"
 
 tcisd_showActive = input.bool(false, "Show Active CISD Level (Plot)", group=tcisd_grpVisual)
 tcisd_display    = input.string("Both", "Triggered CISD Display", options=["Both", "Bullish Only", "Bearish Only", "None"], group=tcisd_grpVisual)
