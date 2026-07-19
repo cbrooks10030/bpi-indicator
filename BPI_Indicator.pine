@@ -136,7 +136,7 @@ ocLineWidth = input.int(1, "Width", minval=1, maxval=10, group="HTF Candles — 
 stdDevColor       = input.color(color.black, "", group="Models — Standard Deviations", inline="std")
 showStdDev        = input.bool(true, "Std dev", group="Models — Standard Deviations", tooltip='Project standard-deviation targets off the fractal manipulation range (swept swing → CISD reclaim level), in the trade direction.', inline="std")
 stdDevWidth       = input.int(1, " Width", minval=1, maxval=10, group="Models — Standard Deviations", inline="std")
-stdDevCount       = input.int(1, "Deviations to show", minval=1, maxval=3, group="Models — Standard Deviations", tooltip="How many standard-deviation targets to project (1σ, 2σ, 3σ). Only one is shown by default; maximum three.")
+stdDevCount       = input.int(4, "Deviations to show", minval=1, maxval=6, group="Models — Standard Deviations", tooltip="How many standard-deviation targets to project (1σ … 6σ). Four are shown by default; maximum six.")
 stdDevProjBars    = input.int(24, "Projection length (bars)", minval=1, maxval=500, group="Models — Standard Deviations", tooltip="How far to the right the standard-deviation target lines extend.")
 showStdDevLabels  = input.bool(true, "Show Labels", group="Models — Standard Deviations")
 
@@ -3986,7 +3986,7 @@ tcisd_bearColor  = input.color(color.new(color.red, 0), "Bearish CISD", group=tc
 
 tcisd_debug      = input.bool(false, "Debug: Show Extreme Tracking", group=tcisd_grpDebug)
 
-tcisd_showTable  = input.bool(true, "Show Multi-Timeframe Table", group=tcisd_grpPanel)
+tcisd_showTable  = input.bool(false, "Show Multi-Timeframe Table", group=tcisd_grpPanel)
 tcisd_tablePos   = input.string("Bottom Right", "Table Position", options=["Top Right", "Middle Right", "Bottom Right", "Bottom Left"], group=tcisd_grpPanel)
 tcisd_tableSize  = input.string("Small", "Table Size", options=["Tiny", "Small", "Normal", "Large"], group=tcisd_grpPanel)
 
