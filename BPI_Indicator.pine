@@ -628,7 +628,7 @@ if showHTFCandles
         candle.wick_up := line.new(bar_index + 1, candle.h, bar_index, math.max(candle.o, candle.c), color=bull ? bull_wick : bear_wick)
         candle.wick_down := line.new(bar_index + 1, math.min(candle.o, candle.c), bar_index, candle.l, color=bull ? bull_wick : bear_wick)
         if show_htf_candle_ce
-            ce_y = (candle.h + candle.l) / 2.0
+            ce_y = f_logMid(candle.h, candle.l, candle.o, candle.c)
             candle.ce_line := line.new(bar_index, ce_y, bar_index + 2, ce_y, color=htf_candle_ce_color, width=htf_candle_ce_width, style=htf_candle_ce_style)
 
         array.unshift(htfCandles, candle)
@@ -706,7 +706,7 @@ if showHTFCandles
                     line.set_x1(c.wick_down, bar_index + t_buffer + int(math.round(htf_candle_width/2.0)))
                     line.set_x2(c.wick_down, bar_index + t_buffer + int(math.round(htf_candle_width/2.0)))
                     if show_htf_candle_ce
-                        ce_y_i = (c.h + c.l) / 2.0
+                        ce_y_i = f_logMid(c.h, c.l, c.o, c.c)
                         if na(c.ce_line)
                             c.ce_line := line.new(bar_index + t_buffer, ce_y_i, bar_index + t_buffer + htf_candle_width, ce_y_i, color=htf_candle_ce_color, width=htf_candle_ce_width, style=htf_candle_ce_style)
                         else
@@ -915,7 +915,7 @@ f_renderAdditionalHTF(string tf, bool show, array<Candle> cd, array<FVG> fvgs, a
             candle.wick_up   := line.new(bar_index + 1, candle.h, bar_index, math.max(candle.o, candle.c), color=bull ? bull_wick : bear_wick)
             candle.wick_down := line.new(bar_index + 1, math.min(candle.o, candle.c), bar_index, candle.l, color=bull ? bull_wick : bear_wick)
             if show_htf_candle_ce
-                ce_y_h = (candle.h + candle.l) / 2.0
+                ce_y_h = f_logMid(candle.h, candle.l, candle.o, candle.c)
                 candle.ce_line := line.new(bar_index, ce_y_h, bar_index + 2, ce_y_h, color=htf_candle_ce_color, width=htf_candle_ce_width, style=htf_candle_ce_style)
 
             array.unshift(cd, candle)
@@ -985,7 +985,7 @@ f_renderAdditionalHTF(string tf, bool show, array<Candle> cd, array<FVG> fvgs, a
                         line.set_x1(c.wick_down, bar_index + t_buffer + int(math.round(htf_candle_width/2.0)))
                         line.set_x2(c.wick_down, bar_index + t_buffer + int(math.round(htf_candle_width/2.0)))
                         if show_htf_candle_ce
-                            ce_y_hi = (c.h + c.l) / 2.0
+                            ce_y_hi = f_logMid(c.h, c.l, c.o, c.c)
                             if na(c.ce_line)
                                 c.ce_line := line.new(bar_index + t_buffer, ce_y_hi, bar_index + t_buffer + htf_candle_width, ce_y_hi, color=htf_candle_ce_color, width=htf_candle_ce_width, style=htf_candle_ce_style)
                             else
