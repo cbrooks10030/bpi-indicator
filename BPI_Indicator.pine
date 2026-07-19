@@ -377,6 +377,14 @@ var bool  bear_cisd_confirmed = false
 var bool  c2_already_invalidated_bull = false
 var bool  c2_already_invalidated_bear = false
 
+// Per-bar pulses: true only on the bar a real C2 setup is actually created
+// (respecting the bias filter). Drives the Fractal info box's active state so it
+// never goes long/short without a C2 signal.
+var bool  frac_c2_fired_bull = false
+var bool  frac_c2_fired_bear = false
+frac_c2_fired_bull := false
+frac_c2_fired_bear := false
+
 var float periodHigh = high
 var int   periodHighTime = time
 var float periodLow = low
@@ -1454,6 +1462,7 @@ createC2Setup(bool isShort, int setupTime, float setupPrice, float _htfOpen, flo
                 if array.size(oldStd.labels) > 0
                     for lb in oldStd.labels
                         label.delete(lb)
+    shouldCreate
 
 // ---------------------------------------------------------------------------
 // T-Spot trigger (ported from the "Fractal ICT" source)
@@ -1479,10 +1488,10 @@ if period_changed
     bool notEngulf = not (not na(prevH1[1]) and not na(prevL1[1]) and sweptH > prevH1[1] and sweptL < prevL1[1] and sweptC > prevL1[1] and sweptC < prevH1[1])
 
     if prevC2Buy and not na(sweepMid) and sweptC > sweepMid and notEngulf and not c2_already_invalidated_bull
-        createC2Setup(false, prevLowTime, prevLowPrice, sweptC, sweepMid, c2_bull_level, c2_bull_index, 0)
+        frac_c2_fired_bull := createC2Setup(false, prevLowTime, prevLowPrice, sweptC, sweepMid, c2_bull_level, c2_bull_index, 0)
 
     if prevC2Sell and not na(sweepMid) and sweptC < sweepMid and notEngulf and not c2_already_invalidated_bear
-        createC2Setup(true, prevHighTime, prevHighPrice, sweptC, sweepMid, c2_bear_level, c2_bear_index, 0)
+        frac_c2_fired_bear := createC2Setup(true, prevHighTime, prevHighPrice, sweptC, sweepMid, c2_bear_level, c2_bear_index, 0)
 
 if array.size(activeLabels) > 0
     for i = array.size(activeLabels) - 1 to 0
@@ -3226,20 +3235,25 @@ if c2_had_bull_sweep and not c2_had_bull_sweep[1]
     frac_status := 1
     frac_dir    := 2
     frac_swept  := "Swing Low (SSL)"
-    frac_cisd   := "Awaiting +CISD"
+    frac_cisd   := "Awaiting C2"
 if c2_had_bear_sweep and not c2_had_bear_sweep[1]
     frac_status := 1
     frac_dir    := 3
     frac_swept  := "Swing High (BSL)"
-    frac_cisd   := "Awaiting -CISD"
+    frac_cisd   := "Awaiting C2"
 
-// The fractal's own reclaim confirmation upgrades Watching → active.
-if frac_status == 1 and frac_dir == 2 and bull_cisd_confirmed
+// Active ONLY when a real C2 signal fires (a C2 setup is actually created).
+// Without a C2 the box stays Watching / Inactive — never long/short.
+if frac_c2_fired_bull
     frac_status := 2
-    frac_cisd   := "+CISD"
-if frac_status == 1 and frac_dir == 3 and bear_cisd_confirmed
+    frac_dir    := 2
+    frac_swept  := "Swing Low (SSL)"
+    frac_cisd   := "C2 (+CISD)"
+if frac_c2_fired_bear
     frac_status := 3
-    frac_cisd   := "-CISD"
+    frac_dir    := 3
+    frac_swept  := "Swing High (BSL)"
+    frac_cisd   := "C2 (-CISD)"
 
 // Reset when the fractal engine clears the active sweep (invalidation / timeout).
 if frac_dir == 2 and not c2_had_bull_sweep and frac_status > 0
