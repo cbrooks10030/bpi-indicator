@@ -2977,113 +2977,93 @@ f_sweptLow (float lvl, float l) => na(lvl) or na(l) ? false : l < lvl
 // ---- Per-model state ----
 //  status: 0 inactive, 1 watching, 2 long-active, 3 short-active
 //  lastUpdateBar: last bar this model was touched (used for watch persistence).
-//  sweep / sig / target / conf: short strings rendered in info-box sub-rows.
+//  sweep / target: short strings rendered in the info-box sub-rows.
 
 var int    atm_status           = 0
 var int    atm_lastBar          = na
+var int    atm_setupDir         = 0     // 2 = long setup (SSL/discount), 3 = short setup (BSL/premium)
 var string atm_sweep            = ""
-var string atm_sig              = ""
 var string atm_target           = ""
-var string atm_conf             = ""
 
-var int    u5_status            = 0
-var int    u5_lastBar           = na
-var string u5_poi               = ""
-var string u5_brk               = ""
-
-
-// ---- Watch persistence decay: revert to inactive if no recent CISD fire ----
-// NOTE: ATM has its OWN time-window-based reset (9:30-11:00 ET), so it's excluded here.
-if not na(u5_lastBar) and u5_status > 0 and (bar_index - u5_lastBar) > model_watch_bars
-    u5_status := 0
-
-// ---- ATM Model (1m / 3m / 5m, post-9:30 → pre-11:00 ET) ---------------------
-// Setup arms when the bar sweeps ANY ONE liquidity level (wick OR close
-// through both qualify since `f_sweptHigh` only checks `high > level` and
-// `f_sweptLow` only checks `low < level`):
-//   SHORT side: NY AM high, PDH, 4hr SH, 1hr SH, 15m SH
-//   LONG  side: NY AM low,  PDL, 4hr SL, 1hr SL, 15m SL
-// While "Watching", a confirming CISD upgrades to long-active / short-active.
-// At 11:00 ET the model resets to inactive regardless of state.
-//
-// Helper: "did the current bar sweep any level in this array of swing prices?"
-f_sweptAnyHigh(array<float> arr, float h) =>
-    bool any = false
-    if not na(h) and array.size(arr) > 0
-        for i = 0 to array.size(arr) - 1
-            float lvl = array.get(arr, i)
-            if not na(lvl) and h > lvl
-                any := true
-                break
-    any
-f_sweptAnyLow(array<float> arr, float l) =>
-    bool any = false
-    if not na(l) and array.size(arr) > 0
-        for i = 0 to array.size(arr) - 1
-            float lvl = array.get(arr, i)
-            if not na(lvl) and l < lvl
-                any := true
-                break
-    any
+// ---- ATM Model (1m / 3m / 5m, 9:30 → 11:00 ET) ------------------------------
+// Bias is set by the tier: Premium (above the 8:30 open) favors shorts, Discount
+// (at/below 8:30) favors longs; Tier 1 vs 2 is decided by the Midnight open.
+// Setup arms (Watching) on a session-liquidity sweep that agrees with the tier:
+//   SHORT: price sweeps the 07:00-09:30 high (BSL) while in Premium.
+//   LONG : price sweeps the 07:00-09:30 low  (SSL) while in Discount.
+// A confirming CISD in the setup direction upgrades Watching → active. Targets
+// are TP1 = 8:30 open, TP2 = opposite session liquidity. Resets at 11:00 ET.
 
 // 9:30-11:00 ET window detection on the chart timeframe
 atm_window_t  = time(timeframe.period, "0930-1100", "America/New_York")
 bool in_atm_window = not na(atm_window_t)
 
+// Always-on capture of the Midnight (00:00 ET) and 8:30 ET opens for the ATM tier
+// logic, independent of the Session-Levels visual toggles (is_midnight_start /
+// is_830_start are computed unconditionally in the Session Levels block above).
+var float atm_mid_open = na
+var float atm_830_open = na
+if is_midnight_start
+    atm_mid_open := open
+if is_830_start
+    atm_830_open := open
+
+// ATM tier / bias: premium (favor shorts) when price is above the 8:30 open;
+// discount (favor longs) when at/below it. Tier 1 vs 2 by the Midnight open.
+bool atm_above830 = not na(atm_830_open) and close >  atm_830_open
+bool atm_aboveMid = not na(atm_mid_open) and close >  atm_mid_open
+bool atm_haveOpens = not na(atm_830_open) and not na(atm_mid_open)
+string atm_tier = "None"
+if atm_haveOpens
+    if atm_above830 and not atm_aboveMid
+        atm_tier := "Tier 1 Premium"
+    else if atm_above830 and atm_aboveMid
+        atm_tier := "Tier 2 Premium"
+    else if not atm_above830 and atm_aboveMid
+        atm_tier := "Tier 1 Discount"
+    else
+        atm_tier := "Tier 2 Discount"
+bool atm_isPremium  = atm_tier == "Tier 1 Premium"  or atm_tier == "Tier 2 Premium"
+bool atm_isDiscount = atm_tier == "Tier 1 Discount" or atm_tier == "Tier 2 Discount"
+
 if show_model_atm and (tf_is_1m or tf_is_3m or tf_is_5m)
-    // Outside the window: hard-reset model state.
+    // Outside the window: hard-reset model state (clear stale rows too).
     if not in_atm_window and atm_status > 0
-        atm_status  := 0
-        atm_lastBar := na
+        atm_status   := 0
+        atm_lastBar  := na
+        atm_setupDir := 0
+        atm_sweep    := ""
+        atm_target   := ""
 
     if in_atm_window
-        // SHORT side liquidity sweeps
-        bool sweptShort =
-              f_sweptHigh(ny_am_high,    high) or
-              f_sweptHigh(prev_day_high, high) or
-              f_sweptAnyHigh(h4_sh_prices,  high) or
-              f_sweptAnyHigh(h1_sh_prices,  high) or
-              f_sweptAnyHigh(m15_sh_prices, high)
-        // LONG side liquidity sweeps
-        bool sweptLong  =
-              f_sweptLow (ny_am_low,    low ) or
-              f_sweptLow (prev_day_low, low ) or
-              f_sweptAnyLow (h4_sl_prices,  low ) or
-              f_sweptAnyLow (h1_sl_prices,  low ) or
-              f_sweptAnyLow (m15_sl_prices, low )
+        // Core ATM liquidity = the 07:00-09:30 session high (BSL) / low (SSL).
+        bool sweptBSL = f_sweptHigh(ny_am_high, high)
+        bool sweptSSL = f_sweptLow (ny_am_low,  low )
 
-        // Arm "Watching" on any sweep. Repurposed string vars for the new info-box rows:
-        //   atm_sweep → POI hit (label of POIs that were swept)
-        //   atm_sig   → Sweep   (BSL/SSL direction)
-        //   atm_target→ CISD    (+CISD / -CISD / Awaiting)
-        //   atm_conf  → MSS     (Confirmed / —)
-        if sweptShort and atm_status < 2
-            atm_status  := 1
-            atm_lastBar := bar_index
-            atm_sweep   := "NY AM H / PDH / 4h-1h-15m SH"
-            atm_sig     := "BSL"
-            atm_target  := "Awaiting -CISD"
-            atm_conf    := "—"
-        if sweptLong and atm_status < 2
-            atm_status  := 1
-            atm_lastBar := bar_index
-            atm_sweep   := "NY AM L / PDL / 4h-1h-15m SL"
-            atm_sig     := "SSL"
-            atm_target  := "Awaiting +CISD"
-            atm_conf    := "—"
+        // Strict tier gating: a short setup arms only when a BSL sweep happens in
+        // Premium; a long setup only when an SSL sweep happens in Discount.
+        if sweptBSL and atm_isPremium and atm_status < 2
+            atm_status   := 1
+            atm_setupDir := 3
+            atm_lastBar  := bar_index
+            atm_sweep    := "BSL (NY AM High)"
+            atm_target   := "Awaiting -CISD"
+        if sweptSSL and atm_isDiscount and atm_status < 2
+            atm_status   := 1
+            atm_setupDir := 2
+            atm_lastBar  := bar_index
+            atm_sweep    := "SSL (NY AM Low)"
+            atm_target   := "Awaiting +CISD"
 
-        // CISD confirmation upgrades Watching → Active. We treat a CISD inside the ATM
-        // window (after a sweep) as also confirming an MSS — the close-through is a structural shift.
-        if atm_status == 1 and ns_cisd_fired_bull
-            atm_status  := 2
-            atm_lastBar := bar_index
-            atm_target  := "+CISD"
-            atm_conf    := "Confirmed"
-        if atm_status == 1 and ns_cisd_fired_bear
+        // CISD confirmation upgrades Watching → Active, in the setup's direction.
+        if atm_status == 1 and atm_setupDir == 3 and ns_cisd_fired_bear
             atm_status  := 3
             atm_lastBar := bar_index
             atm_target  := "-CISD"
-            atm_conf    := "Confirmed"
+        if atm_status == 1 and atm_setupDir == 2 and ns_cisd_fired_bull
+            atm_status  := 2
+            atm_lastBar := bar_index
+            atm_target  := "+CISD"
 
 // ============================================================================
 // Unicorn Entry Model — INFO-BOX ONLY (multi-timeframe)
@@ -3179,7 +3159,13 @@ uni_detect() =>
     if bear
         hiBar := na
     float px = bull ? loPx : bear ? hiPx : na
-    [bull, bear, px]
+    // Entry = midpoint of the breaker∩FVG overlap (the unicorn zone).
+    float entry = na
+    if bull
+        entry := (math.min(bBrkT, low) + math.max(bBrkB, high[2])) / 2
+    if bear
+        entry := (math.min(sBrkT, high) + math.max(sBrkB, low[2])) / 2
+    [bull, bear, px, entry]
 
 // Nearest absolute distance from px to any element of arr (na if empty).
 f_nearArr(array<float> arr, float px) =>
@@ -3226,57 +3212,70 @@ f_uniPoi(float px, bool bull) =>
     lbl
 
 // ---- Monitor 3m / 5m / 15m / 30m via request.security (info-box only) ----
-[u3_bull,  u3_bear,  u3_px]  = request.security(syminfo.tickerid, "3",  uni_detect(), lookahead=barmerge.lookahead_off)
-[u5_bull,  u5_bear,  u5_px]  = request.security(syminfo.tickerid, "5",  uni_detect(), lookahead=barmerge.lookahead_off)
-[u15_bull, u15_bear, u15_px] = request.security(syminfo.tickerid, "15", uni_detect(), lookahead=barmerge.lookahead_off)
-[u30_bull, u30_bear, u30_px] = request.security(syminfo.tickerid, "30", uni_detect(), lookahead=barmerge.lookahead_off)
+[u3_bull,  u3_bear,  u3_px,  u3_en]  = request.security(syminfo.tickerid, "3",  uni_detect(), lookahead=barmerge.lookahead_off)
+[u5_bull,  u5_bear,  u5_px,  u5_en]  = request.security(syminfo.tickerid, "5",  uni_detect(), lookahead=barmerge.lookahead_off)
+[u15_bull, u15_bear, u15_px, u15_en] = request.security(syminfo.tickerid, "15", uni_detect(), lookahead=barmerge.lookahead_off)
+[u30_bull, u30_bear, u30_px, u30_en] = request.security(syminfo.tickerid, "30", uni_detect(), lookahead=barmerge.lookahead_off)
 
 // Latched per-TF state for the info box (dir: 0 none / 2 bull / 3 bear).
+// up* = named POI taken; um* = entry price (breaker∩FVG midpoint).
 var int    ud3 = 0
 var string up3 = ""
+var float  um3 = na
 var int    ub3 = na
 var int    ud5 = 0
 var string up5 = ""
+var float  um5 = na
 var int    ub5 = na
 var int    ud15 = 0
 var string up15 = ""
+var float  um15 = na
 var int    ub15 = na
 var int    ud30 = 0
 var string up30 = ""
+var float  um30 = na
 var int    ub30 = na
 
 if show_model_unicorn5
     if u3_bull
         ud3 := 2
         up3 := f_uniPoi(u3_px, true)
+        um3 := u3_en
         ub3 := bar_index
     else if u3_bear
         ud3 := 3
         up3 := f_uniPoi(u3_px, false)
+        um3 := u3_en
         ub3 := bar_index
     if u5_bull
         ud5 := 2
         up5 := f_uniPoi(u5_px, true)
+        um5 := u5_en
         ub5 := bar_index
     else if u5_bear
         ud5 := 3
         up5 := f_uniPoi(u5_px, false)
+        um5 := u5_en
         ub5 := bar_index
     if u15_bull
         ud15 := 2
         up15 := f_uniPoi(u15_px, true)
+        um15 := u15_en
         ub15 := bar_index
     else if u15_bear
         ud15 := 3
         up15 := f_uniPoi(u15_px, false)
+        um15 := u15_en
         ub15 := bar_index
     if u30_bull
         ud30 := 2
         up30 := f_uniPoi(u30_px, true)
+        um30 := u30_en
         ub30 := bar_index
     else if u30_bear
         ud30 := 3
         up30 := f_uniPoi(u30_px, false)
+        um30 := u30_en
         ub30 := bar_index
 
 // Decay each TF back to inactive after watch persistence.
@@ -3342,26 +3341,35 @@ if show_top_infobox and barstate.islast
     color  c5  = f_modelColor(ud5,  infobox_text_color)
     color  c15 = f_modelColor(ud15, infobox_text_color)
     color  c30 = f_modelColor(ud30, infobox_text_color)
-    string t3  = ud3  == 2 ? "▲ Bull · " + up3  : ud3  == 3 ? "▼ Bear · " + up3  : "—"
-    string t5  = ud5  == 2 ? "▲ Bull · " + up5  : ud5  == 3 ? "▼ Bear · " + up5  : "—"
-    string t15 = ud15 == 2 ? "▲ Bull · " + up15 : ud15 == 3 ? "▼ Bear · " + up15 : "—"
-    string t30 = ud30 == 2 ? "▲ Bull · " + up30 : ud30 == 3 ? "▼ Bear · " + up30 : "—"
+    // Unicorn per-TF text: direction · POI taken · entry (breaker∩FVG midpoint).
+    string e3  = na(um3)  ? "" : " @" + str.tostring(math.round_to_mintick(um3))
+    string e5  = na(um5)  ? "" : " @" + str.tostring(math.round_to_mintick(um5))
+    string e15 = na(um15) ? "" : " @" + str.tostring(math.round_to_mintick(um15))
+    string e30 = na(um30) ? "" : " @" + str.tostring(math.round_to_mintick(um30))
+    string t3  = ud3  == 2 ? "▲ Bull · " + up3  + e3  : ud3  == 3 ? "▼ Bear · " + up3  + e3  : "—"
+    string t5  = ud5  == 2 ? "▲ Bull · " + up5  + e5  : ud5  == 3 ? "▼ Bear · " + up5  + e5  : "—"
+    string t15 = ud15 == 2 ? "▲ Bull · " + up15 + e15 : ud15 == 3 ? "▼ Bear · " + up15 + e15 : "—"
+    string t30 = ud30 == 2 ? "▲ Bull · " + up30 + e30 : ud30 == 3 ? "▼ Bear · " + up30 + e30 : "—"
+
+    // ATM detail-row text
+    string atm_tierTxt = atm_tier == "None" ? "—" : atm_tier
+    string atm_tpTxt   = atm_status == 3 ? "8:30 → SSL" : atm_status == 2 ? "8:30 → BSL" : "—"
 
     // Header (compact: ticker only, drop the timeframe to narrow column 0)
     table.cell(infoTbl, 0, 0, syminfo.ticker, text_color=infobox_header_color, text_size=szRes, text_font_family=font.family_monospace, bgcolor=color.new(color.black, 0))
     table.cell(infoTbl, 1, 0, "BPI Models",  text_color=infobox_header_color, text_size=szRes, text_font_family=font.family_monospace, bgcolor=color.new(color.black, 0))
 
-    // ---- ATM section: status + POI hit / Sweep / CISD / MSS ----
+    // ---- ATM section: status + Tier/Bias / Swept / CISD / Target ----
     table.cell(infoTbl, 0, 1, "ATM",  text_color=cAtmH, text_size=szRes, text_font_family=font.family_monospace)
     table.cell(infoTbl, 1, 1, f_statusDot(atm_status) + " " + f_statusText(atm_status), text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
-    table.cell(infoTbl, 0, 2, "  POI",  text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
-    table.cell(infoTbl, 1, 2, atm_sweep  == "" ? "—" : atm_sweep,  text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
-    table.cell(infoTbl, 0, 3, "  Swp",  text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
-    table.cell(infoTbl, 1, 3, atm_sig    == "" ? "—" : atm_sig,    text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
+    table.cell(infoTbl, 0, 2, "  Tier",  text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
+    table.cell(infoTbl, 1, 2, atm_tierTxt, text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
+    table.cell(infoTbl, 0, 3, "  Swept", text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
+    table.cell(infoTbl, 1, 3, atm_sweep  == "" ? "—" : atm_sweep,  text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
     table.cell(infoTbl, 0, 4, "  CISD", text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
     table.cell(infoTbl, 1, 4, atm_target == "" ? "—" : atm_target, text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
-    table.cell(infoTbl, 0, 5, "  MSS",  text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
-    table.cell(infoTbl, 1, 5, atm_conf   == "" ? "—" : atm_conf,   text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
+    table.cell(infoTbl, 0, 5, "  Target", text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
+    table.cell(infoTbl, 1, 5, atm_tpTxt, text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
 
     // ---- Unicorn section (multi-TF; info-box only, reads on any chart TF) ----
     table.cell(infoTbl, 0, 6, "Unicorn", text_color=cUniH, text_size=szRes, text_font_family=font.family_monospace)
@@ -3961,9 +3969,9 @@ hfvg_FVG_6.AdjustMargins(hfvg_TF_6)
 // MTF trend table and does NOT feed the C2/C3/C4/ATM models (those keep using bull_cisd_confirmed/bear_cisd_confirmed).
 // All identifiers namespaced with `tcisd_`.
 
-var string tcisd_grpVisual = "CISD (tncylyv) — Lines & Text"
-var string tcisd_grpColors = "CISD (tncylyv) — Colors"
-var string tcisd_grpDebug  = "CISD (tncylyv) — Debug"
+var string tcisd_grpVisual = "CISD (MTF) — Lines & Text"
+var string tcisd_grpColors = "CISD (MTF) — Colors"
+var string tcisd_grpDebug  = "CISD (MTF) — Debug"
 var string tcisd_grpPanel  = "Panel — MTF Trend Table (bottom-right)"
 
 tcisd_showActive = input.bool(false, "Show Active CISD Level (Plot)", group=tcisd_grpVisual)
