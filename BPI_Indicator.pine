@@ -3971,7 +3971,8 @@ tcisd_display    = input.string("Both", "Triggered CISD Display", options=["Both
 tcisd_limitHist  = input.bool(true, "Limit Displayed Historical Lines", group=tcisd_grpVisual)
 tcisd_maxLines   = input.int(2, "Max Lines to Show", minval=1, maxval=10, group=tcisd_grpVisual)
 tcisd_extend     = input.int(0, "Extend Lines (Bars)", minval=0, group=tcisd_grpVisual, tooltip="0 = Boring normal length. >0 = Stretch that stuff into the future.")
-tcisd_showLabels = input.bool(true, "Show Labels", group=tcisd_grpVisual)
+tcisd_showLabels_in = input.bool(true, "Show Labels", group=tcisd_grpVisual, tooltip="CISD labels are automatically hidden on the Daily timeframe (line still shows).")
+tcisd_showLabels    = tcisd_showLabels_in and not timeframe.isdaily
 tcisd_labelPos   = input.string("Center", "Label Position", options=["Left", "Center", "Right"], group=tcisd_grpVisual)
 tcisd_lineWidth  = input.int(2, "Line Width", minval=1, group=tcisd_grpVisual)
 tcisd_labelSize  = input.string(size.small, "Label Size", options=[size.tiny, size.small, size.normal, size.large], group=tcisd_grpVisual)
@@ -4153,8 +4154,9 @@ plot(tcisd_showActive ? tcisd_entry : na, "Active CISD", color=tcisd_activeCrayo
 
 if tcisd_showActive and not na(tcisd_entry)
     label.delete(tcisd_sticky)
-    string status_msg = tcisd_vibes == 1 ? "+Active CISD" : "-Active CISD"
-    tcisd_sticky := label.new(bar_index, tcisd_entry, status_msg, color=color.new(tcisd_activeCrayon, 100), textcolor=tcisd_activeCrayon, style=label.style_label_left, size=size.small, text_font_family=tcisd_fontFamily)
+    if not timeframe.isdaily
+        string status_msg = tcisd_vibes == 1 ? "+Active CISD" : "-Active CISD"
+        tcisd_sticky := label.new(bar_index, tcisd_entry, status_msg, color=color.new(tcisd_activeCrayon, 100), textcolor=tcisd_activeCrayon, style=label.style_label_left, size=size.small, text_font_family=tcisd_fontFamily)
 
 int tcisd_hoardingLimit = tcisd_limitHist ? tcisd_maxLines : 450
 
