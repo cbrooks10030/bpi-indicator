@@ -2974,6 +2974,146 @@ f_touchedAnyBox(array<box> arr, float lo, float hi) =>
 f_sweptHigh(float lvl, float h) => na(lvl) or na(h) ? false : h > lvl
 f_sweptLow (float lvl, float l) => na(lvl) or na(l) ? false : l < lvl
 
+// ---- Chart-TF CISD trigger detection ----------------------------------------
+// Computes the same +CISD / -CISD trigger the CISD (MTF) visual renders at the
+// end of the script, but early enough that the ATM model can confirm on the
+// exact event the customer sees on the chart. The label/line drawing stays in
+// the CISD (MTF) section below and consumes the captured payload here.
+//   tcisd_shortsSqueezed = bullish CISD (+CISD)   tcisd_longsRekt = bearish CISD (-CISD)
+var int   tcisd_vibes   = 0
+var float tcisd_entry   = na
+var int   tcisd_timeSet = na
+var float tcisd_pain    = na
+var label tcisd_sticky  = na
+var array<line>  tcisd_lines  = array.new<line>()
+var array<label> tcisd_labels = array.new<label>()
+
+tcisd_crystalBall(int bias) =>
+    int temporal_shift = 0
+    float extreme = open[0]
+    int candle_attitude = close[0] > open[0] ? 1 : close[0] < open[0] ? -1 : 0
+    if candle_attitude == 0 or candle_attitude != bias
+        [extreme, bar_index]
+    for i = 1 to 500
+        candle_attitude := close[i] > open[i] ? 1 : close[i] < open[i] ? -1 : 0
+        if candle_attitude == 0
+            continue
+        bool mood_match = candle_attitude == bias
+        if not mood_match
+            break
+        temporal_shift := i
+        if bias == 1
+            if open[i] < extreme
+                extreme := open[i]
+        else
+            if open[i] > extreme
+                extreme := open[i]
+    int extreme_shift = na
+    for k = 0 to temporal_shift
+        if open[k] == extreme
+            extreme_shift := k
+            break
+    [extreme, bar_index - extreme_shift]
+
+tcisd_archaeologist(int bias) =>
+    int i = 1
+    bool artifact_found = false
+    int max_shift = na
+    float extreme = na
+    for j = 1 to 500
+        i := j
+        int candle_attitude = close[i] > open[i] ? 1 : close[i] < open[i] ? -1 : 0
+        if candle_attitude == 0
+            continue
+        bool is_correct_era = candle_attitude == bias
+        if not artifact_found
+            if is_correct_era
+                artifact_found := true
+                max_shift := i
+                extreme := open[i]
+        else
+            if not is_correct_era
+                break
+            max_shift := i
+            if bias == 1
+                if open[i] < extreme
+                    extreme := open[i]
+            else
+                if open[i] > extreme
+                    extreme := open[i]
+    int extreme_shift = na
+    for k = 1 to max_shift
+        if open[k] == extreme
+            extreme_shift := k
+            break
+    [extreme, bar_index - extreme_shift]
+
+if tcisd_vibes == 0 and bar_index > 10
+    int first_impression = close > open ? 1 : close < open ? -1 : 0
+    if first_impression == 0
+        for k = 1 to 50
+            first_impression := close[k] > open[k] ? 1 : close[k] < open[k] ? -1 : 0
+            if first_impression != 0
+                break
+    if first_impression != 0
+        tcisd_vibes := first_impression
+        [origin_price, origin_time] = tcisd_crystalBall(first_impression)
+        tcisd_entry   := origin_price
+        tcisd_timeSet := origin_time
+        tcisd_pain    := first_impression == 1 ? high : low
+
+int   tcisd_candlePersonality = close > open ? 1 : close < open ? -1 : 0
+float tcisd_freshHopium = na
+int   tcisd_freshTimestamp = na
+
+if tcisd_vibes == 1
+    if high > tcisd_pain
+        tcisd_pain := high
+        if tcisd_candlePersonality == 1
+            [p_price, p_idx] = tcisd_crystalBall(1)
+            tcisd_freshHopium := p_price
+            tcisd_freshTimestamp := p_idx
+        else
+            [p_price, p_idx] = tcisd_archaeologist(1)
+            tcisd_freshHopium := p_price
+            tcisd_freshTimestamp := p_idx
+        tcisd_entry   := tcisd_freshHopium
+        tcisd_timeSet := tcisd_freshTimestamp
+else if tcisd_vibes == -1
+    if low < tcisd_pain
+        tcisd_pain := low
+        if tcisd_candlePersonality == -1
+            [p_price, p_idx] = tcisd_crystalBall(-1)
+            tcisd_freshHopium := p_price
+            tcisd_freshTimestamp := p_idx
+        else
+            [p_price, p_idx] = tcisd_archaeologist(-1)
+            tcisd_freshHopium := p_price
+            tcisd_freshTimestamp := p_idx
+        tcisd_entry   := tcisd_freshHopium
+        tcisd_timeSet := tcisd_freshTimestamp
+
+bool tcisd_shortsSqueezed = tcisd_vibes == -1 and close > tcisd_entry
+bool tcisd_longsRekt      = tcisd_vibes == 1  and close < tcisd_entry
+
+// Capture the fire payload for the CISD (MTF) visual (drawn later), then flip state.
+var bool  tcisd_fire      = false
+var bool  tcisd_fireBull  = false
+var float tcisd_firePrice = na
+var int   tcisd_fireTime  = na
+tcisd_fire := false
+if tcisd_shortsSqueezed or tcisd_longsRekt
+    tcisd_fire      := true
+    tcisd_fireBull  := tcisd_shortsSqueezed
+    tcisd_firePrice := tcisd_entry
+    tcisd_fireTime  := tcisd_timeSet
+    int new_emotional_state = tcisd_shortsSqueezed ? 1 : -1
+    tcisd_vibes := new_emotional_state
+    [reset_price, reset_time] = tcisd_crystalBall(new_emotional_state)
+    tcisd_entry   := reset_price
+    tcisd_timeSet := reset_time
+    tcisd_pain    := new_emotional_state == 1 ? high : low
+
 // ---- Per-model state ----
 //  status: 0 inactive, 1 watching, 2 long-active, 3 short-active
 //  lastUpdateBar: last bar this model was touched (used for watch persistence).
@@ -3056,11 +3196,12 @@ if show_model_atm and (tf_is_1m or tf_is_3m or tf_is_5m)
             atm_target   := "Awaiting +CISD"
 
         // CISD confirmation upgrades Watching → Active, in the setup's direction.
-        if atm_status == 1 and atm_setupDir == 3 and ns_cisd_fired_bear
+        // Uses the same chart-TF CISD trigger that prints the +CISD / -CISD labels.
+        if atm_status == 1 and atm_setupDir == 3 and tcisd_longsRekt
             atm_status  := 3
             atm_lastBar := bar_index
             atm_target  := "-CISD"
-        if atm_status == 1 and atm_setupDir == 2 and ns_cisd_fired_bull
+        if atm_status == 1 and atm_setupDir == 2 and tcisd_shortsSqueezed
             atm_status  := 2
             atm_lastBar := bar_index
             atm_target  := "+CISD"
@@ -3987,8 +4128,9 @@ hfvg_FVG_6.AdjustMargins(hfvg_TF_6)
 //+--- CISD by tncylyv  (Change In State of Delivery)                                                       ---+//
 //+------------------------------------------------------------------------------------------------------------+//
 // Visual port (behavior-preserving) of the standalone "CISD by tncylyv" indicator. Replaces the host script's
-// old on-chart CISD lines/labels (now disabled via `cisd_old_visual`). This is a self-contained visual +
-// MTF trend table and does NOT feed the C2/C3/C4/ATM models (those keep using bull_cisd_confirmed/bear_cisd_confirmed).
+// old on-chart CISD lines/labels (now disabled via `cisd_old_visual`). The +CISD / -CISD trigger detection is
+// computed earlier in the script (see "Chart-TF CISD trigger detection") so the ATM model confirms on the exact
+// same event drawn here; the C2/C3/C4 fractal engine still uses bull_cisd_confirmed/bear_cisd_confirmed.
 // All identifiers namespaced with `tcisd_`.
 
 var string tcisd_grpVisual = "CISD (MTF) — Lines & Text"
@@ -4030,153 +4172,33 @@ tcisd_decodeStyle(outfit) =>
 
 tcisd_chosenStyle = tcisd_decodeStyle(tcisd_lineStyle)
 
-var int   tcisd_vibes   = 0
-var float tcisd_entry   = na
-var int   tcisd_timeSet = na
-var float tcisd_pain    = na
-var label tcisd_sticky  = na
-var array<line>  tcisd_lines  = array.new<line>()
-var array<label> tcisd_labels = array.new<label>()
-
-tcisd_crystalBall(int bias) =>
-    int temporal_shift = 0
-    float extreme = open[0]
-    int candle_attitude = close[0] > open[0] ? 1 : close[0] < open[0] ? -1 : 0
-    if candle_attitude == 0 or candle_attitude != bias
-        [extreme, bar_index]
-    for i = 1 to 500
-        candle_attitude := close[i] > open[i] ? 1 : close[i] < open[i] ? -1 : 0
-        if candle_attitude == 0
-            continue
-        bool mood_match = candle_attitude == bias
-        if not mood_match
-            break
-        temporal_shift := i
-        if bias == 1
-            if open[i] < extreme
-                extreme := open[i]
-        else
-            if open[i] > extreme
-                extreme := open[i]
-    int extreme_shift = na
-    for k = 0 to temporal_shift
-        if open[k] == extreme
-            extreme_shift := k
-            break
-    [extreme, bar_index - extreme_shift]
-
-tcisd_archaeologist(int bias) =>
-    int i = 1
-    bool artifact_found = false
-    int max_shift = na
-    float extreme = na
-    for j = 1 to 500
-        i := j
-        int candle_attitude = close[i] > open[i] ? 1 : close[i] < open[i] ? -1 : 0
-        if candle_attitude == 0
-            continue
-        bool is_correct_era = candle_attitude == bias
-        if not artifact_found
-            if is_correct_era
-                artifact_found := true
-                max_shift := i
-                extreme := open[i]
-        else
-            if not is_correct_era
-                break
-            max_shift := i
-            if bias == 1
-                if open[i] < extreme
-                    extreme := open[i]
-            else
-                if open[i] > extreme
-                    extreme := open[i]
-    int extreme_shift = na
-    for k = 1 to max_shift
-        if open[k] == extreme
-            extreme_shift := k
-            break
-    [extreme, bar_index - extreme_shift]
-
-if tcisd_vibes == 0 and bar_index > 10
-    int first_impression = close > open ? 1 : close < open ? -1 : 0
-    if first_impression == 0
-        for k = 1 to 50
-            first_impression := close[k] > open[k] ? 1 : close[k] < open[k] ? -1 : 0
-            if first_impression != 0
-                break
-    if first_impression != 0
-        tcisd_vibes := first_impression
-        [origin_price, origin_time] = tcisd_crystalBall(first_impression)
-        tcisd_entry   := origin_price
-        tcisd_timeSet := origin_time
-        tcisd_pain    := first_impression == 1 ? high : low
-
-int   tcisd_candlePersonality = close > open ? 1 : close < open ? -1 : 0
-float tcisd_freshHopium = na
-int   tcisd_freshTimestamp = na
-
-if tcisd_vibes == 1
-    if high > tcisd_pain
-        tcisd_pain := high
-        if tcisd_candlePersonality == 1
-            [p_price, p_idx] = tcisd_crystalBall(1)
-            tcisd_freshHopium := p_price
-            tcisd_freshTimestamp := p_idx
-        else
-            [p_price, p_idx] = tcisd_archaeologist(1)
-            tcisd_freshHopium := p_price
-            tcisd_freshTimestamp := p_idx
-        tcisd_entry   := tcisd_freshHopium
-        tcisd_timeSet := tcisd_freshTimestamp
-else if tcisd_vibes == -1
-    if low < tcisd_pain
-        tcisd_pain := low
-        if tcisd_candlePersonality == -1
-            [p_price, p_idx] = tcisd_crystalBall(-1)
-            tcisd_freshHopium := p_price
-            tcisd_freshTimestamp := p_idx
-        else
-            [p_price, p_idx] = tcisd_archaeologist(-1)
-            tcisd_freshHopium := p_price
-            tcisd_freshTimestamp := p_idx
-        tcisd_entry   := tcisd_freshHopium
-        tcisd_timeSet := tcisd_freshTimestamp
-
-bool tcisd_shortsSqueezed = tcisd_vibes == -1 and close > tcisd_entry
-bool tcisd_longsRekt      = tcisd_vibes == 1  and close < tcisd_entry
-
-if tcisd_shortsSqueezed or tcisd_longsRekt
+// Detection/state (tcisd_vibes, functions, triggers) is computed earlier in the
+// script so the ATM model can confirm on the same event. Here we only render the
+// triggered CISD line/label from the captured fire payload.
+if tcisd_fire
     bool should_i_paint_it = false
     if tcisd_display == "Both"
         should_i_paint_it := true
     else if tcisd_display == "Bullish Only"
-        should_i_paint_it := tcisd_shortsSqueezed
+        should_i_paint_it := tcisd_fireBull
     else if tcisd_display == "Bearish Only"
-        should_i_paint_it := tcisd_longsRekt
+        should_i_paint_it := not tcisd_fireBull
     if should_i_paint_it
-        color mood_ring = tcisd_shortsSqueezed ? tcisd_bullColor : tcisd_bearColor
-        line tragedy_line = line.new(tcisd_timeSet, tcisd_entry, bar_index + tcisd_extend, tcisd_entry, color=mood_ring, width=tcisd_lineWidth, style=tcisd_chosenStyle)
+        color mood_ring = tcisd_fireBull ? tcisd_bullColor : tcisd_bearColor
+        line tragedy_line = line.new(tcisd_fireTime, tcisd_firePrice, bar_index + tcisd_extend, tcisd_firePrice, color=mood_ring, width=tcisd_lineWidth, style=tcisd_chosenStyle)
         array.push(tcisd_lines, tragedy_line)
-        label loud_noise = na
         if tcisd_showLabels
             int soapbox_location = na
             if tcisd_labelPos == "Left"
-                soapbox_location := tcisd_timeSet
+                soapbox_location := tcisd_fireTime
             else if tcisd_labelPos == "Right"
                 soapbox_location := bar_index + tcisd_extend
             else
-                soapbox_location := math.round((tcisd_timeSet + bar_index + tcisd_extend) / 2)
-            string gibberish = tcisd_shortsSqueezed ? tcisd_bullText : tcisd_bearText
-            color ink_color = tcisd_shortsSqueezed ? tcisd_bullColor : tcisd_bearColor
-            loud_noise := label.new(soapbox_location, tcisd_entry, gibberish, style=tcisd_shortsSqueezed ? label.style_label_down : label.style_label_up, color=color.new(#000000, 100), textcolor=ink_color, size=tcisd_labelSize, text_font_family=tcisd_fontFamily)
+                soapbox_location := math.round((tcisd_fireTime + bar_index + tcisd_extend) / 2)
+            string gibberish = tcisd_fireBull ? tcisd_bullText : tcisd_bearText
+            color ink_color = tcisd_fireBull ? tcisd_bullColor : tcisd_bearColor
+            label loud_noise = label.new(soapbox_location, tcisd_firePrice, gibberish, style=tcisd_fireBull ? label.style_label_down : label.style_label_up, color=color.new(#000000, 100), textcolor=ink_color, size=tcisd_labelSize, text_font_family=tcisd_fontFamily)
             array.push(tcisd_labels, loud_noise)
-    int new_emotional_state = tcisd_shortsSqueezed ? 1 : -1
-    tcisd_vibes := new_emotional_state
-    [reset_price, reset_time] = tcisd_crystalBall(new_emotional_state)
-    tcisd_entry   := reset_price
-    tcisd_timeSet := reset_time
-    tcisd_pain    := new_emotional_state == 1 ? high : low
 
 color tcisd_activeCrayon = tcisd_vibes == 1 ? tcisd_bullColor : tcisd_bearColor
 
