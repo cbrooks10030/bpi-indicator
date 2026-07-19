@@ -3211,6 +3211,12 @@ f_uniPoi(float px, bool bull) =>
             lbl := bull ? "SSL" : "BSL"
     lbl
 
+// Premium/Discount alignment tag for a unicorn, based on the chart-TF tier at the
+// time it fired. A bullish unicorn is "aligned" in Discount, a bearish one in
+// Premium; a counter-bias unicorn is flagged with "!".
+f_uniBias(bool bull, bool prem, bool disc) =>
+    prem ? (bull ? "Prem!" : "Prem") : disc ? (bull ? "Disc" : "Disc!") : ""
+
 // ---- Monitor 3m / 5m / 15m / 30m via request.security (info-box only) ----
 [u3_bull,  u3_bear,  u3_px,  u3_en]  = request.security(syminfo.tickerid, "3",  uni_detect(), lookahead=barmerge.lookahead_off)
 [u5_bull,  u5_bear,  u5_px,  u5_en]  = request.security(syminfo.tickerid, "5",  uni_detect(), lookahead=barmerge.lookahead_off)
@@ -3222,18 +3228,22 @@ f_uniPoi(float px, bool bull) =>
 var int    ud3 = 0
 var string up3 = ""
 var float  um3 = na
+var string ug3 = ""
 var int    ub3 = na
 var int    ud5 = 0
 var string up5 = ""
 var float  um5 = na
+var string ug5 = ""
 var int    ub5 = na
 var int    ud15 = 0
 var string up15 = ""
 var float  um15 = na
+var string ug15 = ""
 var int    ub15 = na
 var int    ud30 = 0
 var string up30 = ""
 var float  um30 = na
+var string ug30 = ""
 var int    ub30 = na
 
 if show_model_unicorn5
@@ -3241,41 +3251,49 @@ if show_model_unicorn5
         ud3 := 2
         up3 := f_uniPoi(u3_px, true)
         um3 := u3_en
+        ug3 := f_uniBias(true, atm_isPremium, atm_isDiscount)
         ub3 := bar_index
     else if u3_bear
         ud3 := 3
         up3 := f_uniPoi(u3_px, false)
         um3 := u3_en
+        ug3 := f_uniBias(false, atm_isPremium, atm_isDiscount)
         ub3 := bar_index
     if u5_bull
         ud5 := 2
         up5 := f_uniPoi(u5_px, true)
         um5 := u5_en
+        ug5 := f_uniBias(true, atm_isPremium, atm_isDiscount)
         ub5 := bar_index
     else if u5_bear
         ud5 := 3
         up5 := f_uniPoi(u5_px, false)
         um5 := u5_en
+        ug5 := f_uniBias(false, atm_isPremium, atm_isDiscount)
         ub5 := bar_index
     if u15_bull
         ud15 := 2
         up15 := f_uniPoi(u15_px, true)
         um15 := u15_en
+        ug15 := f_uniBias(true, atm_isPremium, atm_isDiscount)
         ub15 := bar_index
     else if u15_bear
         ud15 := 3
         up15 := f_uniPoi(u15_px, false)
         um15 := u15_en
+        ug15 := f_uniBias(false, atm_isPremium, atm_isDiscount)
         ub15 := bar_index
     if u30_bull
         ud30 := 2
         up30 := f_uniPoi(u30_px, true)
         um30 := u30_en
+        ug30 := f_uniBias(true, atm_isPremium, atm_isDiscount)
         ub30 := bar_index
     else if u30_bear
         ud30 := 3
         up30 := f_uniPoi(u30_px, false)
         um30 := u30_en
+        ug30 := f_uniBias(false, atm_isPremium, atm_isDiscount)
         ub30 := bar_index
 
 // Decay each TF back to inactive after watch persistence.
@@ -3346,10 +3364,14 @@ if show_top_infobox and barstate.islast
     string e5  = na(um5)  ? "" : " @" + str.tostring(math.round_to_mintick(um5))
     string e15 = na(um15) ? "" : " @" + str.tostring(math.round_to_mintick(um15))
     string e30 = na(um30) ? "" : " @" + str.tostring(math.round_to_mintick(um30))
-    string t3  = ud3  == 2 ? "▲ Bull · " + up3  + e3  : ud3  == 3 ? "▼ Bear · " + up3  + e3  : "—"
-    string t5  = ud5  == 2 ? "▲ Bull · " + up5  + e5  : ud5  == 3 ? "▼ Bear · " + up5  + e5  : "—"
-    string t15 = ud15 == 2 ? "▲ Bull · " + up15 + e15 : ud15 == 3 ? "▼ Bear · " + up15 + e15 : "—"
-    string t30 = ud30 == 2 ? "▲ Bull · " + up30 + e30 : ud30 == 3 ? "▼ Bear · " + up30 + e30 : "—"
+    string g3  = ug3  == "" ? "" : " · " + ug3
+    string g5  = ug5  == "" ? "" : " · " + ug5
+    string g15 = ug15 == "" ? "" : " · " + ug15
+    string g30 = ug30 == "" ? "" : " · " + ug30
+    string t3  = ud3  == 2 ? "▲ Bull · " + up3  + e3  + g3  : ud3  == 3 ? "▼ Bear · " + up3  + e3  + g3  : "—"
+    string t5  = ud5  == 2 ? "▲ Bull · " + up5  + e5  + g5  : ud5  == 3 ? "▼ Bear · " + up5  + e5  + g5  : "—"
+    string t15 = ud15 == 2 ? "▲ Bull · " + up15 + e15 + g15 : ud15 == 3 ? "▼ Bear · " + up15 + e15 + g15 : "—"
+    string t30 = ud30 == 2 ? "▲ Bull · " + up30 + e30 + g30 : ud30 == 3 ? "▼ Bear · " + up30 + e30 + g30 : "—"
 
     // ATM detail-row text
     string atm_tierTxt = atm_tier == "None" ? "—" : atm_tier
