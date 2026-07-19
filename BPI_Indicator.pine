@@ -12,12 +12,16 @@ indicator("BPI Indicator", shorttitle = "BPI", overlay = true, max_bars_back = 5
 
 
 // === MASTER DISPLAY TOGGLES (always shown at top of Settings for easy access) ===
-string GRP_DISPLAY = "Display"
+string GRP_DISPLAY = "General"
 use_light_theme   = input.bool(false, "Use Light Theme (White Background)", group=GRP_DISPLAY, tooltip="Toggle between dark theme (black background) and light theme (white background). Light theme: green/red candles, black lines, black text.")
-show_top_infobox  = input.bool(true, "Show Top-Right Model Info Box", group=GRP_DISPLAY, tooltip="Master toggle for the top-right BPI Models info box (ATM, Unicorn 1m, Unicorn 5m, Fractal).")
+// Box on/off toggles — grouped at the very top of Settings for quick access.
+string GRP_PANELS = "Panels — Show / Hide Boxes"
+show_top_infobox  = input.bool(true,  "Show Top-Right Info Box (ATM + Unicorn)", group=GRP_PANELS, tooltip="Master toggle for the top-right BPI Models info box (ATM + Unicorn).")
+show_fractal_box  = input.bool(true,  "Show Bottom-Right Fractal Info Box",      group=GRP_PANELS, tooltip="Master toggle for the bottom-right Fractal model info box (premium/discount tier, swept swing, CISD confirmation, bias).")
+tcisd_showTable   = input.bool(false, "Show Bottom-Right MTF Trend Table",       group=GRP_PANELS, tooltip="Multi-timeframe CISD trend table in the bottom-right corner. If both this and the Fractal box are on they share the same corner.")
 
 // Alert Settings
-alertFormat = input.text_area('{"ticker":"{ticker}", "interval":"{interval}", "alert":"{default}"}', "Custom alert message format", group="Alert Settings")
+alertFormat = input.text_area('{"ticker":"{ticker}", "interval":"{interval}", "alert":"{default}"}', "Custom alert message format", group="Alerts")
 
 
 // Line Styles
@@ -59,149 +63,150 @@ f_resolveSize(simple string sz) =>
 
 C2 = true
 
-showmarkers = input.bool(true, "Show LQ Markers", group="Marker Settings", inline="a")
-MQmarkers   = input.bool(false, "Show Market Structure", group="Marker Settings", inline="b", tooltip='turn off LQ Markers to avoid clutter')
+showmarkers = input.bool(true, "Show LQ Markers", group="Markers — Liquidity & Structure", inline="a")
+MQmarkers   = input.bool(false, "Show Market Structure", group="Markers — Liquidity & Structure", inline="b", tooltip='turn off LQ Markers to avoid clutter')
 coloroftext = color.new(color.gray, 0)
 
-biasFilter = input.string("Neutral", "Bias", options=["Neutral", "Bullish", "Bearish"], group="BIAS", inline="k")
+biasFilter = input.string("Neutral", "Bias", options=["Neutral", "Bullish", "Bearish"], group="Bias", inline="k")
 
 // === Fractal Model controls ===
-max_c2_setups   = input.int(2, "Max active fractal models on chart (C2/C3/C4)", minval=1, maxval=5, group="Fractal Model", tooltip="Cap on fractal-model setups drawn at once. 1 = show only the current setup; 2 = current + previous; up to 5.")
-show_multiple_fractals = input.bool(false, "Show Multiple Fractal Models", group="Fractal Model", tooltip="When OFF, displays only the current active fractal model. When ON, shows multiple active models.")
-max_stddev_sets = input.int(1, "Max std-dev sets shown",                       minval=1, maxval=5, group="Standard Deviations", tooltip="Cap on std-dev projection sets drawn at once. New setups still create their projections; older sets have their std-dev lines removed when the cap is exceeded.")
+max_c2_setups   = input.int(2, "Max active fractal models on chart (C2/C3/C4)", minval=1, maxval=5, group="Models — Fractal", tooltip="Cap on fractal-model setups drawn at once. 1 = show only the current setup; 2 = current + previous; up to 5.")
+show_multiple_fractals = input.bool(false, "Show Multiple Fractal Models", group="Models — Fractal", tooltip="When OFF, displays only the current active fractal model. When ON, shows multiple active models.")
+max_stddev_sets = input.int(1, "Max std-dev sets shown",                       minval=1, maxval=5, group="Models — Standard Deviations", tooltip="Cap on std-dev projection sets drawn at once. New setups still create their projections; older sets have their std-dev lines removed when the cap is exceeded.")
 
 // Effective max based on toggle
 effective_max = show_multiple_fractals ? max_c2_setups : 1
 
-useAutoTF = input.bool(true, "Use Auto Timeframe Selection", group="HTF Settings")
-manualTF  = input.timeframe("240", "Manual HTF (If Auto is Off)", group="HTF Settings")
+useAutoTF = input.bool(true, "Use Auto Timeframe Selection", group="HTF Candles — Settings")
+manualTF  = input.timeframe("240", "Manual HTF (If Auto is Off)", group="HTF Candles — Settings")
 
-boxColor = input.color(color.new(color.gray, 90), "", group="HTF Lines and Boxes", inline="Spot")
-showBox  = input.bool(true, "Show Trading Zone", group="HTF Lines and Boxes", inline="Spot", tooltip='shows the zone between HTF open and HTF EQ')
+boxColor = input.color(color.new(color.gray, 90), "", group="HTF Candles — Lines & Boxes", inline="Spot")
+showBox  = input.bool(true, "Show Trading Zone", group="HTF Candles — Lines & Boxes", inline="Spot", tooltip='shows the zone between HTF open and HTF EQ')
 
-htfOpenColor = input.color(color.gray, "", group="HTF Lines and Boxes", inline="Solid")
-showHTFOpen  = input.bool(true, "HTF Open", group="HTF Lines and Boxes", inline="Solid", tooltip='shows the HTF open line after LQ marker')
-htfOpenStyle = input.string("Solid", "", options=["Solid", "Dotted", "Dashed"], group="HTF Lines and Boxes", inline="Solid")
-htfOpenWidth = input.int(1, "Width", minval=1, maxval=10, group="HTF Lines and Boxes", inline="Solid")
+htfOpenColor = input.color(color.gray, "", group="HTF Candles — Lines & Boxes", inline="Solid")
+showHTFOpen  = input.bool(true, "HTF Open", group="HTF Candles — Lines & Boxes", inline="Solid", tooltip='shows the HTF open line after LQ marker')
+htfOpenStyle = input.string("Solid", "", options=["Solid", "Dotted", "Dashed"], group="HTF Candles — Lines & Boxes", inline="Solid")
+htfOpenWidth = input.int(1, "Width", minval=1, maxval=10, group="HTF Candles — Lines & Boxes", inline="Solid")
 
-prevHTFMidColor = input.color(color.gray, "", group="HTF Lines and Boxes", inline="Dotted")
-showPrevHTFMid  = input.bool(true, "HTF EQ", group="HTF Lines and Boxes", inline="Dotted", tooltip='shows the HTF EQ line after LQ marker')
-prevHTFMidStyle = input.string("Dotted", "", options=["Solid", "Dotted", "Dashed"], group="HTF Lines and Boxes", inline="Dotted")
-prevHTFMidWidth = input.int(1, "Width", minval=1, maxval=10, group="HTF Lines and Boxes", inline="Dotted")
+prevHTFMidColor = input.color(color.gray, "", group="HTF Candles — Lines & Boxes", inline="Dotted")
+showPrevHTFMid  = input.bool(true, "HTF EQ", group="HTF Candles — Lines & Boxes", inline="Dotted", tooltip='shows the HTF EQ line after LQ marker')
+prevHTFMidStyle = input.string("Dotted", "", options=["Solid", "Dotted", "Dashed"], group="HTF Candles — Lines & Boxes", inline="Dotted")
+prevHTFMidWidth = input.int(1, "Width", minval=1, maxval=10, group="HTF Candles — Lines & Boxes", inline="Dotted")
 
-showCISDNeo = input.bool(true, "Show CISD neo labels", group="CISD neo")
+showCISDNeo = input.bool(true, "Show CISD neo labels", group="CISD (neo) — Lines & Text")
 
-cisdMode = input.string("Confirmed", "CISD Mode", options=["Confirmed", "Hybrid"], group="CISD neo")
+cisdMode = input.string("Confirmed", "CISD Mode", options=["Confirmed", "Hybrid"], group="CISD (neo) — Lines & Text")
 
-showPending  = input.bool(true,  "Pending",   group="CISD neo")
-pendingColor = input.color(color.orange, "", inline="p", group="CISD neo")
-pendingWidth = input.int(2, "W", minval=1, maxval=5, inline="p", group="CISD neo")
+showPending  = input.bool(true,  "Pending",   group="CISD (neo) — Lines & Text")
+pendingColor = input.color(color.orange, "", inline="p", group="CISD (neo) — Lines & Text")
+pendingWidth = input.int(2, "W", minval=1, maxval=5, inline="p", group="CISD (neo) — Lines & Text")
 
-showFaded  = input.bool(true,  "Faded Box", group="CISD neo")
-fadedColor = input.color(color.red, "", inline="f", group="CISD neo")
-fadedWidth = input.int(2, "W", minval=1, maxval=5, inline="f", group="CISD neo")
+showFaded  = input.bool(true,  "Faded Box", group="CISD (neo) — Lines & Text")
+fadedColor = input.color(color.red, "", inline="f", group="CISD (neo) — Lines & Text")
+fadedWidth = input.int(2, "W", minval=1, maxval=5, inline="f", group="CISD (neo) — Lines & Text")
 
-confirmedColor = input.color(color.yellow, "Confirmed", group="CISD neo")
-confirmedWidth = input.int(2, "W", minval=1, maxval=5, group="CISD neo")
-bullishBreakColor = input.color(color.rgb(3, 95, 255), "Bull CISD", inline="bup", group="CISD neo")
-bearishBreakColor = input.color(color.rgb(3, 95, 255), "Bear CISD", inline="bep", group="CISD neo")
+confirmedColor = input.color(color.yellow, "Confirmed", group="CISD (neo) — Lines & Text")
+confirmedWidth = input.int(2, "W", minval=1, maxval=5, group="CISD (neo) — Lines & Text")
+bullishBreakColor = input.color(color.rgb(3, 95, 255), "Bull CISD", inline="bup", group="CISD (neo) — Lines & Text")
+bearishBreakColor = input.color(color.rgb(3, 95, 255), "Bear CISD", inline="bep", group="CISD (neo) — Lines & Text")
 
-bullStr = input.string("+CISD", " ", tooltip="Text displayed next to the CISD level.", inline="bup", group="CISD neo")
-bearStr = input.string("-CISD", " ", tooltip="Text displayed next to the CISD level.", inline="bep", group="CISD neo")
+bullStr = input.string("+CISD", " ", tooltip="Text displayed next to the CISD level.", inline="bup", group="CISD (neo) — Lines & Text")
+bearStr = input.string("-CISD", " ", tooltip="Text displayed next to the CISD level.", inline="bep", group="CISD (neo) — Lines & Text")
 
-bullishAlerts = input.bool(false, "Alert?", "Alert when price breaks the current +CISD level.", inline="bup", group="CISD neo")
-bearishAlerts = input.bool(false, "Alert?", "Alert when price breaks the current -CISD level.", inline="bep", group="CISD neo")
+bullishAlerts = input.bool(false, "Alert?", "Alert when price breaks the current +CISD level.", inline="bup", group="CISD (neo) — Lines & Text")
+bearishAlerts = input.bool(false, "Alert?", "Alert when price breaks the current -CISD level.", inline="bep", group="CISD (neo) — Lines & Text")
 
-cisdLineWidth = input.int(1, "Line Width", minval=1, maxval=5, group="CISD neo")
-lookAheadBars = input.int(5, "Line Extension Bars (forward, neg shortens)", minval=-20, maxval=50, group="CISD neo")
-styleOption   = input.string("Solid (─)", title="Line Style", options=["Solid (─)", "Dotted (┈)", "Dashed (╌)"], group="CISD neo")
-keepLevels    = input.bool(false, "Keep old CISD levels", group="CISD neo")
-max_cisd_keep = input.int(2, "Max CISD lines per direction (0 = hide)", minval=0, maxval=5, group="CISD neo", tooltip="Cap on CISD lines kept per direction. 0 hides all CISD lines.")
-cisd_text_show = input.bool(true, "Show CISD Text", group="CISD neo")
-cisd_text_size_s = input.string(SIZE_SMALL, "CISD Text Size", options=[SIZE_TINY, SIZE_SMALL, SIZE_NORMAL, SIZE_LARGE, SIZE_HUGE], group="CISD neo")
-cisd_label_pos = input.string("Right", "CISD Label Position", options=["Top","Bottom","Left","Right","Center"], group="CISD neo", tooltip="Where the CISD text sits relative to the line's right end.")
-cisd_label_pad = input.int(0, "CISD Label Padding (bars)", minval=-50, maxval=50, group="CISD neo", tooltip="Extra bars added to the label's x position. Positive pushes right, negative pulls left.")
+cisdLineWidth = input.int(1, "Line Width", minval=1, maxval=5, group="CISD (neo) — Lines & Text")
+lookAheadBars = input.int(5, "Line Extension Bars (forward, neg shortens)", minval=-20, maxval=50, group="CISD (neo) — Lines & Text")
+styleOption   = input.string("Solid (─)", title="Line Style", options=["Solid (─)", "Dotted (┈)", "Dashed (╌)"], group="CISD (neo) — Lines & Text")
+keepLevels    = input.bool(false, "Keep old CISD levels", group="CISD (neo) — Lines & Text")
+max_cisd_keep = input.int(2, "Max CISD lines per direction (0 = hide)", minval=0, maxval=5, group="CISD (neo) — Lines & Text", tooltip="Cap on CISD lines kept per direction. 0 hides all CISD lines.")
+cisd_text_show_in = input.bool(true, "Show CISD Text", group="CISD (neo) — Lines & Text", tooltip="CISD text is automatically hidden on the Daily timeframe (line still shows).")
+cisd_text_show    = cisd_text_show_in and not timeframe.isdaily
+cisd_text_size_s = input.string(SIZE_SMALL, "CISD Text Size", options=[SIZE_TINY, SIZE_SMALL, SIZE_NORMAL, SIZE_LARGE, SIZE_HUGE], group="CISD (neo) — Lines & Text")
+cisd_label_pos = input.string("Right", "CISD Label Position", options=["Top","Bottom","Left","Right","Center"], group="CISD (neo) — Lines & Text", tooltip="Where the CISD text sits relative to the line's right end.")
+cisd_label_pad = input.int(0, "CISD Label Padding (bars)", minval=-50, maxval=50, group="CISD (neo) — Lines & Text", tooltip="Extra bars added to the label's x position. Positive pushes right, negative pulls left.")
 
 cisdLineStyle =
      styleOption == "Dotted (┈)" ? line.style_dotted :
      styleOption == "Dashed (╌)" ? line.style_dashed :
      line.style_solid
 
-showOCLines = input.bool(true, "Show O/C Lines", group="HTF O/C Lines", inline="oc1", tooltip='vertical lines marking HTF candle open/close range')
-ocLineColor = input.color(color.new(color.gray, 50), "", group="HTF O/C Lines", inline="oc2")
-ocLineStyle = input.string("Solid", "", options=["Solid", "Dotted", "Dashed"], group="HTF O/C Lines", inline="oc2")
-ocLineWidth = input.int(1, "Width", minval=1, maxval=10, group="HTF O/C Lines", inline="oc2")
+showOCLines = input.bool(true, "Show O/C Lines", group="HTF Candles — Open/Close Lines", inline="oc1", tooltip='vertical lines marking HTF candle open/close range')
+ocLineColor = input.color(color.new(color.gray, 50), "", group="HTF Candles — Open/Close Lines", inline="oc2")
+ocLineStyle = input.string("Solid", "", options=["Solid", "Dotted", "Dashed"], group="HTF Candles — Open/Close Lines", inline="oc2")
+ocLineWidth = input.int(1, "Width", minval=1, maxval=10, group="HTF Candles — Open/Close Lines", inline="oc2")
 
-stdDevColor       = input.color(color.white, "", group="Standard Deviations", inline="std")
-showStdDev        = input.bool(true, "Std dev", group="Standard Deviations", tooltip='Project standard-deviation targets off the fractal manipulation range (swept swing → CISD reclaim level), in the trade direction.', inline="std")
-stdDevWidth       = input.int(1, " Width", minval=1, maxval=10, group="Standard Deviations", inline="std")
-stdDevCount       = input.int(1, "Deviations to show", minval=1, maxval=3, group="Standard Deviations", tooltip="How many standard-deviation targets to project (1σ, 2σ, 3σ). Only one is shown by default; maximum three.")
-stdDevProjBars    = input.int(24, "Projection length (bars)", minval=1, maxval=500, group="Standard Deviations", tooltip="How far to the right the standard-deviation target lines extend.")
-showStdDevLabels  = input.bool(true, "Show Labels", group="Standard Deviations")
+stdDevColor       = input.color(color.black, "", group="Models — Standard Deviations", inline="std")
+showStdDev        = input.bool(true, "Std dev", group="Models — Standard Deviations", tooltip='Project standard-deviation targets off the fractal manipulation range (swept swing → CISD reclaim level), in the trade direction.', inline="std")
+stdDevWidth       = input.int(1, " Width", minval=1, maxval=10, group="Models — Standard Deviations", inline="std")
+stdDevCount       = input.int(4, "Deviations to show", minval=1, maxval=6, group="Models — Standard Deviations", tooltip="How many standard-deviation targets to project (1σ … 6σ). Four are shown by default; maximum six.")
+stdDevProjBars    = input.int(24, "Projection length (bars)", minval=1, maxval=500, group="Models — Standard Deviations", tooltip="How far to the right the standard-deviation target lines extend.")
+showStdDevLabels  = input.bool(true, "Show Labels", group="Models — Standard Deviations")
 
-show_htfswing_lines       = input.bool(true, title="Show Confirmed Swing Lines", group="HTF Swings", tooltip="Draws horizontal lines at confirmed swing highs and lows on the HTF strip")
-htfswing_line_width       = input.int(1, title="Line Width", minval=1, maxval=5, group="HTF Swings")
-htfswing_line_style_input = input.string("Solid", title="Line Style", options=["Solid", "Dashed", "Dotted"], group="HTF Swings")
-htfswing_high_color       = input.color(color.white, title="High Line Color", group="HTF Swings", inline="swing_col")
-htfswing_low_color        = input.color(color.white, title="Low Line Color", group="HTF Swings", inline="swing_col")
-htfswing_overshoot        = input.int(1, title="Overshoot (bars)", minval=0, maxval=50, group="HTF Swings")
+show_htfswing_lines       = input.bool(true, title="Show Confirmed Swing Lines", group="HTF Candles — Swings", tooltip="Draws horizontal lines at confirmed swing highs and lows on the HTF strip")
+htfswing_line_width       = input.int(1, title="Line Width", minval=1, maxval=5, group="HTF Candles — Swings")
+htfswing_line_style_input = input.string("Solid", title="Line Style", options=["Solid", "Dashed", "Dotted"], group="HTF Candles — Swings")
+htfswing_high_color       = input.color(color.black, title="High Line Color", group="HTF Candles — Swings", inline="swing_col")
+htfswing_low_color        = input.color(color.black, title="Low Line Color", group="HTF Candles — Swings", inline="swing_col")
+htfswing_overshoot        = input.int(1, title="Overshoot (bars)", minval=0, maxval=50, group="HTF Candles — Swings")
 
 htfswing_line_style    = htfswing_line_style_input == "Solid" ? line.style_solid : htfswing_line_style_input == "Dashed" ? line.style_dashed : line.style_dotted
 
-showHTFCandles = input.bool(true, "Show HTF Candles (Primary HTF1 — auto/manual TF, drives C2/C3/C4 + CISD + std-dev)", group="HTF Candles")
-htf2_show      = input.bool(true,  "Show HTF 2",  inline="htf2_row", group="HTF Candles")
-htf2_tf        = input.timeframe("30", "TF",      inline="htf2_row", group="HTF Candles")
-htf3_show      = input.bool(true,  "Show HTF 3",  inline="htf3_row", group="HTF Candles")
-htf3_tf        = input.timeframe("60", "TF",      inline="htf3_row", group="HTF Candles")
-htf4_show      = input.bool(true,  "Show HTF 4",  inline="htf4_row", group="HTF Candles")
-htf5_show      = input.bool(false, "Show HTF 5",  inline="htf5_row", group="HTF Candles")
-htf4_tf        = input.timeframe("240", "TF",      inline="htf4_row", group="HTF Candles")
-htf5_tf        = input.timeframe("1D", "TF",      inline="htf5_row", group="HTF Candles")
-bull_body   = input.color(color.new(#1819e7, 0), "Body",   inline="body",   group="HTF Candles")
-bear_body   = input.color(color.black, "",       inline="body",   group="HTF Candles")
-bull_border = input.color(color.new(#1819e7, 0), "Border", inline="border", group="HTF Candles")
-bear_border = input.color(color.black, "",       inline="border", group="HTF Candles")
-bull_wick   = input.color(color.new(#1819e7, 0), "Wick",   inline="wick",   group="HTF Candles")
-bear_wick   = input.color(color.black, "",       inline="wick",   group="HTF Candles")
+showHTFCandles = input.bool(true, "Show HTF Candles (Primary HTF1 — auto/manual TF, drives C2/C3/C4 + CISD + std-dev)", group="HTF Candles — Display")
+htf2_show      = input.bool(true,  "Show HTF 2",  inline="htf2_row", group="HTF Candles — Display")
+htf2_tf        = input.timeframe("30", "TF",      inline="htf2_row", group="HTF Candles — Display")
+htf3_show      = input.bool(true,  "Show HTF 3",  inline="htf3_row", group="HTF Candles — Display")
+htf3_tf        = input.timeframe("60", "TF",      inline="htf3_row", group="HTF Candles — Display")
+htf4_show      = input.bool(true,  "Show HTF 4",  inline="htf4_row", group="HTF Candles — Display")
+htf5_show      = input.bool(false, "Show HTF 5",  inline="htf5_row", group="HTF Candles — Display")
+htf4_tf        = input.timeframe("240", "TF",      inline="htf4_row", group="HTF Candles — Display")
+htf5_tf        = input.timeframe("1D", "TF",      inline="htf5_row", group="HTF Candles — Display")
+bull_body   = input.color(color.new(#1819e7, 0), "Body",   inline="body",   group="HTF Candles — Display")
+bear_body   = input.color(color.black, "",       inline="body",   group="HTF Candles — Display")
+bull_border = input.color(color.new(#1819e7, 0), "Border", inline="border", group="HTF Candles — Display")
+bear_border = input.color(color.black, "",       inline="border", group="HTF Candles — Display")
+bull_wick   = input.color(color.new(#1819e7, 0), "Wick",   inline="wick",   group="HTF Candles — Display")
+bear_wick   = input.color(color.black, "",       inline="wick",   group="HTF Candles — Display")
 
-show_candle_time   = input.bool(false, "Show Candle Time", group="HTF Candles", inline="time")
-candle_time_color  = input.color(color.black, "", group="HTF Candles", inline="time")
-candle_time_size   = input.string("Tiny", "", options=["Tiny", "Small", "Normal"], group="HTF Candles", inline="time")
+show_candle_time   = input.bool(false, "Show Candle Time", group="HTF Candles — Display", inline="time")
+candle_time_color  = input.color(color.black, "", group="HTF Candles — Display", inline="time")
+candle_time_size   = input.string("Tiny", "", options=["Tiny", "Small", "Normal"], group="HTF Candles — Display", inline="time")
 
-show_fvg  = input.bool(true, "Show FVG", group="HTF Candles", inline="fvg")
-fvg_color = input.color(color.new(color.gray, 80), "", group="HTF Candles", inline="fvg")
+show_fvg  = input.bool(true, "Show FVG", group="HTF Candles — Display", inline="fvg")
+fvg_color = input.color(color.new(color.gray, 80), "", group="HTF Candles — Display", inline="fvg")
 
-htfLabelShow      = input.bool(true,  "HTF Label",        group="Label Settings", inline="htf")
-htfLabelColor     = input.color(color.black, "", group="Label Settings", inline="htf")
-htfLabelSizeOpt   = input.string("normal", "", options=["tiny","small","normal","large"], group="Label Settings", inline="htf")
-labelPositions    = input.string("Top", "Label Positions", options=["Top","Bottom"], group="Label Settings")
-labelAlignment    = input.string("Center", "Label Alignment", options=["Left","Center","Right"], group="Label Settings")
-remainingTimeShow = input.bool(true,  "Remaining time",  group="Label Settings", inline="rem")
-remainingTimeColor= input.color(color.black, "", group="Label Settings", inline="rem")
-remainingTimeSizeOpt = input.string("normal", "", options=["tiny","small","normal","large"], group="Label Settings", inline="rem")
-intervalValueShow = input.bool(true,  "Interval Value",  group="Label Settings", inline="int")
-intervalValueSizeOpt = input.string("small", "", options=["tiny","small","normal","large"], group="Label Settings", inline="int")
-htfLabelBG        = input.color(color.new(#000000, 100), "", group="Label Settings")
-htfLabelYOffsetTicks = input.int(10, "Y Offset (ticks)", minval=0, maxval=500, group="Label Settings")
+htfLabelShow      = input.bool(true,  "HTF Label",        group="HTF Candles — Labels", inline="htf")
+htfLabelColor     = input.color(color.black, "", group="HTF Candles — Labels", inline="htf")
+htfLabelSizeOpt   = input.string("normal", "", options=["tiny","small","normal","large"], group="HTF Candles — Labels", inline="htf")
+labelPositions    = input.string("Top", "Label Positions", options=["Top","Bottom"], group="HTF Candles — Labels")
+labelAlignment    = input.string("Center", "Label Alignment", options=["Left","Center","Right"], group="HTF Candles — Labels")
+remainingTimeShow = input.bool(true,  "Remaining time",  group="HTF Candles — Labels", inline="rem")
+remainingTimeColor= input.color(color.black, "", group="HTF Candles — Labels", inline="rem")
+remainingTimeSizeOpt = input.string("normal", "", options=["tiny","small","normal","large"], group="HTF Candles — Labels", inline="rem")
+intervalValueShow = input.bool(true,  "Interval Value",  group="HTF Candles — Labels", inline="int")
+intervalValueSizeOpt = input.string("small", "", options=["tiny","small","normal","large"], group="HTF Candles — Labels", inline="int")
+htfLabelBG        = input.color(color.new(#000000, 100), "", group="HTF Candles — Labels")
+htfLabelYOffsetTicks = input.int(10, "Y Offset (ticks)", minval=0, maxval=500, group="HTF Candles — Labels")
 
-htf_padding      = input.int(40,  "Padding from current candles", minval=0, maxval=200, group="HTF Candles Layout")
-htf_candle_width = input.int(4,   "Candle width (bars)",         minval=1, maxval=20,  group="HTF Candles Layout")
-max_htf_candles  = input.int(4,   "Max HTF Candles",             minval=1, maxval=100, group="HTF Candles Layout", tooltip="Sets how many HTF candles are displayed on the right side.")
+htf_padding      = input.int(40,  "Padding from current candles", minval=0, maxval=200, group="HTF Candles — Layout")
+htf_candle_width = input.int(4,   "Candle width (bars)",         minval=1, maxval=20,  group="HTF Candles — Layout")
+max_htf_candles  = input.int(4,   "Max HTF Candles",             minval=1, maxval=100, group="HTF Candles — Layout", tooltip="Sets how many HTF candles are displayed on the right side.")
 
-htf_space        = input.int(2,   "Space between candles",       minval=0, maxval=20,  group="HTF Candles Layout")
-htf_space_htf    = input.int(10,  "Space between higher timeframes", minval=0, maxval=200, group="HTF Candles Layout", tooltip="For multi-HTF layouts; kept for compatibility")
-vi_show  = input.bool(true, "Show Volume Imbalance", group="HTF Candles Layout", inline="vi")
-vi_color = input.color(color.new(color.orange, 85), "", group="HTF Candles Layout", inline="vi")
+htf_space        = input.int(2,   "Space between candles",       minval=0, maxval=20,  group="HTF Candles — Layout")
+htf_space_htf    = input.int(10,  "Space between higher timeframes", minval=0, maxval=200, group="HTF Candles — Layout", tooltip="For multi-HTF layouts; kept for compatibility")
+vi_show  = input.bool(true, "Show Volume Imbalance", group="HTF Candles — Layout", inline="vi")
+vi_color = input.color(color.new(color.orange, 85), "", group="HTF Candles — Layout", inline="vi")
 
 // --- CE (Consequent Encroachment) midlines for HTF candles and HTF FVGs (all 4 HTFs)
-show_htf_candle_ce   = input.bool(true,         "Show HTF Candle CE", inline="hcce1", group="HTF Candles Layout")
-htf_candle_ce_color  = input.color(color.gray, "",                     inline="hcce1", group="HTF Candles Layout")
-htf_candle_ce_style_s= input.string("Dotted",   "Style",               options=["Line","Dashed","Dotted"], inline="hcce2", group="HTF Candles Layout")
-htf_candle_ce_width  = input.int(1,             "Width",               minval=1, maxval=3, inline="hcce2", group="HTF Candles Layout")
-show_htf_fvg_ce      = input.bool(true,         "Show HTF FVG CE",    inline="hfce1", group="HTF Candles Layout")
-htf_fvg_ce_color     = input.color(color.gray, "",                     inline="hfce1", group="HTF Candles Layout")
-htf_fvg_ce_style_s   = input.string("Dotted",   "Style",               options=["Line","Dashed","Dotted"], inline="hfce2", group="HTF Candles Layout")
-htf_fvg_ce_width     = input.int(1,             "Width",               minval=1, maxval=3, inline="hfce2", group="HTF Candles Layout")
+show_htf_candle_ce   = input.bool(true,         "Show HTF Candle CE", inline="hcce1", group="HTF Candles — Layout")
+htf_candle_ce_color  = input.color(color.gray, "",                     inline="hcce1", group="HTF Candles — Layout")
+htf_candle_ce_style_s= input.string("Dotted",   "Style",               options=["Line","Dashed","Dotted"], inline="hcce2", group="HTF Candles — Layout")
+htf_candle_ce_width  = input.int(1,             "Width",               minval=1, maxval=3, inline="hcce2", group="HTF Candles — Layout")
+show_htf_fvg_ce      = input.bool(true,         "Show HTF FVG CE",    inline="hfce1", group="HTF Candles — Layout")
+htf_fvg_ce_color     = input.color(color.gray, "",                     inline="hfce1", group="HTF Candles — Layout")
+htf_fvg_ce_style_s   = input.string("Dotted",   "Style",               options=["Line","Dashed","Dotted"], inline="hfce2", group="HTF Candles — Layout")
+htf_fvg_ce_width     = input.int(1,             "Width",               minval=1, maxval=3, inline="hfce2", group="HTF Candles — Layout")
 htf_candle_ce_style  = htf_candle_ce_style_s == "Line" ? line.style_solid : htf_candle_ce_style_s == "Dashed" ? line.style_dashed : line.style_dotted
 htf_fvg_ce_style     = htf_fvg_ce_style_s    == "Line" ? line.style_solid : htf_fvg_ce_style_s    == "Dashed" ? line.style_dashed : line.style_dotted
 
@@ -371,6 +376,14 @@ var bool  bull_cisd_confirmed = false
 var bool  bear_cisd_confirmed = false
 var bool  c2_already_invalidated_bull = false
 var bool  c2_already_invalidated_bear = false
+
+// Per-bar pulses: true only on the bar a real C2 setup is actually created
+// (respecting the bias filter). Drives the Fractal info box's active state so it
+// never goes long/short without a C2 signal.
+var bool  frac_c2_fired_bull = false
+var bool  frac_c2_fired_bear = false
+frac_c2_fired_bull := false
+frac_c2_fired_bear := false
 
 var float periodHigh = high
 var int   periodHighTime = time
@@ -623,7 +636,7 @@ if showHTFCandles
         candle.wick_up := line.new(bar_index + 1, candle.h, bar_index, math.max(candle.o, candle.c), color=bull ? bull_wick : bear_wick)
         candle.wick_down := line.new(bar_index + 1, math.min(candle.o, candle.c), bar_index, candle.l, color=bull ? bull_wick : bear_wick)
         if show_htf_candle_ce
-            ce_y = (candle.h + candle.l) / 2.0
+            ce_y = f_logMid(candle.h, candle.l, candle.o, candle.c)
             candle.ce_line := line.new(bar_index, ce_y, bar_index + 2, ce_y, color=htf_candle_ce_color, width=htf_candle_ce_width, style=htf_candle_ce_style)
 
         array.unshift(htfCandles, candle)
@@ -701,7 +714,7 @@ if showHTFCandles
                     line.set_x1(c.wick_down, bar_index + t_buffer + int(math.round(htf_candle_width/2.0)))
                     line.set_x2(c.wick_down, bar_index + t_buffer + int(math.round(htf_candle_width/2.0)))
                     if show_htf_candle_ce
-                        ce_y_i = (c.h + c.l) / 2.0
+                        ce_y_i = f_logMid(c.h, c.l, c.o, c.c)
                         if na(c.ce_line)
                             c.ce_line := line.new(bar_index + t_buffer, ce_y_i, bar_index + t_buffer + htf_candle_width, ce_y_i, color=htf_candle_ce_color, width=htf_candle_ce_width, style=htf_candle_ce_style)
                         else
@@ -910,7 +923,7 @@ f_renderAdditionalHTF(string tf, bool show, array<Candle> cd, array<FVG> fvgs, a
             candle.wick_up   := line.new(bar_index + 1, candle.h, bar_index, math.max(candle.o, candle.c), color=bull ? bull_wick : bear_wick)
             candle.wick_down := line.new(bar_index + 1, math.min(candle.o, candle.c), bar_index, candle.l, color=bull ? bull_wick : bear_wick)
             if show_htf_candle_ce
-                ce_y_h = (candle.h + candle.l) / 2.0
+                ce_y_h = f_logMid(candle.h, candle.l, candle.o, candle.c)
                 candle.ce_line := line.new(bar_index, ce_y_h, bar_index + 2, ce_y_h, color=htf_candle_ce_color, width=htf_candle_ce_width, style=htf_candle_ce_style)
 
             array.unshift(cd, candle)
@@ -980,7 +993,7 @@ f_renderAdditionalHTF(string tf, bool show, array<Candle> cd, array<FVG> fvgs, a
                         line.set_x1(c.wick_down, bar_index + t_buffer + int(math.round(htf_candle_width/2.0)))
                         line.set_x2(c.wick_down, bar_index + t_buffer + int(math.round(htf_candle_width/2.0)))
                         if show_htf_candle_ce
-                            ce_y_hi = (c.h + c.l) / 2.0
+                            ce_y_hi = f_logMid(c.h, c.l, c.o, c.c)
                             if na(c.ce_line)
                                 c.ce_line := line.new(bar_index + t_buffer, ce_y_hi, bar_index + t_buffer + htf_candle_width, ce_y_hi, color=htf_candle_ce_color, width=htf_candle_ce_width, style=htf_candle_ce_style)
                             else
@@ -1449,6 +1462,7 @@ createC2Setup(bool isShort, int setupTime, float setupPrice, float _htfOpen, flo
                 if array.size(oldStd.labels) > 0
                     for lb in oldStd.labels
                         label.delete(lb)
+    shouldCreate
 
 // ---------------------------------------------------------------------------
 // T-Spot trigger (ported from the "Fractal ICT" source)
@@ -1474,10 +1488,10 @@ if period_changed
     bool notEngulf = not (not na(prevH1[1]) and not na(prevL1[1]) and sweptH > prevH1[1] and sweptL < prevL1[1] and sweptC > prevL1[1] and sweptC < prevH1[1])
 
     if prevC2Buy and not na(sweepMid) and sweptC > sweepMid and notEngulf and not c2_already_invalidated_bull
-        createC2Setup(false, prevLowTime, prevLowPrice, sweptC, sweepMid, c2_bull_level, c2_bull_index, 0)
+        frac_c2_fired_bull := createC2Setup(false, prevLowTime, prevLowPrice, sweptC, sweepMid, c2_bull_level, c2_bull_index, 0)
 
     if prevC2Sell and not na(sweepMid) and sweptC < sweepMid and notEngulf and not c2_already_invalidated_bear
-        createC2Setup(true, prevHighTime, prevHighPrice, sweptC, sweepMid, c2_bear_level, c2_bear_index, 0)
+        frac_c2_fired_bear := createC2Setup(true, prevHighTime, prevHighPrice, sweptC, sweepMid, c2_bear_level, c2_bear_index, 0)
 
 if array.size(activeLabels) > 0
     for i = array.size(activeLabels) - 1 to 0
@@ -1634,54 +1648,423 @@ f_touchedAnyHTFFVG(float lo, float hi) =>
 // === END ICT HTF Candle Fractal Model source ====
 
 
-// Session Levels Settings (NY AM Range, Asia, London, Midnight & 8:30 Opens)
-string GRP_SESSIONS = "Session Levels"
-show_ny_am_range  = input.bool(true, "Show NY AM Range (07:00-09:30 ET) BSL/SSL", group=GRP_SESSIONS)
-ny_am_bsl_color   = input.color(color.new(color.red, 0), "NY AM High (BSL)", inline="nyam", group=GRP_SESSIONS)
-ny_am_ssl_color   = input.color(color.new(color.green, 0), "NY AM Low (SSL)", inline="nyam", group=GRP_SESSIONS)
-ny_am_bsl_label_text = input.string("NY AM BSL", "NY AM High Label", inline="nyamtxt", group=GRP_SESSIONS, tooltip="Text on the NY AM BSL line. Leave blank to hide just this label.")
-ny_am_ssl_label_text = input.string("NY AM SSL", "NY AM Low Label",  inline="nyamtxt", group=GRP_SESSIONS)
+//+------------------------------------------------------------------------------------------------------------+//
+//+--- ICT Killzones & Pivots [TFO] — replaces the old Session Levels visuals (© tradeforopp, MPL-2.0)      ---+//
+//+------------------------------------------------------------------------------------------------------------+//
+// Ported from the standalone "ICT Killzones & Pivots [TFO]" indicator. Draws killzone boxes (Asia/London/
+// NY AM/NY Lunch/NY PM), session pivot lines + labels, and the killzone range table.
+// The Opening-Prices and Day/Week/Month subsystems were dropped: they duplicated the host's own
+// "Daily Levels" group and were off by default, and removing them keeps the script under TradingView's
+// compiled-token limit while preserving the killzone boxes/pivots/labels.
 
-show_asia_range   = input.bool(true, "Show Asia High/Low", group=GRP_SESSIONS)
-asia_session_in   = input.session("2000-0000", "Asia Session (ET)", group=GRP_SESSIONS)
-asia_color        = input.color(color.new(color.orange, 0), "Asia Color", group=GRP_SESSIONS)
-asia_high_label_text = input.string("A.High", "Asia High Label", inline="asiatxt", group=GRP_SESSIONS, tooltip="Text on the Asia High/Low lines. Shorten to e.g. 'A.High' / 'A.Low' if you want compact labels.")
-asia_low_label_text  = input.string("A.Low",  "Asia Low Label",  inline="asiatxt", group=GRP_SESSIONS)
+// --- NY AM 07:00-09:30 ET high/low tracker (kept headless: feeds the model detection below; the killzone
+// --- boxes above cover the visual NY session). Do NOT remove — models reference ny_am_high / ny_am_low.
+var float ny_am_high = na
+var float ny_am_low  = na
+ny_am_kz_time  = time(timeframe.period, "0700-0930", "America/New_York")
+is_ny_am_kz    = not na(ny_am_kz_time)
+if is_ny_am_kz and not is_ny_am_kz[1]
+    ny_am_high := high
+    ny_am_low  := low
+else if is_ny_am_kz
+    ny_am_high := math.max(ny_am_high, high)
+    ny_am_low  := math.min(ny_am_low,  low)
 
-show_london_range = input.bool(true, "Show London High/Low", group=GRP_SESSIONS)
-london_session_in = input.session("0200-0500", "London Session (ET)", group=GRP_SESSIONS)
-london_color      = input.color(color.new(color.blue, 0), "London Color", group=GRP_SESSIONS)
-london_high_label_text = input.string("L.High", "London High Label", inline="ldntxt", group=GRP_SESSIONS, tooltip="Text on the London High/Low lines. Shorten to e.g. 'L.High' / 'L.Low' if you want compact labels.")
-london_low_label_text  = input.string("L.Low",  "London Low Label",  inline="ldntxt", group=GRP_SESSIONS)
 
-show_midnight_open = input.bool(true, "Show Midnight Open (00:00 ET)", group=GRP_SESSIONS)
-midnight_color     = input.color(color.new(color.purple, 0), "Midnight Open Color", group=GRP_SESSIONS)
-midnight_label_text = input.string("Midnight", "Midnight Open Label", group=GRP_SESSIONS)
 
-show_830_open    = input.bool(true, "Show 8:30 AM Open (ET)", group=GRP_SESSIONS)
-open_830_color   = input.color(color.new(color.fuchsia, 0), "8:30 Open Color", group=GRP_SESSIONS)
-open_830_label_text = input.string("8:30", "8:30 Open Label", group=GRP_SESSIONS)
+// ---------------------------------------- Constant Functions --------------------------------------------------
+get_line_type(_style) =>
+    switch _style
+        "Solid" => line.style_solid
+        "Dotted" => line.style_dotted
+        "Dashed" => line.style_dashed
 
-show_session_labels = input.bool(true, "Show Session Text Labels", group=GRP_SESSIONS, tooltip="If off, lines still show but text labels are hidden.")
-session_line_width = input.int(1, "Session Line Width", minval=1, maxval=4, group=GRP_SESSIONS)
-session_line_style_in = input.string("solid", "Session Line Style", options=["solid","dashed","dotted"], group=GRP_SESSIONS)
-session_label_size = input.string(SIZE_SMALL, "Session Label Size", options=[SIZE_TINY, SIZE_SMALL, SIZE_NORMAL, SIZE_LARGE, SIZE_HUGE], group=GRP_SESSIONS)
-session_label_pos_in = input.string("Right", "Session Label Position", options=["Above","Below","Left","Right","Center","Inside-Left"], group=GRP_SESSIONS, tooltip="Where each session's text sits relative to the end of its line. 'Inside-Left' pins the RIGHT edge of the text to the end of the line so the text reads BACK into the line and never overflows past the endpoint. 'Center' has NO callout arrow — text sits directly at the anchor (may overflow past line end). Above/Below/Left/Right use a Pine callout label.")
-session_label_padding = input.int(0, "Session Label Nudge (signed bars, −500 to +500)", minval=-500, maxval=500, group=GRP_SESSIONS, tooltip="Signed horizontal nudge for the session label. 0 = label sits at the chart's right edge (current bar). NEGATIVE values pull the text BACKWARD (left, into history). POSITIVE values push the text FORWARD (right, into the future / projection area). Range −500 to +500 bars. NOTE: if the slider in Settings still shows 0 as the minimum after updating the script, that's a TradingView input cache — remove the indicator from the chart and re-add it.")
-session_taken_label_pad = input.int(6, "Swept-Level Label Left Pad (bars)", minval=0, maxval=100, group=GRP_SESSIONS, tooltip="For NY AM / Asia / London levels that have been swept: how many bars to the LEFT of the takeout point the text sits. The text reads back to the left of the takeout candle so it never overlaps the wicks/candles that swept the level. Increase for more clearance.")
-session_taken_center_thresh = input.int(25, "Swept-Level Auto-Center Threshold (bars)", minval=0, maxval=500, group=GRP_SESSIONS, tooltip="If a swept level's line is SHORTER than this many bars (i.e. price took it out soon after it formed, leaving too little room for left-padded text), the text is automatically CENTERED on the line instead. Set to 0 to always left-pad and never auto-center.")
+get_size(x) =>
+    switch x
+        "Auto" => size.auto
+        "Tiny" => size.tiny
+        "Small" => size.small
+        "Normal" => size.normal
+        "Large" => size.large
+        "Huge" => size.huge
 
-auto_hide_sessions_on_htf = input.bool(true, "Auto-hide Sessions on 15m+", group=GRP_SESSIONS, tooltip="When ON, the Asia / London / NY AM session high & low lines (and their labels) are automatically hidden on charts with a 15-minute or higher timeframe to reduce clutter. Midnight Open, 8:30 Open, Previous Day H/L, and the 1hr/15m swing labels are NOT affected. Turn OFF to always show the sessions regardless of chart timeframe.")
-sessions_hidden_by_tf = auto_hide_sessions_on_htf and timeframe.in_seconds() >= 15 * 60
+get_table_pos(pos) =>
+    switch pos
+        "Bottom Center" => position.bottom_center
+        "Bottom Left" => position.bottom_left
+        "Bottom Right" => position.bottom_right
+        "Middle Center" => position.middle_center
+        "Middle Left" => position.middle_left
+        "Middle Right" => position.middle_right
+        "Top Center" => position.top_center
+        "Top Left" => position.top_left
+        "Top Right" => position.top_right
+// ---------------------------------------- Constant Functions --------------------------------------------------
 
-session_line_style = session_line_style_in == "dashed" ? line.style_dashed : session_line_style_in == "dotted" ? line.style_dotted : line.style_solid
 
+// ---------------------------------------- Inputs --------------------------------------------------
+var g_SETTINGS      = "Killzones — Settings"
+max_days            = input.int(3, "Session Drawing Limit", 1, tooltip = "Only this many drawings will be kept on the chart, for each selected drawing type (killzone boxes, pivot lines, open lines, etc.)", group = g_SETTINGS)
+tf_limit            = input.timeframe("30", "Timeframe Limit", tooltip = "Drawings will not appear on timeframes greater than or equal to this", group = g_SETTINGS)
+gmt_tz              = input.string('America/New_York', "Timezone", options = ['America/New_York','GMT-12','GMT-11','GMT-10','GMT-9','GMT-8','GMT-7','GMT-6','GMT-5','GMT-4','GMT-3','GMT-2','GMT-1','GMT+0','GMT+1','GMT+2','GMT+3','GMT+4','GMT+5','GMT+6','GMT+7','GMT+8','GMT+9','GMT+10','GMT+11','GMT+12','GMT+13','GMT+14'], tooltip = "Note GMT is not adjusted to reflect Daylight Saving Time changes", group = g_SETTINGS)
+lbl_size            = get_size(input.string('Normal', "Label Size", options = ['Auto', 'Tiny', 'Small', 'Normal', 'Large', 'Huge'], tooltip = "The size of all labels", group = g_SETTINGS))
+txt_color           = input.color(color.black, "Text Color", tooltip = "The color of all label and table text", group = g_SETTINGS)
+use_cutoff          = input.bool(false, "Drawing Cutoff Time", inline = "CO", tooltip = "When enabled, all pivots and open price lines will stop extending at this time", group = g_SETTINGS)
+cutoff              = input.session("1800-1801", "", inline = "CO", group = g_SETTINGS)
+
+var tf_limit_is_equal_or_more_chart_tf = timeframe.in_seconds('') <= timeframe.in_seconds(tf_limit)
+
+var g_KZ            = "Killzones"
+show_kz             = input.bool(false, "Show Killzone Boxes", inline = "KZ", group = g_KZ)
+show_kz_text        = input.bool(true, "Display Text", inline = "KZ", group = g_KZ)
+
+use_asia            = input.bool(true, "", inline = "ASIA", group = g_KZ)
+as_txt              = input.string("Asia", "", inline = "ASIA", group = g_KZ)
+asia                = input.session("2000-0000", "", inline = "ASIA", group = g_KZ)
+as_color            = input.color(color.blue, "", inline = "ASIA", group = g_KZ)
+
+use_london          = input.bool(true, "", inline = "LONDON", group = g_KZ)
+lo_txt              = input.string("London", "", inline = "LONDON", group = g_KZ)
+london              = input.session("0200-0500", "", inline = "LONDON", group = g_KZ)
+lo_color            = input.color(color.red, "", inline = "LONDON", group = g_KZ)
+
+use_nyam            = input.bool(true, "", inline = "NYAM", group = g_KZ)
+na_txt              = input.string("NY AM", "", inline = "NYAM", group = g_KZ)
+nyam                = input.session("0930-1100", "", inline = "NYAM", group = g_KZ)
+na_color            = input.color(#089981, "", inline = "NYAM", group = g_KZ)
+
+use_nylu            = input.bool(true, "", inline = "NYLU", group = g_KZ)
+nl_txt              = input.string("NY Lunch", "", inline = "NYLU", group = g_KZ)
+nylu                = input.session("1200-1300", "", inline = "NYLU", group = g_KZ)
+nl_color            = input.color(color.yellow, "", inline = "NYLU", group = g_KZ)
+
+use_nypm            = input.bool(true, "", inline = "NYPM", group = g_KZ)
+np_txt              = input.string("NY PM", "", inline = "NYPM", group = g_KZ)
+nypm                = input.session("1330-1600", "", inline = "NYPM", group = g_KZ)
+np_color            = input.color(color.purple, "", inline = "NYPM", group = g_KZ)
+
+box_transparency    = input.int(70, "Box Transparency", 0, 100, group = g_KZ)
+text_transparency   = input.int(50, "Text Transparency", 0, 100, group = g_KZ)
+
+
+var g_LABELS        = "Killzone Pivots"
+show_pivots         = input.bool(true, "Show Pivots", inline = "PV", group = g_LABELS)
+use_alerts          = input.bool(true, "Alert Broken Pivots", inline = "PV", tooltip = "The desired killzones must be enabled at the time that an alert is created, along with the show pivots option, in order for alerts to work", group = g_LABELS)
+show_midpoints      = input.bool(false, "Show Pivot Midpoints", inline = "mp", group = g_LABELS)
+stop_midpoints      = input.bool(true, "Stop Once Mitigated", inline = "mp", group = g_LABELS) 
+show_labels         = input.bool(true, "Show Pivot Labels", inline = "LB", tooltip = "Show labels denoting each killzone's high and low. Optionally choose to show the price of each level. Right side will show labels on the right-hand side of the chart until they are reached", group = g_LABELS)
+label_price         = input.bool(false, "Display Price", inline = "LB", group = g_LABELS)
+label_right         = input.bool(false, "Right Side", inline = "LB", group = g_LABELS)
+ext_pivots          = input.string("Until Mitigated", "Extend Pivots...", options = ['Until Mitigated', 'Past Mitigation'], group = g_LABELS)
+ext_which           = input.string("Most Recent", "...From Which Sessions", options = ['Most Recent', 'All'], group = g_LABELS)
+
+ash_str             = input.string("AS.H", "Killzone 1 Labels", inline = "L_AS", group = g_LABELS)
+asl_str             = input.string("AS.L", "", inline = "L_AS", group = g_LABELS)
+
+loh_str             = input.string("LO.H", "Killzone 2 Labels", inline = "L_LO", group = g_LABELS)
+lol_str             = input.string("LO.L", "", inline = "L_LO", group = g_LABELS)
+
+nah_str             = input.string("NYAM.H", "Killzone 3 Labels", inline = "L_NA", group = g_LABELS)
+nal_str             = input.string("NYAM.L", "", inline = "L_NA", group = g_LABELS)
+
+nlh_str             = input.string("NYL.H", "Killzone 4 Labels", inline = "L_NL", group = g_LABELS)
+nll_str             = input.string("NYL.L", "", inline = "L_NL", group = g_LABELS)
+
+nph_str             = input.string("NYPM.H", "Killzone 5 Labels", inline = "L_NP", group = g_LABELS)
+npl_str             = input.string("NYPM.L", "", inline = "L_NP", group = g_LABELS)
+
+kzp_style           = get_line_type(input.string(defval = 'Solid', title = "Pivot Style", options = ['Solid', 'Dotted', 'Dashed'], inline = "KZP", group = g_LABELS))
+kzp_width           = input.int(1, "", inline = "KZP", group = g_LABELS)
+kzm_style           = get_line_type(input.string(defval = 'Dotted', title = "Midpoint Style", options = ['Solid', 'Dotted', 'Dashed'], inline = "KZM", group = g_LABELS))
+kzm_width           = input.int(1, "", inline = "KZM", group = g_LABELS)
+
+
+var g_RNG           = "Killzone Range"
+show_range          = input.bool(false, "Show Killzone Range", tooltip = "Show the most recent ranges of each selected killzone, from high to low", group = g_RNG)
+show_range_avg      = input.bool(true, "Show Average", tooltip = "Show the average range of each selected killzone", group = g_RNG)
+range_avg           = input.int(5, "Average Length", 0, tooltip = "This many previous sessions will be used to calculate the average. If there isn't enough data on the current chart, it will use as many sessions as possible", group = g_RNG)
+range_pos           = get_table_pos(input.string('Top Right', "Table Position", options = ['Bottom Center', 'Bottom Left', 'Bottom Right', 'Middle Center', 'Middle Left', 'Middle Right', 'Top Center', 'Top Left', 'Top Right'], group = g_RNG))
+range_size          = get_size(input.string('Normal', "Table Size", options = ['Auto', 'Tiny', 'Small', 'Normal', 'Large', 'Huge'], group = g_RNG))
+
+
+
+
+
+
+// ---------------------------------------- Variables & Constants --------------------------------------------------
+type kz
+    string _title
+
+    array<box> _box
+
+    array<line> _hi_line
+    array<line> _md_line
+    array<line> _lo_line
+
+    array<label> _hi_label
+    array<label> _lo_label
+
+    array<bool> _hi_valid
+    array<bool> _md_valid
+    array<bool> _lo_valid
+
+    array<float> _range_store
+    float _range_current
+
+
+
+type kz_helper
+    kz _kz
+    string session
+    color c
+    string box_txt
+    string hi_txt
+    string lo_txt
+
+initKZ() => 
+    array<kz_helper> res = array.new<kz_helper>()
+    if use_asia
+        res.push(kz_helper.new(
+             kz.new(as_txt, array.new_box(), array.new_line(), array.new_line(), array.new_line(), array.new_label(), array.new_label(), array.new_bool(), array.new_bool(), array.new_bool(), array.new_float()),
+             asia, as_color, as_txt, ash_str, asl_str
+         ))
+    if use_london
+        res.push(kz_helper.new(
+             kz.new(lo_txt, array.new_box(), array.new_line(), array.new_line(), array.new_line(), array.new_label(), array.new_label(), array.new_bool(), array.new_bool(), array.new_bool(), array.new_float()),
+             london, lo_color, lo_txt, loh_str, lol_str
+         ))
+    if use_nyam
+        res.push(kz_helper.new(
+             kz.new(na_txt, array.new_box(), array.new_line(), array.new_line(), array.new_line(), array.new_label(), array.new_label(), array.new_bool(), array.new_bool(), array.new_bool(), array.new_float()),
+             nyam, na_color, na_txt, nah_str, nal_str
+         ))
+    if use_nylu
+        res.push(kz_helper.new(
+             kz.new(nl_txt, array.new_box(), array.new_line(), array.new_line(), array.new_line(), array.new_label(), array.new_label(), array.new_bool(), array.new_bool(), array.new_bool(), array.new_float()),
+             nylu, nl_color, nl_txt, nlh_str, nll_str
+         ))
+    if use_nypm
+        res.push(kz_helper.new(
+             kz.new(np_txt, array.new_box(), array.new_line(), array.new_line(), array.new_line(), array.new_label(), array.new_label(), array.new_bool(), array.new_bool(), array.new_bool(), array.new_float()),
+             nypm, np_color, np_txt, nph_str, npl_str
+         ))
+    res
+
+var array<kz_helper> _kz = initKZ()
+
+
+
+t_co = not na(time("", cutoff, gmt_tz))
+
+
+
+var transparent = #ffffff00
+var ext_current = ext_which == 'Most Recent'
+var ext_past = ext_pivots == 'Past Mitigation'
+
+// ---------------------------------------- Variables & Constants --------------------------------------------------
+
+
+// ---------------------------------------- Functions --------------------------------------------------
+get_box_color(color c) =>
+    color.new(c, box_transparency)
+
+get_text_color(color c) =>
+    color.new(c, text_transparency)
+// ---------------------------------------- Functions --------------------------------------------------
+
+
+// ---------------------------------------- Core Logic --------------------------------------------------
+
+
+del_kz(kz k) =>
+    if k._box.size() > max_days
+        k._box.pop().delete()
+    if k._hi_line.size() > max_days
+        k._hi_line.pop().delete()
+        k._lo_line.pop().delete()
+        k._hi_valid.pop()
+        k._lo_valid.pop()
+        if show_midpoints
+            k._md_line.pop().delete()
+            k._md_valid.pop()
+    if k._hi_label.size() > max_days
+        k._hi_label.pop().delete()
+        k._lo_label.pop().delete()
+
+update_price_string(label L, float P) =>
+    S = L.get_text()
+    pre = str.substring(S, 0, str.pos(S, " ")) 
+    str.trim(pre)
+    L.set_text(str.format("{0} ({1})", pre, P))
+
+adjust_in_kz(kz kz, bool t) =>
+    if t
+        kzBox0 = kz._box.get(0)
+        kzBox0.set_right(time)
+        newTop = math.max(kzBox0.get_top(), high)
+        kzBox0.set_top(newTop)
+        newBottom = math.min(kzBox0.get_bottom(), low)
+        kzBox0.set_bottom(newBottom)
+
+        kz._range_current := newTop - newBottom
+
+        if show_pivots and kz._hi_line.size() > 0
+            kzHiLine0 = kz._hi_line.get(0)
+            kzHiLine0.set_x2(time)
+            if high > kzHiLine0.get_y1()
+                kzHiLine0.set_xy1(time, high)
+                kzHiLine0.set_xy2(time, high)
+
+            kzLoLine0 = kz._lo_line.get(0)
+            kzLoLine0.set_x2(time)
+            if low < kzLoLine0.get_y1()
+                kzLoLine0.set_xy1(time, low)
+                kzLoLine0.set_xy2(time, low)
+
+            if show_midpoints
+                kzMidLine0 = kz._md_line.get(0)
+                kzMidLine0.set_x2(time)
+                kzMidLine0.set_xy1(time, math.avg(kzHiLine0.get_y2(), kzLoLine0.get_y2()))
+                kzMidLine0.set_xy2(time, math.avg(kzHiLine0.get_y2(), kzLoLine0.get_y2()))
+
+        if show_labels and kz._hi_label.size() > 0
+            if label_right
+                kz._hi_label.get(0).set_x(time)
+                kz._lo_label.get(0).set_x(time)
+            if high > kz._hi_label.get(0).get_y()
+                kz._hi_label.get(0).set_xy(time, high)
+                if label_price
+                    update_price_string(kz._hi_label.get(0), high)
+            if low < kz._lo_label.get(0).get_y()
+                kz._lo_label.get(0).set_xy(time, low)
+                if label_price
+                    update_price_string(kz._lo_label.get(0), low)
+
+
+adjust_out_kz(kz kz, bool t, bool t_prev) =>
+    boxCount = kz._box.size()
+    if not t and boxCount > 0
+        if t_prev
+            array.unshift(kz._range_store, kz._range_current)
+            if kz._range_store.size() > range_avg
+                kz._range_store.pop()
+
+    if show_pivots and boxCount > 0
+        for i = 0 to boxCount - 1 by 1
+            if not ext_current or i == 0
+                kzHiValid = kz._hi_valid.get(i)
+                if ext_past or kzHiValid
+                    kz._hi_line.get(i).set_x2(time)
+                    if show_labels and label_right
+                        kz._hi_label.get(i).set_x(time)
+                if kzHiValid and high > kz._hi_line.get(i).get_y1()
+                    if use_alerts and i == 0
+                        alert('Broke ' + kz._title + ' High', alert.freq_once_per_bar)
+                    kz._hi_valid.set(i, false)
+                    if show_labels and label_right
+                        kz._hi_label.get(i).set_style(label.style_label_down)
+                else if use_cutoff ? t_co : false
+                    kz._hi_valid.set(i, false)
+
+                kzLoValid = kz._lo_valid.get(i)
+                if ext_past or kzLoValid
+                    kz._lo_line.get(i).set_x2(time)
+                    if show_labels and label_right
+                        kz._lo_label.get(i).set_x(time)
+                if kzLoValid and low < kz._lo_line.get(i).get_y1()
+                    if use_alerts and i == 0
+                        alert("Broke " + kz._title + " Low", alert.freq_once_per_bar)
+                    kz._lo_valid.set(i, false)
+                    if show_labels and label_right
+                        kz._lo_label.get(i).set_style(label.style_label_up)
+                else if use_cutoff ? t_co : false
+                    kz._lo_valid.set(i, false)
+
+                if show_midpoints and not t
+                    if stop_midpoints ? kz._md_valid.get(i) : true
+                        kz._md_line.get(i).set_x2(time)
+                        if kz._md_valid.get(i) and low <= kz._md_line.get(i).get_y1() and high >= kz._md_line.get(i).get_y1()
+                            kz._md_valid.set(i, false)
+
+            else
+                break
+
+method manage_kz(kz_helper this) =>
+    kz kz = this._kz    
+    c = this.c
+    string box_txt = this.box_txt
+    string hi_txt = this.hi_txt
+    string lo_txt = this.lo_txt
+
+    if tf_limit_is_equal_or_more_chart_tf
+        t = not na(time("", this.session, gmt_tz))
+        t_prev = not na(time("", this.session, gmt_tz, bars_back = 1))
+        if t and not t_prev
+            _c = get_box_color(c)
+            _t = get_text_color(c)
+            kz._box.unshift(box.new(time, high, time, low, xloc = xloc.bar_time, border_color = show_kz ? _c : na, bgcolor = show_kz ? _c : na, text = show_kz and show_kz_text ? box_txt : na, text_color = _t))
+
+            if show_pivots
+                kz._hi_line.unshift(line.new(time, high, time, high, xloc = xloc.bar_time, style = kzp_style, color = c, width = kzp_width))
+                kz._lo_line.unshift(line.new(time, low, time, low, xloc = xloc.bar_time, style = kzp_style, color = c, width = kzp_width))
+                if show_midpoints
+                    kz._md_line.unshift(line.new(time, math.avg(high, low), time, math.avg(high, low), xloc = xloc.bar_time, style = kzm_style, color = c, width = kzm_width))
+                    array.unshift(kz._md_valid, true)
+
+                array.unshift(kz._hi_valid, true)
+                array.unshift(kz._lo_valid, true)
+
+                if show_labels
+                    _hi_txt = label_price ? str.format('{0} ({1})', hi_txt, high) : hi_txt
+                    _lo_txt = label_price ? str.format('{0} ({1})', lo_txt, low) : lo_txt
+                    if label_right
+                        kz._hi_label.unshift(label.new(time, high, _hi_txt, xloc = xloc.bar_time, color = transparent, textcolor = txt_color, style = label.style_label_left, size = lbl_size))
+                        kz._lo_label.unshift(label.new(time, low, _lo_txt, xloc = xloc.bar_time, color = transparent, textcolor = txt_color, style = label.style_label_left, size = lbl_size))
+                    else
+                        kz._hi_label.unshift(label.new(time, high, _hi_txt, xloc = xloc.bar_time, color = transparent, textcolor = txt_color, style = label.style_label_down, size = lbl_size))
+                        kz._lo_label.unshift(label.new(time, low, _lo_txt, xloc = xloc.bar_time, color = transparent, textcolor = txt_color, style = label.style_label_up, size = lbl_size))
+
+            del_kz(kz)
+        adjust_in_kz(kz, t)
+        adjust_out_kz(kz, t, t_prev)
+
+for [_, value] in _kz
+    manage_kz(value)
+
+
+
+get_min_days_stored() =>
+    store = array.new_int()
+    for [_, value] in _kz
+        int tmpStoreSize = value._kz._range_store.size()
+        if tmpStoreSize > 0
+            store.push(tmpStoreSize) 
+    store.min()
+
+method set_table(table tbl, kz kz, int row, string txt, bool t, color col) =>
+    table.cell(tbl, 0, row, txt, text_size = range_size, bgcolor = get_box_color(col), text_color = txt_color)
+    table.cell(tbl, 1, row, str.tostring(kz._range_current), text_size = range_size, bgcolor = t ? get_box_color(col) : na, text_color = txt_color)
+    if show_range_avg
+        table.cell(tbl, 2, row, str.tostring(kz._range_store.avg()), text_size = range_size, text_color = txt_color)
+
+if show_range and barstate.islast
+    var tbl = table.new(range_pos, 10, 10, chart.bg_color, chart.fg_color, 2, chart.fg_color, 1)
+
+    table.cell(tbl, 0, 0, "Killzone", text_size = range_size, text_color = txt_color)
+    table.cell(tbl, 1, 0, "Range", text_size = range_size, text_color = txt_color)
+    if show_range_avg
+        table.cell(tbl, 2, 0, "Avg (" + str.tostring(get_min_days_stored()) + ")", text_size = range_size, text_color = txt_color)
+
+    for [index, value] in _kz
+        set_table(tbl, value._kz, index + 1, value.box_txt, not na(time("", value.session, gmt_tz)), value.c)
+// ---------------------------------------- Core Logic --------------------------------------------------
 // Session Swings — at AM (9:30-12:00 ET) and optional PM (13:30-15:30 ET) opens, snapshot
 // the last N swing highs and N swing lows from the 1h and/or 15m timeframes (each
 // independently toggleable) and draw each as a horizontal line anchored at its pivot
 // bar's time, extending right until session end OR taken out (wick or body close).
 // Lines do NOT carry over to the next day.
-string GRP_SWINGS         = "Session Swings"
+string GRP_SWINGS         = "Swings — Session (1h / 15m)"
 ss_show                   = input.bool(true,  "Show session swings", group=GRP_SWINGS, tooltip="Master toggle. Off = no lines/labels drawn.")
 ss_show_h1                = input.bool(true,  "1h source",   inline="src",  group=GRP_SWINGS, tooltip="Detect swings on the 1-hour timeframe.")
 ss_show_m15               = input.bool(true,  "15m source",  inline="src",  group=GRP_SWINGS, tooltip="Detect swings on the 15-minute timeframe.")
@@ -1691,8 +2074,8 @@ ss_per_side               = input.int(2, "Swings per side (per TF)", minval=1, m
 ss_pivot_len              = input.int(1, "Pivot length", minval=1, maxval=10, group=GRP_SWINGS, tooltip="Bars on each side of the pivot. 1 = middle candle has lower high on both sides for a swing high (ICT/BPI style).")
 ss_h1_prefix              = input.string("1hr", "1h label prefix",  inline="pfx", group=GRP_SWINGS)
 ss_m15_prefix             = input.string("15m", "15m label prefix", inline="pfx", group=GRP_SWINGS)
-ss_line_color             = input.color(color.new(color.white, 0), "Line color", inline="col", group=GRP_SWINGS)
-ss_text_color             = input.color(color.new(color.white, 0), "Text color", inline="col", group=GRP_SWINGS)
+ss_line_color             = input.color(color.new(color.black, 0), "Line color", inline="col", group=GRP_SWINGS)
+ss_text_color             = input.color(color.new(color.black, 0), "Text color", inline="col", group=GRP_SWINGS)
 ss_line_width             = input.int(1, "Line width", minval=1, maxval=4, inline="ln", group=GRP_SWINGS)
 ss_line_style_s           = input.string("solid", "Line style", options=["solid","dashed","dotted"], inline="ln", group=GRP_SWINGS)
 ss_show_text              = input.bool(true,  "Show labels", group=GRP_SWINGS)
@@ -1702,7 +2085,7 @@ ss_text_pad               = input.int(0, "Label Padding (bars)", minval=-50, max
 ss_line_style             = ss_line_style_s == "dashed" ? line.style_dashed : ss_line_style_s == "dotted" ? line.style_dotted : line.style_solid
 
 // Daily & Previous Day Levels
-string GRP_DAILY = "Daily Levels"
+string GRP_DAILY = "Levels — Daily & Previous Day"
 show_daily_high     = input.bool(true,  "Show Daily High",          inline="dhl",  group=GRP_DAILY)
 show_daily_low      = input.bool(true,  "Show Daily Low",           inline="dhl",  group=GRP_DAILY)
 daily_high_color    = input.color(color.new(color.red, 0), "Daily High Color", inline="dhlc", group=GRP_DAILY)
@@ -1743,32 +2126,12 @@ f_labelStyle(simple string pos) =>
 
 // Session & daily label styles (derived from Position dropdowns) + padded x offsets.
 // For "Left", padding moves the label to the LEFT of the anchor; otherwise to the RIGHT.
-session_label_style    = f_labelStyle(session_label_pos_in)
 daily_label_style      = f_labelStyle(daily_label_pos_in)
 // For "Left" position mode the padding's sign is flipped (so a positive padding pushes
 // further left of the anchor). For Inside-Left and all other modes the user-supplied
 // offset is taken as-is: NEGATIVE = backward (left), POSITIVE = forward (right).
-session_label_x_offset = session_label_pos_in == "Left" ? -session_label_padding : session_label_padding
 daily_label_x_offset   = daily_label_pos_in   == "Left" ? -daily_label_padding   : daily_label_padding
 
-// Resolve the x-anchor + label style for a session H/L label.
-//  - Not swept: label at the right edge using the user's Session Label Position.
-//  - Swept + enough room on the line: text reads to the LEFT of the takeout point
-//    (left-pointing callout), padded by session_taken_label_pad.
-//  - Swept + line too short (span < session_taken_center_thresh): text is CENTERED
-//    on the line (no callout arrow) so it never overflows past the tiny line.
-f_sessionLabelPos(bool taken, int level_bar, int taken_bar) =>
-    int   x   = bar_index + session_label_x_offset
-    string stl = session_label_style
-    if taken
-        int span = taken_bar - level_bar
-        if session_taken_center_thresh > 0 and span < session_taken_center_thresh
-            x   := int(math.round((level_bar + taken_bar) / 2.0))
-            stl := label.style_none
-        else
-            x   := taken_bar - session_taken_label_pad
-            stl := label.style_label_right
-    [x, stl]
 
 // Std-Dev CISD projections feature removed to keep the script under Pine's
 // compile token cap. Will be re-added later as a leaner module.
@@ -1780,18 +2143,18 @@ f_sessionLabelPos(bool taken, int level_bar, int taken_bar) =>
 // | style/color/width, background transparency, and realtime cap. |
 // | Hidden by default — toggle "Show Fair Value Gaps" to enable.  |
 // +---------------------------------------------------------------+
-string GRP_FVG = "Main Chart FVG"
-show_fvg_main        = input.bool(false, "Show Fair Value Gaps on Main Chart", group=GRP_FVG, inline="fvg_on")
+string GRP_FVG = "FVG — Main Chart"
+show_fvg_main        = input.bool(true, "Show Fair Value Gaps on Main Chart", group=GRP_FVG, inline="fvg_on")
 fvg_max_display      = input.int(9, "Max FVGs on Chart", minval=0, maxval=50, group=GRP_FVG, inline="fvg_on", tooltip="0 = hide all. Max 50. Also uncheck 'Show Fair Value Gaps on Main Chart' to disable entirely.")
-fvg_bull_color_raw   = input.color(color.white, "Bull FVG Fill (base)", inline="fvgfill", group=GRP_FVG)
+fvg_bull_color_raw   = input.color(color.black, "Bull FVG Fill (base)", inline="fvgfill", group=GRP_FVG)
 fvg_bear_color_raw   = input.color(color.red,   "Bear FVG Fill (base)", inline="fvgfill", group=GRP_FVG)
-fvg_bull_border_raw  = input.color(color.white, "Bull Border (base)",   inline="fvgbord", group=GRP_FVG)
+fvg_bull_border_raw  = input.color(color.black, "Bull Border (base)",   inline="fvgbord", group=GRP_FVG)
 fvg_bear_border_raw  = input.color(color.red,   "Bear Border (base)",   inline="fvgbord", group=GRP_FVG)
 fvg_bg_transparency  = input.int(90, "Background Transparency (0 solid → 100 invisible)", minval=0, maxval=100, group=GRP_FVG)
 fvg_bd_transparency  = input.int(80, "Border Transparency (0 solid → 100 invisible)",     minval=0, maxval=100, group=GRP_FVG)
 fvg_length           = input.int(3, "FVG Length (bars to extend right)", minval=1, maxval=500, group=GRP_FVG)
 fvg_show_ce          = input.bool(true, "Show CE (Midline)", inline="ce",  group=GRP_FVG)
-fvg_ce_color         = input.color(color.white, "CE Color",   inline="ce", group=GRP_FVG)
+fvg_ce_color         = input.color(color.black, "CE Color",   inline="ce", group=GRP_FVG)
 fvg_ce_style_in      = input.string("dotted", "CE Style", options=["solid","dashed","dotted"], inline="ce2", group=GRP_FVG)
 fvg_ce_width         = input.int(1, "CE Width", minval=1, maxval=4, inline="ce2", group=GRP_FVG)
 fvg_ce_style = fvg_ce_style_in == "dashed" ? line.style_dashed : fvg_ce_style_in == "dotted" ? line.style_dotted : line.style_solid
@@ -1804,447 +2167,123 @@ fvg_bear_border = color.new(fvg_bear_border_raw, fvg_bd_transparency)
 
 // IFVG (Inverse Fair Value Gap) feature removed.
 
-// +---------------------------------------------------------------+
-// | ICT OB & FVG (GK)                                             |
-// | Ported from "Simple ICT OB & FVG by Gowtham Kannakaje L".     |
-// | Adds mitigation-aware LTF Fair Value Gaps, Naked/Covered      |
-// | Order Blocks (2/3/4-bar patterns), optional bar coloring on   |
-// | OB bars, Simple mode (non-extending boxes), and alert         |
-// | conditions for Bullish/Bearish OBs and FVGs.                  |
-// +---------------------------------------------------------------+
-string GRP_GK = "ICT OB & FVG (GK)"
-gk_mitigation        = input.string("Close", "Mitigation Type", options=["Close","Wick"], group=GRP_GK, tooltip="Close = mitigated only when a candle closes through the level. Wick = mitigated if any wick pierces the level.")
-gk_simple            = input.bool(false, "Simple Mode (non-extending boxes)", group=GRP_GK, tooltip="When on, OB/FVG boxes are drawn for a single bar only and don't extend right.")
-
-gk_show_ob           = input.bool(false, "Show Order Blocks", group=GRP_GK, inline="gk_ob1", tooltip="Master toggle — turn ALL order blocks on/off. Default OFF; enable in Settings if you want OBs rendered.")
-gk_ob_delete_mit     = input.bool(true,  "Delete on Mitigation", group=GRP_GK, inline="gk_ob1", tooltip="When on, mitigated OBs are deleted. When off, mitigated OBs are frozen in place.")
-gk_ob_show_bull      = input.bool(true,  "  Show Buy-Side (Bull) OBs",  group=GRP_GK, inline="gk_ob_bull_sh", tooltip="Turn buy-side (bullish) order blocks on/off.")
-gk_ob_max_bull       = input.int(5, "  Max Buy-Side Displayed",  minval=1, maxval=10, group=GRP_GK, inline="gk_ob_bull_sh", tooltip="How many most-recent buy-side OBs to keep on the chart (1–10). Older ones are dropped.")
-gk_ob_show_bear      = input.bool(true,  "  Show Sell-Side (Bear) OBs", group=GRP_GK, inline="gk_ob_bear_sh", tooltip="Turn sell-side (bearish) order blocks on/off.")
-gk_ob_max_bear       = input.int(5, "  Max Sell-Side Displayed", minval=1, maxval=10, group=GRP_GK, inline="gk_ob_bear_sh", tooltip="How many most-recent sell-side OBs to keep on the chart (1–10). Older ones are dropped.")
-gk_ob_bull_color_raw  = input.color(color.green, "Bullish OB Fill (base)",   inline="gk_obfill", group=GRP_GK)
-gk_ob_bear_color_raw  = input.color(color.red,   "Bearish OB Fill (base)",   inline="gk_obfill", group=GRP_GK)
-gk_ob_bull_border_raw = input.color(color.green, "Bullish OB Border (base)", inline="gk_obbord", group=GRP_GK)
-gk_ob_bear_border_raw = input.color(color.red,   "Bearish OB Border (base)", inline="gk_obbord", group=GRP_GK)
-gk_ob_bg_transparency = input.int(90, "OB Fill Transparency (0 solid → 100 invisible)",   minval=0, maxval=100, group=GRP_GK, tooltip="Order-block fill transparency. Default 90 — very faded so OBs don't overwhelm the chart.")
-gk_ob_bd_transparency = input.int(30, "OB Border Transparency (0 solid → 100 invisible)", minval=0, maxval=100, group=GRP_GK, tooltip="Order-block border transparency. Default 30 — crisp visible border.")
-// Final OB colors: apply transparency on top of the user's picked base color.
-gk_ob_bull_color  = color.new(gk_ob_bull_color_raw,  gk_ob_bg_transparency)
-gk_ob_bear_color  = color.new(gk_ob_bear_color_raw,  gk_ob_bg_transparency)
-gk_ob_bull_border = color.new(gk_ob_bull_border_raw, gk_ob_bd_transparency)
-gk_ob_bear_border = color.new(gk_ob_bear_border_raw, gk_ob_bd_transparency)
-gk_ob_text           = input.color(color.new(color.white, 0),  "OB Text Color",    group=GRP_GK)
-gk_ob_barcolor       = input.bool(false, "Color OB Bars", group=GRP_GK, inline="gk_obbar")
-gk_ob_bull_bar       = input.color(color.new(color.green, 0), "Bull Bar",         inline="gk_obbar", group=GRP_GK)
-gk_ob_bear_bar       = input.color(color.new(color.red,   0), "Bear Bar",         inline="gk_obbar", group=GRP_GK)
-
-gk_show_fvg             = input.bool(false, "Show LTF FVGs (GK)", group=GRP_GK, inline="gk_fvg1")
-gk_fvg_delete_mit       = input.bool(true,  "Delete on Mitigation", group=GRP_GK, inline="gk_fvg1")
-gk_fvg_bull_color_raw   = input.color(color.white, "Bullish FVG Fill (base)",   inline="gk_fvgfill", group=GRP_GK)
-gk_fvg_bear_color_raw   = input.color(color.red,   "Bearish FVG Fill (base)",   inline="gk_fvgfill", group=GRP_GK)
-gk_fvg_bull_border_raw  = input.color(color.white, "Bullish FVG Border (base)", inline="gk_fvgbord", group=GRP_GK)
-gk_fvg_bear_border_raw  = input.color(color.red,   "Bearish FVG Border (base)", inline="gk_fvgbord", group=GRP_GK)
-gk_fvg_bg_transparency  = input.int(85, "FVG Background Transparency (0 solid → 100 invisible)", minval=0, maxval=100, group=GRP_GK)
-gk_fvg_bd_transparency  = input.int(30, "FVG Border Transparency (0 solid → 100 invisible)",     minval=0, maxval=100, group=GRP_GK)
-gk_fvg_length           = input.int(30, "FVG Length (bars to extend right, Simple mode off)", minval=1, maxval=500, group=GRP_GK)
-gk_fvg_show_ce          = input.bool(false, "Show FVG CE (Midline)", inline="gk_fvgce",  group=GRP_GK)
-gk_fvg_ce_color         = input.color(color.white, "CE Color",       inline="gk_fvgce",  group=GRP_GK)
-gk_fvg_ce_style_in      = input.string("dashed", "CE Style", options=["solid","dashed","dotted"], inline="gk_fvgce2", group=GRP_GK)
-gk_fvg_ce_width         = input.int(1, "CE Width", minval=1, maxval=4, inline="gk_fvgce2", group=GRP_GK)
-gk_fvg_ce_style = gk_fvg_ce_style_in == "dashed" ? line.style_dashed : gk_fvg_ce_style_in == "dotted" ? line.style_dotted : line.style_solid
-
-// Final LTF GK FVG colors
-gk_fvg_bull_color  = color.new(gk_fvg_bull_color_raw,  gk_fvg_bg_transparency)
-gk_fvg_bear_color  = color.new(gk_fvg_bear_color_raw,  gk_fvg_bg_transparency)
-gk_fvg_bull_border = color.new(gk_fvg_bull_border_raw, gk_fvg_bd_transparency)
-gk_fvg_bear_border = color.new(gk_fvg_bear_border_raw, gk_fvg_bd_transparency)
-
-// +---------------------------------------------------------------+
-// | ICT HTF FVG (GK)                                              |
-// | Pulls 3-bar FVGs from two higher timeframes and plots them    |
-// | on the chart. Each HTF has its own timeframe + color controls.|
-// +---------------------------------------------------------------+
-string GRP_GKHTF = "ICT HTF FVG (GK)"
-gk_htf1_show            = input.bool(false, "Show HTF1 FVG", group=GRP_GKHTF, inline="gk_htf1_on")
-gk_htf1_tf              = input.string("15 Mins", "HTF1 Timeframe", options=["3 Mins","5 Mins","15 Mins","30 Mins","1 Hour","2 Hour","3 Hour","4 Hour","1 Day","1 Week","1 Month","3 Month","6 Month","1 Year"], group=GRP_GKHTF, inline="gk_htf1_on")
-gk_htf1_max_count       = input.int(2, "Max HTF1 FVGs per direction", minval=1, maxval=10, group=GRP_GKHTF, tooltip="Keep only the latest N HTF1 FVGs of each direction (bull & bear tracked separately). Max 10.")
-gk_htf1_length          = input.int(0, "HTF1 Box Length (chart bars, 0 = extend to current)", minval=0, maxval=500, group=GRP_GKHTF, tooltip="0 = box auto-extends right to the current bar. >0 = fixed width in chart-TF bars past the FVG origin.")
-gk_htf1_bull_color_raw  = input.color(color.white, "HTF1 Bull Fill (base)",   inline="gk_htf1fill", group=GRP_GKHTF)
-gk_htf1_bear_color_raw  = input.color(color.red,   "HTF1 Bear Fill (base)",   inline="gk_htf1fill", group=GRP_GKHTF)
-gk_htf1_bull_border_raw = input.color(color.white, "HTF1 Bull Border (base)", inline="gk_htf1bord", group=GRP_GKHTF)
-gk_htf1_bear_border_raw = input.color(color.red,   "HTF1 Bear Border (base)", inline="gk_htf1bord", group=GRP_GKHTF)
-gk_htf1_bg_transparency = input.int(85, "HTF1 Background Transparency", minval=0, maxval=100, group=GRP_GKHTF)
-gk_htf1_bd_transparency = input.int(30, "HTF1 Border Transparency",     minval=0, maxval=100, group=GRP_GKHTF)
-gk_htf1_show_ce         = input.bool(false, "Show HTF1 CE (Midline)", inline="gk_htf1ce", group=GRP_GKHTF)
-gk_htf1_ce_color        = input.color(color.white, "HTF1 CE Color",   inline="gk_htf1ce", group=GRP_GKHTF)
-gk_htf1_ce_style_in     = input.string("dashed", "HTF1 CE Style", options=["solid","dashed","dotted"], inline="gk_htf1ce2", group=GRP_GKHTF)
-gk_htf1_ce_width        = input.int(1, "HTF1 CE Width", minval=1, maxval=4, inline="gk_htf1ce2", group=GRP_GKHTF)
-gk_htf1_ce_style = gk_htf1_ce_style_in == "dashed" ? line.style_dashed : gk_htf1_ce_style_in == "dotted" ? line.style_dotted : line.style_solid
-
-gk_htf2_show            = input.bool(false, "Show HTF2 FVG", group=GRP_GKHTF, inline="gk_htf2_on")
-gk_htf2_tf              = input.string("1 Hour", "HTF2 Timeframe", options=["3 Mins","5 Mins","15 Mins","30 Mins","1 Hour","2 Hour","3 Hour","4 Hour","1 Day","1 Week","1 Month","3 Month","6 Month","1 Year"], group=GRP_GKHTF, inline="gk_htf2_on")
-gk_htf2_max_count       = input.int(2, "Max HTF2 FVGs per direction", minval=1, maxval=10, group=GRP_GKHTF, tooltip="Keep only the latest N HTF2 FVGs of each direction (bull & bear tracked separately). Max 10.")
-gk_htf2_length          = input.int(0, "HTF2 Box Length (chart bars, 0 = extend to current)", minval=0, maxval=500, group=GRP_GKHTF, tooltip="0 = box auto-extends right to the current bar. >0 = fixed width in chart-TF bars past the FVG origin.")
-gk_htf2_bull_color_raw  = input.color(color.white, "HTF2 Bull Fill (base)",   inline="gk_htf2fill", group=GRP_GKHTF)
-gk_htf2_bear_color_raw  = input.color(color.red,   "HTF2 Bear Fill (base)",   inline="gk_htf2fill", group=GRP_GKHTF)
-gk_htf2_bull_border_raw = input.color(color.white, "HTF2 Bull Border (base)", inline="gk_htf2bord", group=GRP_GKHTF)
-gk_htf2_bear_border_raw = input.color(color.red,   "HTF2 Bear Border (base)", inline="gk_htf2bord", group=GRP_GKHTF)
-gk_htf2_bg_transparency = input.int(85, "HTF2 Background Transparency", minval=0, maxval=100, group=GRP_GKHTF)
-gk_htf2_bd_transparency = input.int(30, "HTF2 Border Transparency",     minval=0, maxval=100, group=GRP_GKHTF)
-gk_htf2_show_ce         = input.bool(false, "Show HTF2 CE (Midline)", inline="gk_htf2ce", group=GRP_GKHTF)
-gk_htf2_ce_color        = input.color(color.white, "HTF2 CE Color",   inline="gk_htf2ce", group=GRP_GKHTF)
-gk_htf2_ce_style_in     = input.string("dashed", "HTF2 CE Style", options=["solid","dashed","dotted"], inline="gk_htf2ce2", group=GRP_GKHTF)
-gk_htf2_ce_width        = input.int(1, "HTF2 CE Width", minval=1, maxval=4, inline="gk_htf2ce2", group=GRP_GKHTF)
-gk_htf2_ce_style = gk_htf2_ce_style_in == "dashed" ? line.style_dashed : gk_htf2_ce_style_in == "dotted" ? line.style_dotted : line.style_solid
-
-// Final HTF GK FVG colors
-gk_htf1_bull_color  = color.new(gk_htf1_bull_color_raw,  gk_htf1_bg_transparency)
-gk_htf1_bear_color  = color.new(gk_htf1_bear_color_raw,  gk_htf1_bg_transparency)
-gk_htf1_bull_border = color.new(gk_htf1_bull_border_raw, gk_htf1_bd_transparency)
-gk_htf1_bear_border = color.new(gk_htf1_bear_border_raw, gk_htf1_bd_transparency)
-gk_htf2_bull_color  = color.new(gk_htf2_bull_color_raw,  gk_htf2_bg_transparency)
-gk_htf2_bear_color  = color.new(gk_htf2_bear_color_raw,  gk_htf2_bg_transparency)
-gk_htf2_bull_border = color.new(gk_htf2_bull_border_raw, gk_htf2_bd_transparency)
-gk_htf2_bear_border = color.new(gk_htf2_bear_border_raw, gk_htf2_bd_transparency)
-
-// Friendly-name → Pine timeframe code. Mirrors v5 source options.
-f_gkTF(simple string _htf) =>
-    switch _htf
-        "3 Mins"   => "3"
-        "5 Mins"   => "5"
-        "15 Mins"  => "15"
-        "30 Mins"  => "30"
-        "1 Hour"   => "60"
-        "2 Hour"   => "120"
-        "3 Hour"   => "180"
-        "4 Hour"   => "240"
-        "1 Day"    => "D"
-        "1 Week"   => "W"
-        "1 Month"  => "M"
-        "3 Month"  => "3M"
-        "6 Month"  => "6M"
-        "1 Year"   => "12M"
-        => "60"
 
 // +---------------------------------------------------------------+
 // | Global Text & Color Control                                   |
 // | Master override to hide every text label the indicator draws, |
 // | plus per-category toggles and color pickers.                  |
 // +---------------------------------------------------------------+
-string GRP_TEXT = "Text & Color Control"
+string GRP_TEXT = "Global Text & Color Control"
 hide_all_labels        = input.bool(false, "Hide ALL Text Labels (master override)", group=GRP_TEXT, tooltip="When on, every text label drawn by this indicator is hidden. Lines, boxes and fills still render.")
 show_session_text      = input.bool(true,  "Show Session Text (duplicate of per-session setting)", group=GRP_TEXT)
 show_daily_text        = input.bool(true,  "Show Daily/PDH/PDL Text (duplicate of per-daily setting)", group=GRP_TEXT)
 
 // Master-resolved flags. Master override wins over any individual toggle.
-text_session_visible = not hide_all_labels and show_session_text and show_session_labels
 text_daily_visible   = not hide_all_labels and show_daily_text   and show_daily_labels
 
 
 //+------------------------------------------------------------------------------------------------------------+//
-//+--- Session Levels: NY AM Range (07:00-09:30), Asia, London, Midnight & 8:30 Opens                      ---+//
+//+--- Session Levels: NY AM Range (07:00-09:30) BSL/SSL, Midnight & 8:30 Opens                             ---+//
 //+------------------------------------------------------------------------------------------------------------+//
+// Restored from the pre-killzones version: horizontal liquidity lines at the NY AM 07:00-09:30 ET high (BSL)
+// and low (SSL), plus the Midnight (00:00 ET) and 8:30 ET opens. Asia/London high-low were dropped because
+// the killzone boxes above already cover those sessions. The 07:00-09:30 high/low come from ny_am_high /
+// ny_am_low computed in the killzones block above (also consumed by the model detection).
+string GRP_SESSIONS = "Levels — NY AM / Midnight / 8:30"
+show_ny_am_range     = input.bool(true, "Show NY AM Range (07:00-09:30 ET) BSL/SSL", group=GRP_SESSIONS)
+ny_am_bsl_color      = input.color(color.new(color.red,   0), "NY AM High (BSL)", inline="nyam", group=GRP_SESSIONS)
+ny_am_ssl_color      = input.color(color.new(color.green, 0), "NY AM Low (SSL)",  inline="nyam", group=GRP_SESSIONS)
+ny_am_bsl_label_text = input.string("NY AM BSL", "NY AM High Label", inline="nyamtxt", group=GRP_SESSIONS)
+ny_am_ssl_label_text = input.string("NY AM SSL", "NY AM Low Label",  inline="nyamtxt", group=GRP_SESSIONS)
+show_midnight_open   = input.bool(true, "Show Midnight Open (00:00 ET)", group=GRP_SESSIONS)
+midnight_color       = input.color(color.new(color.purple, 0), "Midnight Open Color", group=GRP_SESSIONS)
+midnight_label_text  = input.string("Midnight", "Midnight Open Label", group=GRP_SESSIONS)
+show_830_open        = input.bool(true, "Show 8:30 AM Open (ET)", group=GRP_SESSIONS)
+open_830_color       = input.color(color.new(color.fuchsia, 0), "8:30 Open Color", group=GRP_SESSIONS)
+open_830_label_text  = input.string("8:30", "8:30 Open Label", group=GRP_SESSIONS)
+show_session_labels  = input.bool(true, "Show Session Text Labels", group=GRP_SESSIONS)
+session_line_width   = input.int(1, "Session Line Width", minval=1, maxval=4, group=GRP_SESSIONS)
+session_line_style_in = input.string("solid", "Session Line Style", options=["solid","dashed","dotted"], group=GRP_SESSIONS)
+session_line_style   = session_line_style_in == "dashed" ? line.style_dashed : session_line_style_in == "dotted" ? line.style_dotted : line.style_solid
+text_session_visible = not hide_all_labels and show_session_text and show_session_labels
 
-// --- Session state (NY AM 07:00-09:30) ---
-var float ny_am_high = na
-var float ny_am_low  = na
+// --- NY AM (07:00-09:30 ET) BSL/SSL lines ---
 var int   ny_am_high_bar = na
 var int   ny_am_low_bar  = na
 var line  ny_am_high_line  = na
 var line  ny_am_low_line   = na
 var label ny_am_high_label = na
 var label ny_am_low_label  = na
-// "Taken" state: once session ended and a later wick reaches the level, freeze line at that bar
-var bool  ny_am_high_taken     = false
-var int   ny_am_high_taken_bar = na
-var bool  ny_am_low_taken      = false
-var int   ny_am_low_taken_bar  = na
-
-// --- Asia session state ---
-var float asia_high = na
-var float asia_low  = na
-var int   asia_high_bar = na
-var int   asia_low_bar  = na
-var line  asia_high_line  = na
-var line  asia_low_line   = na
-var label asia_high_label = na
-var label asia_low_label  = na
-var bool  asia_high_taken     = false
-var int   asia_high_taken_bar = na
-var bool  asia_low_taken      = false
-var int   asia_low_taken_bar  = na
-
-// --- London session state ---
-var float london_high = na
-var float london_low  = na
-var int   london_high_bar = na
-var int   london_low_bar  = na
-var line  london_high_line  = na
-var line  london_low_line   = na
-var label london_high_label = na
-var label london_low_label  = na
-var bool  london_high_taken     = false
-var int   london_high_taken_bar = na
-var bool  london_low_taken      = false
-var int   london_low_taken_bar  = na
-
-// --- Midnight open state ---
-var float midnight_open_price = na
-var int   midnight_open_bar   = na
-var line  midnight_open_line  = na
-var label midnight_open_label = na
-
-// --- 8:30 open state ---
-var float open_830_price = na
-var int   open_830_bar   = na
-var line  open_830_line  = na
-var label open_830_label = na
-
-// Session detection via time() -- returns non-na bar time when inside the session, na otherwise
-ny_am_time  = time(timeframe.period, "0700-0930", "America/New_York")
-asia_time   = time(timeframe.period, asia_session_in, "America/New_York")
-london_time = time(timeframe.period, london_session_in, "America/New_York")
-
-is_ny_am  = not na(ny_am_time)
-is_asia   = not na(asia_time)
-is_london = not na(london_time)
-
-is_ny_am_start  = is_ny_am  and not (is_ny_am[1])
-is_asia_start   = is_asia   and not (is_asia[1])
-is_london_start = is_london and not (is_london[1])
-
-// Narrow session-window triggers for midnight and 8:30 opens (first bar of the minute-window)
-midnight_sess_time = time(timeframe.period, "0000-0002", "America/New_York")
-open830_sess_time  = time(timeframe.period, "0830-0832", "America/New_York")
-
-is_midnight_start = not na(midnight_sess_time) and na(midnight_sess_time[1])
-is_830_start      = not na(open830_sess_time)  and na(open830_sess_time[1])
-
-// --- NY AM (07:00-09:30 ET) BSL/SSL ---
-if show_ny_am_range and not sessions_hidden_by_tf
-    if is_ny_am_start
-        ny_am_high := high
-        ny_am_low  := low
+if show_ny_am_range
+    if is_ny_am_kz and not is_ny_am_kz[1]
         ny_am_high_bar := bar_index
         ny_am_low_bar  := bar_index
-        ny_am_high_taken     := false
-        ny_am_high_taken_bar := na
-        ny_am_low_taken      := false
-        ny_am_low_taken_bar  := na
         if not na(ny_am_high_line)
             line.delete(ny_am_high_line)
             line.delete(ny_am_low_line)
-            if not na(ny_am_high_label)
-                label.delete(ny_am_high_label)
-                ny_am_high_label := na
-            if not na(ny_am_low_label)
-                label.delete(ny_am_low_label)
-                ny_am_low_label  := na
-        ny_am_high_line  := line.new(bar_index, high, bar_index, high, color=ny_am_bsl_color, width=session_line_width, style=session_line_style)
-        ny_am_low_line   := line.new(bar_index, low,  bar_index, low,  color=ny_am_ssl_color, width=session_line_width, style=session_line_style)
-        // NOTE: labels are NOT created here. They are rebuilt fresh on barstate.islast
-        // (see end of this block) so they can never get "stuck" at a stale bar_index.
-    else if is_ny_am
-        if high > ny_am_high
-            ny_am_high := high
+        ny_am_high_line := line.new(bar_index, high, bar_index, high, color=ny_am_bsl_color, width=session_line_width, style=session_line_style)
+        ny_am_low_line  := line.new(bar_index, low,  bar_index, low,  color=ny_am_ssl_color, width=session_line_width, style=session_line_style)
+    else if is_ny_am_kz
+        if high >= ny_am_high
             ny_am_high_bar := bar_index
-            ny_am_high_taken     := false
-            ny_am_high_taken_bar := na
-        if low < ny_am_low
-            ny_am_low := low
+        if low <= ny_am_low
             ny_am_low_bar := bar_index
-            ny_am_low_taken     := false
-            ny_am_low_taken_bar := na
-    // Takeout detection: only AFTER the session has finalized the level
-    if not is_ny_am and not na(ny_am_high_line)
-        if not ny_am_high_taken and not na(ny_am_high) and high >= ny_am_high
-            ny_am_high_taken     := true
-            ny_am_high_taken_bar := bar_index
-        if not ny_am_low_taken and not na(ny_am_low) and low <= ny_am_low
-            ny_am_low_taken     := true
-            ny_am_low_taken_bar := bar_index
     if not na(ny_am_high_line)
-        int ny_am_h_x2 = ny_am_high_taken ? ny_am_high_taken_bar : bar_index
-        int ny_am_l_x2 = ny_am_low_taken  ? ny_am_low_taken_bar  : bar_index
         line.set_xy1(ny_am_high_line, ny_am_high_bar, ny_am_high)
-        line.set_xy2(ny_am_high_line, ny_am_h_x2,     ny_am_high)
+        line.set_xy2(ny_am_high_line, bar_index,      ny_am_high)
         line.set_xy1(ny_am_low_line,  ny_am_low_bar,  ny_am_low)
-        line.set_xy2(ny_am_low_line,  ny_am_l_x2,     ny_am_low)
-    // Label rebuild on the latest bar.
-    //  - If the line is FROZEN at takeout: anchor the label at the line's x2 (takeout bar)
-    //    with text floating ABOVE the line for highs / BELOW for lows so it never lands on
-    //    candles that traded after the sweep.
-    //  - If the line is still EXTENDING to the right edge: anchor at the right edge using
-    //    the user-selected session label position style.
+        line.set_xy2(ny_am_low_line,  bar_index,      ny_am_low)
     if barstate.islast and not na(ny_am_high_line)
         if not na(ny_am_high_label)
             label.delete(ny_am_high_label)
         if not na(ny_am_low_label)
             label.delete(ny_am_low_label)
-        [ny_h_lbl_x, ny_h_lbl_stl] = f_sessionLabelPos(ny_am_high_taken, ny_am_high_bar, ny_am_high_taken_bar)
-        [ny_l_lbl_x, ny_l_lbl_stl] = f_sessionLabelPos(ny_am_low_taken,  ny_am_low_bar,  ny_am_low_taken_bar)
-        ny_am_high_label := label.new(ny_h_lbl_x, ny_am_high, text_session_visible ? ny_am_bsl_label_text : "", color=color.new(color.white, 100), textcolor=ny_am_bsl_color, style=ny_h_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
-        ny_am_low_label  := label.new(ny_l_lbl_x, ny_am_low,  text_session_visible ? ny_am_ssl_label_text : "", color=color.new(color.white, 100), textcolor=ny_am_ssl_color, style=ny_l_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
+        ny_am_high_label := label.new(bar_index, ny_am_high, text_session_visible ? ny_am_bsl_label_text : "", color=color.new(color.white, 100), textcolor=ny_am_bsl_color, style=label.style_label_left, size=size.small, text_font_family=font.family_monospace)
+        ny_am_low_label  := label.new(bar_index, ny_am_low,  text_session_visible ? ny_am_ssl_label_text : "", color=color.new(color.white, 100), textcolor=ny_am_ssl_color, style=label.style_label_left, size=size.small, text_font_family=font.family_monospace)
 
-// --- Asia High/Low ---
-if show_asia_range and not sessions_hidden_by_tf
-    if is_asia_start
-        asia_high := high
-        asia_low  := low
-        asia_high_bar := bar_index
-        asia_low_bar  := bar_index
-        asia_high_taken     := false
-        asia_high_taken_bar := na
-        asia_low_taken      := false
-        asia_low_taken_bar  := na
-        if not na(asia_high_line)
-            line.delete(asia_high_line)
-            line.delete(asia_low_line)
-            if not na(asia_high_label)
-                label.delete(asia_high_label)
-                asia_high_label := na
-            if not na(asia_low_label)
-                label.delete(asia_low_label)
-                asia_low_label  := na
-        asia_high_line  := line.new(bar_index, high, bar_index, high, color=asia_color, width=session_line_width, style=session_line_style)
-        asia_low_line   := line.new(bar_index, low,  bar_index, low,  color=asia_color, width=session_line_width, style=session_line_style)
-        // Labels rebuilt on barstate.islast at end of block.
-    else if is_asia
-        if high > asia_high
-            asia_high := high
-            asia_high_bar := bar_index
-            asia_high_taken     := false
-            asia_high_taken_bar := na
-        if low < asia_low
-            asia_low := low
-            asia_low_bar := bar_index
-            asia_low_taken     := false
-            asia_low_taken_bar := na
-    // Takeout detection: only AFTER the Asia session has finalized the level
-    if not is_asia and not na(asia_high_line)
-        if not asia_high_taken and not na(asia_high) and high >= asia_high
-            asia_high_taken     := true
-            asia_high_taken_bar := bar_index
-        if not asia_low_taken and not na(asia_low) and low <= asia_low
-            asia_low_taken     := true
-            asia_low_taken_bar := bar_index
-    if not na(asia_high_line)
-        int asia_h_x2 = asia_high_taken ? asia_high_taken_bar : bar_index
-        int asia_l_x2 = asia_low_taken  ? asia_low_taken_bar  : bar_index
-        line.set_xy1(asia_high_line, asia_high_bar, asia_high)
-        line.set_xy2(asia_high_line, asia_h_x2,     asia_high)
-        line.set_xy1(asia_low_line,  asia_low_bar,  asia_low)
-        line.set_xy2(asia_low_line,  asia_l_x2,     asia_low)
-    // Label rebuild on the latest bar (frozen → at line end above/below; active → right edge).
-    if barstate.islast and not na(asia_high_line)
-        if not na(asia_high_label)
-            label.delete(asia_high_label)
-        if not na(asia_low_label)
-            label.delete(asia_low_label)
-        [asia_h_lbl_x, asia_h_lbl_stl] = f_sessionLabelPos(asia_high_taken, asia_high_bar, asia_high_taken_bar)
-        [asia_l_lbl_x, asia_l_lbl_stl] = f_sessionLabelPos(asia_low_taken,  asia_low_bar,  asia_low_taken_bar)
-        asia_high_label := label.new(asia_h_lbl_x, asia_high, text_session_visible ? asia_high_label_text : "", color=color.new(color.white, 100), textcolor=asia_color, style=asia_h_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
-        asia_low_label  := label.new(asia_l_lbl_x, asia_low,  text_session_visible ? asia_low_label_text  : "", color=color.new(color.white, 100), textcolor=asia_color, style=asia_l_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
+// --- Midnight (00:00 ET) & 8:30 ET opens ---
+midnight_sess_time = time(timeframe.period, "0000-0002", "America/New_York")
+open830_sess_time  = time(timeframe.period, "0830-0832", "America/New_York")
+is_midnight_start  = not na(midnight_sess_time) and na(midnight_sess_time[1])
+is_830_start       = not na(open830_sess_time)  and na(open830_sess_time[1])
 
-// --- London High/Low ---
-if show_london_range and not sessions_hidden_by_tf
-    if is_london_start
-        london_high := high
-        london_low  := low
-        london_high_bar := bar_index
-        london_low_bar  := bar_index
-        london_high_taken     := false
-        london_high_taken_bar := na
-        london_low_taken      := false
-        london_low_taken_bar  := na
-        if not na(london_high_line)
-            line.delete(london_high_line)
-            line.delete(london_low_line)
-            if not na(london_high_label)
-                label.delete(london_high_label)
-                london_high_label := na
-            if not na(london_low_label)
-                label.delete(london_low_label)
-                london_low_label  := na
-        london_high_line  := line.new(bar_index, high, bar_index, high, color=london_color, width=session_line_width, style=session_line_style)
-        london_low_line   := line.new(bar_index, low,  bar_index, low,  color=london_color, width=session_line_width, style=session_line_style)
-        // Labels rebuilt on barstate.islast at end of block.
-    else if is_london
-        if high > london_high
-            london_high := high
-            london_high_bar := bar_index
-            london_high_taken     := false
-            london_high_taken_bar := na
-        if low < london_low
-            london_low := low
-            london_low_bar := bar_index
-            london_low_taken     := false
-            london_low_taken_bar := na
-    // Takeout detection: only AFTER the London session has finalized the level
-    if not is_london and not na(london_high_line)
-        if not london_high_taken and not na(london_high) and high >= london_high
-            london_high_taken     := true
-            london_high_taken_bar := bar_index
-        if not london_low_taken and not na(london_low) and low <= london_low
-            london_low_taken     := true
-            london_low_taken_bar := bar_index
-    if not na(london_high_line)
-        int london_h_x2 = london_high_taken ? london_high_taken_bar : bar_index
-        int london_l_x2 = london_low_taken  ? london_low_taken_bar  : bar_index
-        line.set_xy1(london_high_line, london_high_bar, london_high)
-        line.set_xy2(london_high_line, london_h_x2,     london_high)
-        line.set_xy1(london_low_line,  london_low_bar,  london_low)
-        line.set_xy2(london_low_line,  london_l_x2,     london_low)
-    // Label rebuild on the latest bar (frozen → at line end above/below; active → right edge).
-    if barstate.islast and not na(london_high_line)
-        if not na(london_high_label)
-            label.delete(london_high_label)
-        if not na(london_low_label)
-            label.delete(london_low_label)
-        [london_h_lbl_x, london_h_lbl_stl] = f_sessionLabelPos(london_high_taken, london_high_bar, london_high_taken_bar)
-        [london_l_lbl_x, london_l_lbl_stl] = f_sessionLabelPos(london_low_taken,  london_low_bar,  london_low_taken_bar)
-        london_high_label := label.new(london_h_lbl_x, london_high, text_session_visible ? london_high_label_text : "", color=color.new(color.white, 100), textcolor=london_color, style=london_h_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
-        london_low_label  := label.new(london_l_lbl_x, london_low,  text_session_visible ? london_low_label_text  : "", color=color.new(color.white, 100), textcolor=london_color, style=london_l_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
-
-// --- Midnight Open (00:00 ET) ---
+var float midnight_open_price = na
+var int   midnight_open_bar   = na
+var line  midnight_open_line  = na
+var label midnight_open_label = na
 if show_midnight_open
     if is_midnight_start
         midnight_open_price := open
         midnight_open_bar   := bar_index
         if not na(midnight_open_line)
             line.delete(midnight_open_line)
-            if not na(midnight_open_label)
-                label.delete(midnight_open_label)
-                midnight_open_label := na
-        midnight_open_line  := line.new(bar_index, open, bar_index, open, color=midnight_color, width=session_line_width, style=session_line_style)
-        // Label rebuilt fresh on barstate.islast (right-edge anchor pattern).
+        midnight_open_line := line.new(bar_index, open, bar_index, open, color=midnight_color, width=session_line_width, style=session_line_style)
     if not na(midnight_open_line)
         line.set_xy1(midnight_open_line, midnight_open_bar, midnight_open_price)
-        line.set_xy2(midnight_open_line, bar_index, midnight_open_price)
+        line.set_xy2(midnight_open_line, bar_index,         midnight_open_price)
     if barstate.islast and not na(midnight_open_line)
         if not na(midnight_open_label)
             label.delete(midnight_open_label)
-        midnight_open_label := label.new(bar_index + session_label_x_offset, midnight_open_price, text_session_visible ? midnight_label_text : "", color=color.new(color.white, 100), textcolor=midnight_color, style=session_label_style, size=session_label_size, text_font_family=font.family_monospace)
+        midnight_open_label := label.new(bar_index, midnight_open_price, text_session_visible ? midnight_label_text : "", color=color.new(color.white, 100), textcolor=midnight_color, style=label.style_label_left, size=size.small, text_font_family=font.family_monospace)
 
-// --- 8:30 AM Open (ET) ---
+var float open_830_price = na
+var int   open_830_bar   = na
+var line  open_830_line   = na
+var label open_830_label  = na
 if show_830_open
     if is_830_start
         open_830_price := open
         open_830_bar   := bar_index
         if not na(open_830_line)
             line.delete(open_830_line)
-            if not na(open_830_label)
-                label.delete(open_830_label)
-                open_830_label := na
-        open_830_line  := line.new(bar_index, open, bar_index, open, color=open_830_color, width=session_line_width, style=session_line_style)
-        // Label rebuilt fresh on barstate.islast (right-edge anchor pattern).
+        open_830_line := line.new(bar_index, open, bar_index, open, color=open_830_color, width=session_line_width, style=session_line_style)
     if not na(open_830_line)
         line.set_xy1(open_830_line, open_830_bar, open_830_price)
-        line.set_xy2(open_830_line, bar_index, open_830_price)
+        line.set_xy2(open_830_line, bar_index,    open_830_price)
     if barstate.islast and not na(open_830_line)
         if not na(open_830_label)
             label.delete(open_830_label)
-        open_830_label := label.new(bar_index + session_label_x_offset, open_830_price, text_session_visible ? open_830_label_text : "", color=color.new(color.white, 100), textcolor=open_830_color, style=session_label_style, size=session_label_size, text_font_family=font.family_monospace)
+        open_830_label := label.new(bar_index, open_830_price, text_session_visible ? open_830_label_text : "", color=color.new(color.white, 100), textcolor=open_830_color, style=label.style_label_left, size=size.small, text_font_family=font.family_monospace)
 
 
 //+------------------------------------------------------------------------------------------------------------+//
@@ -2507,7 +2546,7 @@ else
     cur_day_start_bar := na(cur_day_start_bar) ? bar_index : cur_day_start_bar
 
 // Draw / update current-day high
-if show_daily_high and not na(cur_day_high)
+if show_daily_high and not timeframe.isdaily and not na(cur_day_high)
     if na(dh_line)
         dh_line  := line.new(cur_day_start_bar, cur_day_high, bar_index, cur_day_high, color=daily_high_color, width=daily_line_width, style=daily_line_style)
         dh_label := label.new(bar_index + daily_label_x_offset, cur_day_high, text_daily_visible ? "Daily High" : "", color=color.new(color.white, 100), textcolor=daily_high_color, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
@@ -2516,7 +2555,7 @@ if show_daily_high and not na(cur_day_high)
     label.set_xy(dh_label, bar_index + daily_label_x_offset, cur_day_high)
 
 // Draw / update current-day low
-if show_daily_low and not na(cur_day_low)
+if show_daily_low and not timeframe.isdaily and not na(cur_day_low)
     if na(dl_line)
         dl_line  := line.new(cur_day_start_bar, cur_day_low, bar_index, cur_day_low, color=daily_low_color, width=daily_line_width, style=daily_line_style)
         dl_label := label.new(bar_index + daily_label_x_offset, cur_day_low, text_daily_visible ? "Daily Low" : "", color=color.new(color.white, 100), textcolor=daily_low_color, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
@@ -2525,7 +2564,7 @@ if show_daily_low and not na(cur_day_low)
     label.set_xy(dl_label, bar_index + daily_label_x_offset, cur_day_low)
 
 // Draw / update previous-day high (horizontal, extends to current bar)
-if show_pdh and not na(prev_day_high)
+if show_pdh and not timeframe.isdaily and not na(prev_day_high)
     if na(pdh_line)
         pdh_line  := line.new(prev_day_start_bar, prev_day_high, bar_index, prev_day_high, color=pdh_color, width=daily_line_width, style=daily_line_style)
         pdh_label := label.new(bar_index + daily_label_x_offset, prev_day_high, text_daily_visible ? "PDH" : "", color=color.new(color.white, 100), textcolor=pdh_color, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
@@ -2533,7 +2572,7 @@ if show_pdh and not na(prev_day_high)
     label.set_xy(pdh_label, bar_index + daily_label_x_offset, prev_day_high)
 
 // Draw / update previous-day low
-if show_pdl and not na(prev_day_low)
+if show_pdl and not timeframe.isdaily and not na(prev_day_low)
     if na(pdl_line)
         pdl_line  := line.new(prev_day_start_bar, prev_day_low, bar_index, prev_day_low, color=pdl_color, width=daily_line_width, style=daily_line_style)
         pdl_label := label.new(bar_index + daily_label_x_offset, prev_day_low, text_daily_visible ? "PDL" : "", color=color.new(color.white, 100), textcolor=pdl_color, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
@@ -2599,224 +2638,13 @@ if array.size(main_fvgs) > fvg_max_display or not show_fvg_main
 
 
 //+------------------------------------------------------------------------------------------------------------+//
-//+--- ICT OB & FVG (GK) — ported from "Simple ICT OB & FVG by Gowtham Kannakaje L"                           ---+//
-//+------------------------------------------------------------------------------------------------------------+//
-// LTF Fair Value Gaps and Order Blocks on the chart timeframe. Order Blocks use the classic GK
-// patterns: Naked OB (2-bar), Covered OB (3-bar with validity), Covered OB (4-bar with validity).
-// Mitigation type (Close/Wick) is user-selectable; on mitigation the box is either deleted or
-// frozen (no longer extends right), depending on the "Delete on Mitigation" toggle. Optional bar
-// coloring on OB origin bars. HTF1 + HTF2 FVGs below via request.security.
-
-// --- Mitigation reference levels
-gk_mit_lo = gk_mitigation == "Close" ? close[1] : low
-gk_mit_hi = gk_mitigation == "Close" ? close[1] : high
-
-// --- LTF FVG detection (3-bar, standard)
-gk_bull_fvg_raw = (low - high[2]) > 0 and open[1] < close[1]
-gk_bear_fvg_raw = (low[2] - high) > 0 and open[1] > close[1]
-
-// --- Order Block detection (bullish variants)
-// 2-bar Naked OB: bearish candle followed by bullish engulfing-style push, new FVG above
-gk_ob_bull_2 = close[2] < open[2] and low[0] - high[2] > 0 and open[1] < close[1]
-// 3-bar Covered OB candidate + validity
-gk_ob_bull_3     = close[3] < open[3] and low[0] - high[3] > 0 and close[2] > open[2]
-gk_ob_bull_3_ok  = close[2] > high[3]
-// 4-bar Covered OB candidate + validity
-gk_ob_bull_4     = close[4] < open[4] and low[0] - high[4] > 0 and close[3] > open[3] and close[2] > open[2]
-gk_ob_bull_4_ok  = close[3] > high[4] or close[2] > high[4]
-
-// --- Order Block detection (bearish variants)
-gk_ob_bear_2 = close[2] > open[2] and low[2] - high[0] > 0 and open[1] > close[1]
-gk_ob_bear_3     = close[3] > open[3] and low[3] - high[0] > 0 and close[2] < open[2]
-gk_ob_bear_3_ok  = close[2] < low[3]
-gk_ob_bear_4     = close[4] > open[4] and low[4] - high[0] > 0 and close[3] < open[3] and close[2] < open[2]
-gk_ob_bear_4_ok  = close[3] < low[4] or close[2] < low[4]
-
-// --- Persistent box arrays (box + parallel CE line array for FVGs)
-var array<box>  gk_bull_fvg_boxes = array.new<box>()
-var array<box>  gk_bear_fvg_boxes = array.new<box>()
-var array<line> gk_bull_fvg_ces   = array.new<line>()
-var array<line> gk_bear_fvg_ces   = array.new<line>()
-var array<box>  gk_bull_ob_boxes  = array.new<box>()
-var array<box>  gk_bear_ob_boxes  = array.new<box>()
-
-gk_ext = gk_simple ? extend.none : extend.right
-
-// --- LTF FVG: create boxes (and CE midlines) on new detection
-if gk_show_fvg and gk_bull_fvg_raw and barstate.isconfirmed
-    bx = box.new(bar_index - 2, high[2], bar_index, low, bgcolor=gk_fvg_bull_color, border_color=gk_fvg_bull_border, extend=gk_ext, text=gk_simple ? "" : "Bullish FVG", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
-    array.unshift(gk_bull_fvg_boxes, bx)
-    ce_y = (high[2] + low) / 2.0
-    line ce_ln = gk_fvg_show_ce ? line.new(bar_index - 2, ce_y, bar_index, ce_y, xloc=xloc.bar_index, extend=gk_ext, color=gk_fvg_ce_color, style=gk_fvg_ce_style, width=gk_fvg_ce_width) : na
-    array.unshift(gk_bull_fvg_ces, ce_ln)
-
-if gk_show_fvg and gk_bear_fvg_raw and barstate.isconfirmed
-    bx = box.new(bar_index - 2, high, bar_index, low[2], bgcolor=gk_fvg_bear_color, border_color=gk_fvg_bear_border, extend=gk_ext, text=gk_simple ? "" : "Bearish FVG", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
-    array.unshift(gk_bear_fvg_boxes, bx)
-    ce_y = (high + low[2]) / 2.0
-    line ce_ln = gk_fvg_show_ce ? line.new(bar_index - 2, ce_y, bar_index, ce_y, xloc=xloc.bar_index, extend=gk_ext, color=gk_fvg_ce_color, style=gk_fvg_ce_style, width=gk_fvg_ce_width) : na
-    array.unshift(gk_bear_fvg_ces, ce_ln)
-
-// --- LTF OB: create boxes on new detection
-if gk_show_ob and barstate.isconfirmed
-    // ---- Buy-side (Bullish) OBs ----
-    if gk_ob_show_bull
-        // 2-bar Naked Bullish OB — origin bar is index-2
-        if gk_ob_bull_2
-            bx = box.new(bar_index - 2, high[2], bar_index, low[2], bgcolor=gk_ob_bull_color, border_color=gk_ob_bull_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
-            array.unshift(gk_bull_ob_boxes, bx)
-        // 3-bar Covered Bullish OB — origin bar is index-3
-        if gk_ob_bull_3 and gk_ob_bull_3_ok
-            bx = box.new(bar_index - 3, high[3], bar_index, low[3], bgcolor=gk_ob_bull_color, border_color=gk_ob_bull_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
-            array.unshift(gk_bull_ob_boxes, bx)
-        // 4-bar Covered Bullish OB — origin bar is index-4
-        if gk_ob_bull_4 and gk_ob_bull_4_ok
-            bx = box.new(bar_index - 4, high[4], bar_index, low[4], bgcolor=gk_ob_bull_color, border_color=gk_ob_bull_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
-            array.unshift(gk_bull_ob_boxes, bx)
-        // Trim to max count — drop oldest (tail) so the freshest N survive
-        while array.size(gk_bull_ob_boxes) > gk_ob_max_bull
-            box.delete(array.pop(gk_bull_ob_boxes))
-
-    // ---- Sell-side (Bearish) OBs ----
-    if gk_ob_show_bear
-        if gk_ob_bear_2
-            bx = box.new(bar_index - 2, high[2], bar_index, low[2], bgcolor=gk_ob_bear_color, border_color=gk_ob_bear_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
-            array.unshift(gk_bear_ob_boxes, bx)
-        if gk_ob_bear_3 and gk_ob_bear_3_ok
-            bx = box.new(bar_index - 3, high[3], bar_index, low[3], bgcolor=gk_ob_bear_color, border_color=gk_ob_bear_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
-            array.unshift(gk_bear_ob_boxes, bx)
-        if gk_ob_bear_4 and gk_ob_bear_4_ok
-            bx = box.new(bar_index - 4, high[4], bar_index, low[4], bgcolor=gk_ob_bear_color, border_color=gk_ob_bear_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
-            array.unshift(gk_bear_ob_boxes, bx)
-        while array.size(gk_bear_ob_boxes) > gk_ob_max_bear
-            box.delete(array.pop(gk_bear_ob_boxes))
-
-// --- If a side is turned off or master is off, purge any lingering boxes of that side ---
-if not gk_show_ob or not gk_ob_show_bull
-    while array.size(gk_bull_ob_boxes) > 0
-        box.delete(array.pop(gk_bull_ob_boxes))
-if not gk_show_ob or not gk_ob_show_bear
-    while array.size(gk_bear_ob_boxes) > 0
-        box.delete(array.pop(gk_bear_ob_boxes))
-// If show_ob is on but max was lowered at runtime, trim to the new cap
-if gk_show_ob and gk_ob_show_bull
-    while array.size(gk_bull_ob_boxes) > gk_ob_max_bull
-        box.delete(array.pop(gk_bull_ob_boxes))
-if gk_show_ob and gk_ob_show_bear
-    while array.size(gk_bear_ob_boxes) > gk_ob_max_bear
-        box.delete(array.pop(gk_bear_ob_boxes))
-
-// --- Extend right edge of active boxes + CE lines to current bar
-if not gk_simple
-    if array.size(gk_bull_fvg_boxes) > 0
-        for i = 0 to array.size(gk_bull_fvg_boxes) - 1
-            box.set_right(array.get(gk_bull_fvg_boxes, i), bar_index)
-            ln = array.get(gk_bull_fvg_ces, i)
-            if not na(ln)
-                line.set_x2(ln, bar_index)
-    if array.size(gk_bear_fvg_boxes) > 0
-        for i = 0 to array.size(gk_bear_fvg_boxes) - 1
-            box.set_right(array.get(gk_bear_fvg_boxes, i), bar_index)
-            ln = array.get(gk_bear_fvg_ces, i)
-            if not na(ln)
-                line.set_x2(ln, bar_index)
-    if array.size(gk_bull_ob_boxes) > 0
-        for i = 0 to array.size(gk_bull_ob_boxes) - 1
-            box.set_right(array.get(gk_bull_ob_boxes, i), bar_index)
-    if array.size(gk_bear_ob_boxes) > 0
-        for i = 0 to array.size(gk_bear_ob_boxes) - 1
-            box.set_right(array.get(gk_bear_ob_boxes, i), bar_index)
-
-// --- Mitigation sweep: bullish zones are mitigated when price trades back through their TOP (or bottom for bearish)
-// For Bullish FVG: mitigated when gk_mit_lo <= box.top (price back-filled the gap from above)
-// For Bearish FVG: mitigated when gk_mit_hi >= box.bottom
-if array.size(gk_bull_fvg_boxes) > 0
-    for i = array.size(gk_bull_fvg_boxes) - 1 to 0
-        bx = array.get(gk_bull_fvg_boxes, i)
-        if gk_mit_lo <= box.get_bottom(bx)
-            ln_del = array.get(gk_bull_fvg_ces, i)
-            if not na(ln_del)
-                line.delete(ln_del)
-            array.remove(gk_bull_fvg_ces, i)
-            if gk_fvg_delete_mit
-                box.delete(bx)
-                array.remove(gk_bull_fvg_boxes, i)
-            else
-                box.set_right(bx, bar_index)
-                box.set_extend(bx, extend.none)
-                array.remove(gk_bull_fvg_boxes, i)
-
-if array.size(gk_bear_fvg_boxes) > 0
-    for i = array.size(gk_bear_fvg_boxes) - 1 to 0
-        bx = array.get(gk_bear_fvg_boxes, i)
-        if gk_mit_hi >= box.get_top(bx)
-            ln_del = array.get(gk_bear_fvg_ces, i)
-            if not na(ln_del)
-                line.delete(ln_del)
-            array.remove(gk_bear_fvg_ces, i)
-            if gk_fvg_delete_mit
-                box.delete(bx)
-                array.remove(gk_bear_fvg_boxes, i)
-            else
-                box.set_right(bx, bar_index)
-                box.set_extend(bx, extend.none)
-                array.remove(gk_bear_fvg_boxes, i)
-
-if array.size(gk_bull_ob_boxes) > 0
-    for i = array.size(gk_bull_ob_boxes) - 1 to 0
-        bx = array.get(gk_bull_ob_boxes, i)
-        if gk_mit_lo <= box.get_bottom(bx)
-            if gk_ob_delete_mit
-                box.delete(bx)
-                array.remove(gk_bull_ob_boxes, i)
-            else
-                box.set_right(bx, bar_index)
-                box.set_extend(bx, extend.none)
-                array.remove(gk_bull_ob_boxes, i)
-
-if array.size(gk_bear_ob_boxes) > 0
-    for i = array.size(gk_bear_ob_boxes) - 1 to 0
-        bx = array.get(gk_bear_ob_boxes, i)
-        if gk_mit_hi >= box.get_top(bx)
-            if gk_ob_delete_mit
-                box.delete(bx)
-                array.remove(gk_bear_ob_boxes, i)
-            else
-                box.set_right(bx, bar_index)
-                box.set_extend(bx, extend.none)
-                array.remove(gk_bear_ob_boxes, i)
-
-// --- Bar coloring on OB origin bars
-gk_bar_col_bull_2 = gk_ob_barcolor and gk_ob_bull_2
-gk_bar_col_bull_3 = gk_ob_barcolor and gk_ob_bull_3 and gk_ob_bull_3_ok
-gk_bar_col_bull_4 = gk_ob_barcolor and gk_ob_bull_4 and gk_ob_bull_4_ok
-gk_bar_col_bear_2 = gk_ob_barcolor and gk_ob_bear_2
-gk_bar_col_bear_3 = gk_ob_barcolor and gk_ob_bear_3 and gk_ob_bear_3_ok
-gk_bar_col_bear_4 = gk_ob_barcolor and gk_ob_bear_4 and gk_ob_bear_4_ok
-
-barcolor(gk_bar_col_bull_2 ? gk_ob_bull_bar : na, offset=-2)
-barcolor(gk_bar_col_bull_3 ? gk_ob_bull_bar : na, offset=-3)
-barcolor(gk_bar_col_bull_4 ? gk_ob_bull_bar : na, offset=-4)
-barcolor(gk_bar_col_bear_2 ? gk_ob_bear_bar : na, offset=-2)
-barcolor(gk_bar_col_bear_3 ? gk_ob_bear_bar : na, offset=-3)
-barcolor(gk_bar_col_bear_4 ? gk_ob_bear_bar : na, offset=-4)
-
-// --- Alerts
-gk_any_bull_ob = gk_ob_bull_2 or (gk_ob_bull_3 and gk_ob_bull_3_ok) or (gk_ob_bull_4 and gk_ob_bull_4_ok)
-gk_any_bear_ob = gk_ob_bear_2 or (gk_ob_bear_3 and gk_ob_bear_3_ok) or (gk_ob_bear_4 and gk_ob_bear_4_ok)
-alertcondition(gk_any_bull_ob, title="GK Bullish OB", message="Bullish Order Block detected")
-alertcondition(gk_any_bear_ob, title="GK Bearish OB", message="Bearish Order Block detected")
-alertcondition(gk_bull_fvg_raw, title="GK Bullish FVG", message="Bullish Fair Value Gap detected")
-alertcondition(gk_bear_fvg_raw, title="GK Bearish FVG", message="Bearish Fair Value Gap detected")
-
-//+------------------------------------------------------------------------------------------------------------+//
 //+--- Opening Range Gap (9:30 AM ET) — ported from ICT Open Range Gap (fadi)                                 ---+//
 //+------------------------------------------------------------------------------------------------------------+//
 // The ORG is the gap between the prior session's close (16:14 ET) and the current session's
 // open (09:30 ET). Inputs mirror the fadi ORG indicator: open line, close line, C.E., quadrants,
 // backgrounds, fills, labels, trace, and "extend to end of day".
 
-string GRP_ORG = "Opening Range Gap (9:30 AM)"
+string GRP_ORG = "Levels — Opening Range Gap (9:30)"
 org_show_openrange   = input.bool(true,  "Show Open Range Gap",                        group=GRP_ORG, inline="org_on")
 org_hide_above       = input.timeframe("15", "Hide above timeframe",                   group=GRP_ORG, inline="org_on")
 org_max              = input.int(5, "Limit to last X days", minval=1, maxval=100,      group=GRP_ORG)
@@ -3113,7 +2941,7 @@ if orgValidTF() and org_show_openrange
 // Multiple models can be active simultaneously — the info-box renders each row independently.
 
 // ---- Model toggle inputs (kept independent of the info-box toggle so power users can mute one model) ----
-string GRP_MODELS = "Model Detection"
+string GRP_MODELS = "Models — Detection"
 show_model_atm       = input.bool(true,  "Enable ATM Model (1m / 3m / 5m, 9:30-11:00 ET)", group=GRP_MODELS)
 show_model_unicorn5  = input.bool(true,  "Enable Unicorn Model (shows on all TFs except 1m)", group=GRP_MODELS)
 model_poi_tolerance  = input.float(0.05, "POI Proximity % (tap tolerance)", minval=0.0, maxval=5.0, step=0.01, group=GRP_MODELS, tooltip="How close price has to come to a POI level (as % of level price) to count as a 'tap'. Small values = stricter.")
@@ -3159,116 +2987,285 @@ f_touchedAnyBox(array<box> arr, float lo, float hi) =>
 f_sweptHigh(float lvl, float h) => na(lvl) or na(h) ? false : h > lvl
 f_sweptLow (float lvl, float l) => na(lvl) or na(l) ? false : l < lvl
 
+// ---- Chart-TF CISD trigger detection ----------------------------------------
+// Computes the same +CISD / -CISD trigger the CISD (MTF) visual renders at the
+// end of the script, but early enough that the ATM model can confirm on the
+// exact event the customer sees on the chart. The label/line drawing stays in
+// the CISD (MTF) section below and consumes the captured payload here.
+//   tcisd_shortsSqueezed = bullish CISD (+CISD)   tcisd_longsRekt = bearish CISD (-CISD)
+var int   tcisd_vibes   = 0
+var float tcisd_entry   = na
+var int   tcisd_timeSet = na
+var float tcisd_pain    = na
+var label tcisd_sticky  = na
+var array<line>  tcisd_lines  = array.new<line>()
+var array<label> tcisd_labels = array.new<label>()
+
+tcisd_crystalBall(int bias) =>
+    int temporal_shift = 0
+    float extreme = open[0]
+    int candle_attitude = close[0] > open[0] ? 1 : close[0] < open[0] ? -1 : 0
+    if candle_attitude == 0 or candle_attitude != bias
+        [extreme, bar_index]
+    for i = 1 to 500
+        candle_attitude := close[i] > open[i] ? 1 : close[i] < open[i] ? -1 : 0
+        if candle_attitude == 0
+            continue
+        bool mood_match = candle_attitude == bias
+        if not mood_match
+            break
+        temporal_shift := i
+        if bias == 1
+            if open[i] < extreme
+                extreme := open[i]
+        else
+            if open[i] > extreme
+                extreme := open[i]
+    int extreme_shift = na
+    for k = 0 to temporal_shift
+        if open[k] == extreme
+            extreme_shift := k
+            break
+    [extreme, bar_index - extreme_shift]
+
+tcisd_archaeologist(int bias) =>
+    int i = 1
+    bool artifact_found = false
+    int max_shift = na
+    float extreme = na
+    for j = 1 to 500
+        i := j
+        int candle_attitude = close[i] > open[i] ? 1 : close[i] < open[i] ? -1 : 0
+        if candle_attitude == 0
+            continue
+        bool is_correct_era = candle_attitude == bias
+        if not artifact_found
+            if is_correct_era
+                artifact_found := true
+                max_shift := i
+                extreme := open[i]
+        else
+            if not is_correct_era
+                break
+            max_shift := i
+            if bias == 1
+                if open[i] < extreme
+                    extreme := open[i]
+            else
+                if open[i] > extreme
+                    extreme := open[i]
+    int extreme_shift = na
+    for k = 1 to max_shift
+        if open[k] == extreme
+            extreme_shift := k
+            break
+    [extreme, bar_index - extreme_shift]
+
+if tcisd_vibes == 0 and bar_index > 10
+    int first_impression = close > open ? 1 : close < open ? -1 : 0
+    if first_impression == 0
+        for k = 1 to 50
+            first_impression := close[k] > open[k] ? 1 : close[k] < open[k] ? -1 : 0
+            if first_impression != 0
+                break
+    if first_impression != 0
+        tcisd_vibes := first_impression
+        [origin_price, origin_time] = tcisd_crystalBall(first_impression)
+        tcisd_entry   := origin_price
+        tcisd_timeSet := origin_time
+        tcisd_pain    := first_impression == 1 ? high : low
+
+int   tcisd_candlePersonality = close > open ? 1 : close < open ? -1 : 0
+float tcisd_freshHopium = na
+int   tcisd_freshTimestamp = na
+
+if tcisd_vibes == 1
+    if high > tcisd_pain
+        tcisd_pain := high
+        if tcisd_candlePersonality == 1
+            [p_price, p_idx] = tcisd_crystalBall(1)
+            tcisd_freshHopium := p_price
+            tcisd_freshTimestamp := p_idx
+        else
+            [p_price, p_idx] = tcisd_archaeologist(1)
+            tcisd_freshHopium := p_price
+            tcisd_freshTimestamp := p_idx
+        tcisd_entry   := tcisd_freshHopium
+        tcisd_timeSet := tcisd_freshTimestamp
+else if tcisd_vibes == -1
+    if low < tcisd_pain
+        tcisd_pain := low
+        if tcisd_candlePersonality == -1
+            [p_price, p_idx] = tcisd_crystalBall(-1)
+            tcisd_freshHopium := p_price
+            tcisd_freshTimestamp := p_idx
+        else
+            [p_price, p_idx] = tcisd_archaeologist(-1)
+            tcisd_freshHopium := p_price
+            tcisd_freshTimestamp := p_idx
+        tcisd_entry   := tcisd_freshHopium
+        tcisd_timeSet := tcisd_freshTimestamp
+
+bool tcisd_shortsSqueezed = tcisd_vibes == -1 and close > tcisd_entry
+bool tcisd_longsRekt      = tcisd_vibes == 1  and close < tcisd_entry
+
+// Capture the fire payload for the CISD (MTF) visual (drawn later), then flip state.
+var bool  tcisd_fire      = false
+var bool  tcisd_fireBull  = false
+var float tcisd_firePrice = na
+var int   tcisd_fireTime  = na
+tcisd_fire := false
+if tcisd_shortsSqueezed or tcisd_longsRekt
+    tcisd_fire      := true
+    tcisd_fireBull  := tcisd_shortsSqueezed
+    tcisd_firePrice := tcisd_entry
+    tcisd_fireTime  := tcisd_timeSet
+    int new_emotional_state = tcisd_shortsSqueezed ? 1 : -1
+    tcisd_vibes := new_emotional_state
+    [reset_price, reset_time] = tcisd_crystalBall(new_emotional_state)
+    tcisd_entry   := reset_price
+    tcisd_timeSet := reset_time
+    tcisd_pain    := new_emotional_state == 1 ? high : low
+
 // ---- Per-model state ----
 //  status: 0 inactive, 1 watching, 2 long-active, 3 short-active
 //  lastUpdateBar: last bar this model was touched (used for watch persistence).
-//  sweep / sig / target / conf: short strings rendered in info-box sub-rows.
+//  sweep / target: short strings rendered in the info-box sub-rows.
 
 var int    atm_status           = 0
 var int    atm_lastBar          = na
+var int    atm_setupDir         = 0     // 2 = long setup (SSL/discount), 3 = short setup (BSL/premium)
 var string atm_sweep            = ""
-var string atm_sig              = ""
 var string atm_target           = ""
-var string atm_conf             = ""
 
-var int    u5_status            = 0
-var int    u5_lastBar           = na
-var string u5_poi               = ""
-var string u5_brk               = ""
-
-
-// ---- Watch persistence decay: revert to inactive if no recent CISD fire ----
-// NOTE: ATM has its OWN time-window-based reset (9:30-11:00 ET), so it's excluded here.
-if not na(u5_lastBar) and u5_status > 0 and (bar_index - u5_lastBar) > model_watch_bars
-    u5_status := 0
-
-// ---- ATM Model (1m / 3m / 5m, post-9:30 → pre-11:00 ET) ---------------------
-// Setup arms when the bar sweeps ANY ONE liquidity level (wick OR close
-// through both qualify since `f_sweptHigh` only checks `high > level` and
-// `f_sweptLow` only checks `low < level`):
-//   SHORT side: NY AM high, PDH, 4hr SH, 1hr SH, 15m SH
-//   LONG  side: NY AM low,  PDL, 4hr SL, 1hr SL, 15m SL
-// While "Watching", a confirming CISD upgrades to long-active / short-active.
-// At 11:00 ET the model resets to inactive regardless of state.
-//
-// Helper: "did the current bar sweep any level in this array of swing prices?"
-f_sweptAnyHigh(array<float> arr, float h) =>
-    bool any = false
-    if not na(h) and array.size(arr) > 0
-        for i = 0 to array.size(arr) - 1
-            float lvl = array.get(arr, i)
-            if not na(lvl) and h > lvl
-                any := true
-                break
-    any
-f_sweptAnyLow(array<float> arr, float l) =>
-    bool any = false
-    if not na(l) and array.size(arr) > 0
-        for i = 0 to array.size(arr) - 1
-            float lvl = array.get(arr, i)
-            if not na(lvl) and l < lvl
-                any := true
-                break
-    any
+// ---- ATM Model (1m / 3m / 5m, 9:30 → 11:00 ET) ------------------------------
+// Bias is set by the tier: Premium (above the 8:30 open) favors shorts, Discount
+// (at/below 8:30) favors longs; Tier 1 vs 2 is decided by the Midnight open.
+// Setup arms (Watching) on a session-liquidity sweep that agrees with the tier:
+//   SHORT: price sweeps the 07:00-09:30 high (BSL) while in Premium.
+//   LONG : price sweeps the 07:00-09:30 low  (SSL) while in Discount.
+// A confirming CISD in the setup direction upgrades Watching → active. Targets
+// are TP1 = 8:30 open, TP2 = opposite session liquidity. Resets at 11:00 ET.
 
 // 9:30-11:00 ET window detection on the chart timeframe
 atm_window_t  = time(timeframe.period, "0930-1100", "America/New_York")
 bool in_atm_window = not na(atm_window_t)
 
+// Always-on capture of the Midnight (00:00 ET) and 8:30 ET opens for the ATM tier
+// logic, independent of the Session-Levels visual toggles (is_midnight_start /
+// is_830_start are computed unconditionally in the Session Levels block above).
+var float atm_mid_open = na
+var float atm_830_open = na
+if is_midnight_start
+    atm_mid_open := open
+if is_830_start
+    atm_830_open := open
+
+// ATM tier / bias: premium (favor shorts) when price is above the 8:30 open;
+// discount (favor longs) when at/below it. Tier 1 vs 2 by the Midnight open.
+bool atm_above830 = not na(atm_830_open) and close >  atm_830_open
+bool atm_aboveMid = not na(atm_mid_open) and close >  atm_mid_open
+bool atm_haveOpens = not na(atm_830_open) and not na(atm_mid_open)
+string atm_tier = "None"
+if atm_haveOpens
+    if atm_above830 and not atm_aboveMid
+        atm_tier := "Tier 1 Premium"
+    else if atm_above830 and atm_aboveMid
+        atm_tier := "Tier 2 Premium"
+    else if not atm_above830 and atm_aboveMid
+        atm_tier := "Tier 1 Discount"
+    else
+        atm_tier := "Tier 2 Discount"
+bool atm_isPremium  = atm_tier == "Tier 1 Premium"  or atm_tier == "Tier 2 Premium"
+bool atm_isDiscount = atm_tier == "Tier 1 Discount" or atm_tier == "Tier 2 Discount"
+
 if show_model_atm and (tf_is_1m or tf_is_3m or tf_is_5m)
-    // Outside the window: hard-reset model state.
+    // Outside the window: hard-reset model state (clear stale rows too).
     if not in_atm_window and atm_status > 0
-        atm_status  := 0
-        atm_lastBar := na
+        atm_status   := 0
+        atm_lastBar  := na
+        atm_setupDir := 0
+        atm_sweep    := ""
+        atm_target   := ""
 
     if in_atm_window
-        // SHORT side liquidity sweeps
-        bool sweptShort =
-              f_sweptHigh(ny_am_high,    high) or
-              f_sweptHigh(prev_day_high, high) or
-              f_sweptAnyHigh(h4_sh_prices,  high) or
-              f_sweptAnyHigh(h1_sh_prices,  high) or
-              f_sweptAnyHigh(m15_sh_prices, high)
-        // LONG side liquidity sweeps
-        bool sweptLong  =
-              f_sweptLow (ny_am_low,    low ) or
-              f_sweptLow (prev_day_low, low ) or
-              f_sweptAnyLow (h4_sl_prices,  low ) or
-              f_sweptAnyLow (h1_sl_prices,  low ) or
-              f_sweptAnyLow (m15_sl_prices, low )
+        // Core ATM liquidity = the 07:00-09:30 session high (BSL) / low (SSL).
+        bool sweptBSL = f_sweptHigh(ny_am_high, high)
+        bool sweptSSL = f_sweptLow (ny_am_low,  low )
 
-        // Arm "Watching" on any sweep. Repurposed string vars for the new info-box rows:
-        //   atm_sweep → POI hit (label of POIs that were swept)
-        //   atm_sig   → Sweep   (BSL/SSL direction)
-        //   atm_target→ CISD    (+CISD / -CISD / Awaiting)
-        //   atm_conf  → MSS     (Confirmed / —)
-        if sweptShort and atm_status < 2
-            atm_status  := 1
-            atm_lastBar := bar_index
-            atm_sweep   := "NY AM H / PDH / 4h-1h-15m SH"
-            atm_sig     := "BSL"
-            atm_target  := "Awaiting -CISD"
-            atm_conf    := "—"
-        if sweptLong and atm_status < 2
-            atm_status  := 1
-            atm_lastBar := bar_index
-            atm_sweep   := "NY AM L / PDL / 4h-1h-15m SL"
-            atm_sig     := "SSL"
-            atm_target  := "Awaiting +CISD"
-            atm_conf    := "—"
+        // Strict tier gating: a short setup arms only when a BSL sweep happens in
+        // Premium; a long setup only when an SSL sweep happens in Discount.
+        if sweptBSL and atm_isPremium and atm_status < 2
+            atm_status   := 1
+            atm_setupDir := 3
+            atm_lastBar  := bar_index
+            atm_sweep    := "BSL (NY AM High)"
+            atm_target   := "Awaiting -CISD"
+        if sweptSSL and atm_isDiscount and atm_status < 2
+            atm_status   := 1
+            atm_setupDir := 2
+            atm_lastBar  := bar_index
+            atm_sweep    := "SSL (NY AM Low)"
+            atm_target   := "Awaiting +CISD"
 
-        // CISD confirmation upgrades Watching → Active. We treat a CISD inside the ATM
-        // window (after a sweep) as also confirming an MSS — the close-through is a structural shift.
-        if atm_status == 1 and ns_cisd_fired_bull
-            atm_status  := 2
-            atm_lastBar := bar_index
-            atm_target  := "+CISD"
-            atm_conf    := "Confirmed"
-        if atm_status == 1 and ns_cisd_fired_bear
+        // CISD confirmation upgrades Watching → Active, in the setup's direction.
+        // Uses the same chart-TF CISD trigger that prints the +CISD / -CISD labels.
+        if atm_status == 1 and atm_setupDir == 3 and tcisd_longsRekt
             atm_status  := 3
             atm_lastBar := bar_index
             atm_target  := "-CISD"
-            atm_conf    := "Confirmed"
+        if atm_status == 1 and atm_setupDir == 2 and tcisd_shortsSqueezed
+            atm_status  := 2
+            atm_lastBar := bar_index
+            atm_target  := "+CISD"
+
+// ---- Fractal model info-box state (no time gate) ---------------------------
+// Mirrors the ATM box (premium/discount tier + swept swing + CISD) but for the
+// built-in C2/C3/C4 fractal model, which runs the whole session with no killzone
+// window. Uses the fractal engine's own sweep + reclaim (bull_cisd_confirmed /
+// bear_cisd_confirmed) rather than the chart-TF label trigger.
+//   status: 0 inactive, 1 watching, 2 long-active, 3 short-active
+var int    frac_status = 0
+var int    frac_dir    = 0     // 2 = long (swept low), 3 = short (swept high)
+var string frac_swept  = ""
+var string frac_cisd   = ""
+
+// A fresh fractal sweep arms a watching setup in that direction.
+if c2_had_bull_sweep and not c2_had_bull_sweep[1]
+    frac_status := 1
+    frac_dir    := 2
+    frac_swept  := "Swing Low (SSL)"
+    frac_cisd   := "Awaiting C2"
+if c2_had_bear_sweep and not c2_had_bear_sweep[1]
+    frac_status := 1
+    frac_dir    := 3
+    frac_swept  := "Swing High (BSL)"
+    frac_cisd   := "Awaiting C2"
+
+// Active ONLY when a real C2 signal fires (a C2 setup is actually created).
+// Without a C2 the box stays Watching / Inactive — never long/short.
+if frac_c2_fired_bull
+    frac_status := 2
+    frac_dir    := 2
+    frac_swept  := "Swing Low (SSL)"
+    frac_cisd   := "C2 (+CISD)"
+if frac_c2_fired_bear
+    frac_status := 3
+    frac_dir    := 3
+    frac_swept  := "Swing High (BSL)"
+    frac_cisd   := "C2 (-CISD)"
+
+// Reset when the fractal engine clears the active sweep (invalidation / timeout).
+if frac_dir == 2 and not c2_had_bull_sweep and frac_status > 0
+    frac_status := 0
+    frac_dir    := 0
+    frac_swept  := ""
+    frac_cisd   := ""
+if frac_dir == 3 and not c2_had_bear_sweep and frac_status > 0
+    frac_status := 0
+    frac_dir    := 0
+    frac_swept  := ""
+    frac_cisd   := ""
 
 // ============================================================================
 // Unicorn Entry Model — INFO-BOX ONLY (multi-timeframe)
@@ -3287,7 +3284,7 @@ if show_model_atm and (tf_is_1m or tf_is_3m or tf_is_5m)
 // direction (Bullish/Bearish) and the POI/liquidity that was taken. No time
 // window. Does NOT touch the CISD model feed or the ATM model.
 // ============================================================================
-string GRP_UNI = "Unicorn Model (info-box only)"
+string GRP_UNI = "Models — Unicorn"
 uni_swing    = input.int(5,    "Swing Detection (pivot bars)",     minval=1, maxval=50,  group=GRP_UNI, tooltip="Left/right bars for the swing pivots that define structure, sweeps and MSS on each monitored timeframe.")
 uni_lookback = input.int(20,   "Sweep / Breaker Lookback (bars)",  minval=3, maxval=200, group=GRP_UNI, tooltip="How far back a liquidity sweep and its breaker candle may be from the confirming displacement.")
 uni_dispATR  = input.float(0.0,"Min Displacement (ATR x, 0 = off)",minval=0.0, step=0.1, group=GRP_UNI, tooltip="Require the displacement FVG gap to span at least this many ATR(14). 0 disables the size filter.")
@@ -3364,7 +3361,13 @@ uni_detect() =>
     if bear
         hiBar := na
     float px = bull ? loPx : bear ? hiPx : na
-    [bull, bear, px]
+    // Entry = midpoint of the breaker∩FVG overlap (the unicorn zone).
+    float entry = na
+    if bull
+        entry := (math.min(bBrkT, low) + math.max(bBrkB, high[2])) / 2
+    if bear
+        entry := (math.min(sBrkT, high) + math.max(sBrkB, low[2])) / 2
+    [bull, bear, px, entry]
 
 // Nearest absolute distance from px to any element of arr (na if empty).
 f_nearArr(array<float> arr, float px) =>
@@ -3410,58 +3413,89 @@ f_uniPoi(float px, bool bull) =>
             lbl := bull ? "SSL" : "BSL"
     lbl
 
+// Premium/Discount alignment tag for a unicorn, based on the chart-TF tier at the
+// time it fired. A bullish unicorn is "aligned" in Discount, a bearish one in
+// Premium; a counter-bias unicorn is flagged with "!".
+f_uniBias(bool bull, bool prem, bool disc) =>
+    prem ? (bull ? "Prem!" : "Prem") : disc ? (bull ? "Disc" : "Disc!") : ""
+
 // ---- Monitor 3m / 5m / 15m / 30m via request.security (info-box only) ----
-[u3_bull,  u3_bear,  u3_px]  = request.security(syminfo.tickerid, "3",  uni_detect(), lookahead=barmerge.lookahead_off)
-[u5_bull,  u5_bear,  u5_px]  = request.security(syminfo.tickerid, "5",  uni_detect(), lookahead=barmerge.lookahead_off)
-[u15_bull, u15_bear, u15_px] = request.security(syminfo.tickerid, "15", uni_detect(), lookahead=barmerge.lookahead_off)
-[u30_bull, u30_bear, u30_px] = request.security(syminfo.tickerid, "30", uni_detect(), lookahead=barmerge.lookahead_off)
+[u3_bull,  u3_bear,  u3_px,  u3_en]  = request.security(syminfo.tickerid, "3",  uni_detect(), lookahead=barmerge.lookahead_off)
+[u5_bull,  u5_bear,  u5_px,  u5_en]  = request.security(syminfo.tickerid, "5",  uni_detect(), lookahead=barmerge.lookahead_off)
+[u15_bull, u15_bear, u15_px, u15_en] = request.security(syminfo.tickerid, "15", uni_detect(), lookahead=barmerge.lookahead_off)
+[u30_bull, u30_bear, u30_px, u30_en] = request.security(syminfo.tickerid, "30", uni_detect(), lookahead=barmerge.lookahead_off)
 
 // Latched per-TF state for the info box (dir: 0 none / 2 bull / 3 bear).
+// up* = named POI taken; um* = entry price (breaker∩FVG midpoint).
 var int    ud3 = 0
 var string up3 = ""
+var float  um3 = na
+var string ug3 = ""
 var int    ub3 = na
 var int    ud5 = 0
 var string up5 = ""
+var float  um5 = na
+var string ug5 = ""
 var int    ub5 = na
 var int    ud15 = 0
 var string up15 = ""
+var float  um15 = na
+var string ug15 = ""
 var int    ub15 = na
 var int    ud30 = 0
 var string up30 = ""
+var float  um30 = na
+var string ug30 = ""
 var int    ub30 = na
 
 if show_model_unicorn5
     if u3_bull
         ud3 := 2
         up3 := f_uniPoi(u3_px, true)
+        um3 := u3_en
+        ug3 := f_uniBias(true, atm_isPremium, atm_isDiscount)
         ub3 := bar_index
     else if u3_bear
         ud3 := 3
         up3 := f_uniPoi(u3_px, false)
+        um3 := u3_en
+        ug3 := f_uniBias(false, atm_isPremium, atm_isDiscount)
         ub3 := bar_index
     if u5_bull
         ud5 := 2
         up5 := f_uniPoi(u5_px, true)
+        um5 := u5_en
+        ug5 := f_uniBias(true, atm_isPremium, atm_isDiscount)
         ub5 := bar_index
     else if u5_bear
         ud5 := 3
         up5 := f_uniPoi(u5_px, false)
+        um5 := u5_en
+        ug5 := f_uniBias(false, atm_isPremium, atm_isDiscount)
         ub5 := bar_index
     if u15_bull
         ud15 := 2
         up15 := f_uniPoi(u15_px, true)
+        um15 := u15_en
+        ug15 := f_uniBias(true, atm_isPremium, atm_isDiscount)
         ub15 := bar_index
     else if u15_bear
         ud15 := 3
         up15 := f_uniPoi(u15_px, false)
+        um15 := u15_en
+        ug15 := f_uniBias(false, atm_isPremium, atm_isDiscount)
         ub15 := bar_index
     if u30_bull
         ud30 := 2
         up30 := f_uniPoi(u30_px, true)
+        um30 := u30_en
+        ug30 := f_uniBias(true, atm_isPremium, atm_isDiscount)
         ub30 := bar_index
     else if u30_bear
         ud30 := 3
         up30 := f_uniPoi(u30_px, false)
+        um30 := u30_en
+        ug30 := f_uniBias(false, atm_isPremium, atm_isDiscount)
         ub30 := bar_index
 
 // Decay each TF back to inactive after watch persistence.
@@ -3484,7 +3518,7 @@ alertcondition(uni_anyBear, title="Unicorn Bearish", message="Bearish Unicorn mo
 //+------------------------------------------------------------------------------------------------------------+//
 //+--- Info-box (top-right corner)                                                                          ---+//
 //+------------------------------------------------------------------------------------------------------------+//
-string GRP_INFOBOX = "Info Box"
+string GRP_INFOBOX = "Panel — Top-Right Info Box"
 // (master toggle "Show Top-Right Model Info Box" lives in the top-of-settings Display group)
 infobox_bg            = input.color(color.new(color.black, 20), "Background",       group=GRP_INFOBOX)
 infobox_text_color    = input.color(color.new(color.white, 0),  "Text Color",       group=GRP_INFOBOX)
@@ -3527,26 +3561,39 @@ if show_top_infobox and barstate.islast
     color  c5  = f_modelColor(ud5,  infobox_text_color)
     color  c15 = f_modelColor(ud15, infobox_text_color)
     color  c30 = f_modelColor(ud30, infobox_text_color)
-    string t3  = ud3  == 2 ? "▲ Bull · " + up3  : ud3  == 3 ? "▼ Bear · " + up3  : "—"
-    string t5  = ud5  == 2 ? "▲ Bull · " + up5  : ud5  == 3 ? "▼ Bear · " + up5  : "—"
-    string t15 = ud15 == 2 ? "▲ Bull · " + up15 : ud15 == 3 ? "▼ Bear · " + up15 : "—"
-    string t30 = ud30 == 2 ? "▲ Bull · " + up30 : ud30 == 3 ? "▼ Bear · " + up30 : "—"
+    // Unicorn per-TF text: direction · POI taken · entry (breaker∩FVG midpoint).
+    string e3  = na(um3)  ? "" : " @" + str.tostring(math.round_to_mintick(um3))
+    string e5  = na(um5)  ? "" : " @" + str.tostring(math.round_to_mintick(um5))
+    string e15 = na(um15) ? "" : " @" + str.tostring(math.round_to_mintick(um15))
+    string e30 = na(um30) ? "" : " @" + str.tostring(math.round_to_mintick(um30))
+    string g3  = ug3  == "" ? "" : " · " + ug3
+    string g5  = ug5  == "" ? "" : " · " + ug5
+    string g15 = ug15 == "" ? "" : " · " + ug15
+    string g30 = ug30 == "" ? "" : " · " + ug30
+    string t3  = ud3  == 2 ? "▲ Bull · " + up3  + e3  + g3  : ud3  == 3 ? "▼ Bear · " + up3  + e3  + g3  : "—"
+    string t5  = ud5  == 2 ? "▲ Bull · " + up5  + e5  + g5  : ud5  == 3 ? "▼ Bear · " + up5  + e5  + g5  : "—"
+    string t15 = ud15 == 2 ? "▲ Bull · " + up15 + e15 + g15 : ud15 == 3 ? "▼ Bear · " + up15 + e15 + g15 : "—"
+    string t30 = ud30 == 2 ? "▲ Bull · " + up30 + e30 + g30 : ud30 == 3 ? "▼ Bear · " + up30 + e30 + g30 : "—"
+
+    // ATM detail-row text
+    string atm_tierTxt = atm_tier == "None" ? "—" : atm_tier
+    string atm_tpTxt   = atm_status == 3 ? "8:30 → SSL" : atm_status == 2 ? "8:30 → BSL" : "—"
 
     // Header (compact: ticker only, drop the timeframe to narrow column 0)
     table.cell(infoTbl, 0, 0, syminfo.ticker, text_color=infobox_header_color, text_size=szRes, text_font_family=font.family_monospace, bgcolor=color.new(color.black, 0))
     table.cell(infoTbl, 1, 0, "BPI Models",  text_color=infobox_header_color, text_size=szRes, text_font_family=font.family_monospace, bgcolor=color.new(color.black, 0))
 
-    // ---- ATM section: status + POI hit / Sweep / CISD / MSS ----
+    // ---- ATM section: status + Tier/Bias / Swept / CISD / Target ----
     table.cell(infoTbl, 0, 1, "ATM",  text_color=cAtmH, text_size=szRes, text_font_family=font.family_monospace)
     table.cell(infoTbl, 1, 1, f_statusDot(atm_status) + " " + f_statusText(atm_status), text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
-    table.cell(infoTbl, 0, 2, "  POI",  text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
-    table.cell(infoTbl, 1, 2, atm_sweep  == "" ? "—" : atm_sweep,  text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
-    table.cell(infoTbl, 0, 3, "  Swp",  text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
-    table.cell(infoTbl, 1, 3, atm_sig    == "" ? "—" : atm_sig,    text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
+    table.cell(infoTbl, 0, 2, "  Tier",  text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
+    table.cell(infoTbl, 1, 2, atm_tierTxt, text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
+    table.cell(infoTbl, 0, 3, "  Swept", text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
+    table.cell(infoTbl, 1, 3, atm_sweep  == "" ? "—" : atm_sweep,  text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
     table.cell(infoTbl, 0, 4, "  CISD", text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
     table.cell(infoTbl, 1, 4, atm_target == "" ? "—" : atm_target, text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
-    table.cell(infoTbl, 0, 5, "  MSS",  text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
-    table.cell(infoTbl, 1, 5, atm_conf   == "" ? "—" : atm_conf,   text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
+    table.cell(infoTbl, 0, 5, "  Target", text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
+    table.cell(infoTbl, 1, 5, atm_tpTxt, text_color=cAtmT, text_size=szRes, text_font_family=font.family_monospace)
 
     // ---- Unicorn section (multi-TF; info-box only, reads on any chart TF) ----
     table.cell(infoTbl, 0, 6, "Unicorn", text_color=cUniH, text_size=szRes, text_font_family=font.family_monospace)
@@ -3559,6 +3606,37 @@ if show_top_infobox and barstate.islast
     table.cell(infoTbl, 1, 9, t15,     text_color=c15, text_size=szRes, text_font_family=font.family_monospace)
     table.cell(infoTbl, 0, 10, "  30m",text_color=c30, text_size=szRes, text_font_family=font.family_monospace)
     table.cell(infoTbl, 1, 10, t30,    text_color=c30, text_size=szRes, text_font_family=font.family_monospace)
+
+
+// ---- Bottom-right Fractal model info box -----------------------------------
+// Same look/feel and premium/discount tier logic as the top-right ATM box, but
+// for the built-in fractal model and with NO killzone time window.
+var table fracTbl = na
+
+if show_fractal_box and barstate.islast
+    if na(fracTbl)
+        fracTbl := table.new(position.bottom_right, 2, 6, bgcolor=infobox_bg, border_color=color.new(color.gray, 50), frame_color=color.new(color.gray, 50), border_width=1, frame_width=1)
+
+    szF = f_resolveSize(infobox_size)
+    color cFrH = f_modelColor(frac_status, infobox_header_color)
+    color cFrT = f_modelColor(frac_status, infobox_text_color)
+
+    string frac_tierTxt = atm_tier == "None" ? "—" : atm_tier
+    string frac_biasTag = frac_dir == 0 ? "" : f_uniBias(frac_dir == 2, atm_isPremium, atm_isDiscount)
+    string frac_biasTxt = frac_biasTag == "" ? "—" : frac_biasTag
+
+    table.cell(fracTbl, 0, 0, syminfo.ticker, text_color=infobox_header_color, text_size=szF, text_font_family=font.family_monospace, bgcolor=color.new(color.black, 0))
+    table.cell(fracTbl, 1, 0, "Fractal",      text_color=infobox_header_color, text_size=szF, text_font_family=font.family_monospace, bgcolor=color.new(color.black, 0))
+    table.cell(fracTbl, 0, 1, "Status", text_color=cFrH, text_size=szF, text_font_family=font.family_monospace)
+    table.cell(fracTbl, 1, 1, f_statusDot(frac_status) + " " + f_statusText(frac_status), text_color=cFrT, text_size=szF, text_font_family=font.family_monospace)
+    table.cell(fracTbl, 0, 2, "  Tier",  text_color=cFrT, text_size=szF, text_font_family=font.family_monospace)
+    table.cell(fracTbl, 1, 2, frac_tierTxt, text_color=cFrT, text_size=szF, text_font_family=font.family_monospace)
+    table.cell(fracTbl, 0, 3, "  Swept", text_color=cFrT, text_size=szF, text_font_family=font.family_monospace)
+    table.cell(fracTbl, 1, 3, frac_swept == "" ? "—" : frac_swept, text_color=cFrT, text_size=szF, text_font_family=font.family_monospace)
+    table.cell(fracTbl, 0, 4, "  CISD", text_color=cFrT, text_size=szF, text_font_family=font.family_monospace)
+    table.cell(fracTbl, 1, 4, frac_cisd == "" ? "—" : frac_cisd, text_color=cFrT, text_size=szF, text_font_family=font.family_monospace)
+    table.cell(fracTbl, 0, 5, "  Bias", text_color=cFrT, text_size=szF, text_font_family=font.family_monospace)
+    table.cell(fracTbl, 1, 5, frac_biasTxt, text_color=cFrT, text_size=szF, text_font_family=font.family_monospace)
 
 
 
@@ -3778,190 +3856,6 @@ alertcondition(brk_mssBear, 'MSS Bear', 'MSS Bear')
 
 
 //+------------------------------------------------------------------------------------------------------------+//
-//+--- Breaker Blocks (ICT / Smart Money) — drawn PD-array zones                                            ---+//
-//+------------------------------------------------------------------------------------------------------------+//
-// Draws bullish/bearish breaker-block zones on the chart timeframe after a market
-// structure shift, following the TTrades breaker definition:
-//   Bullish breaker: Low -> High -> Lower Low -> Higher High.
-//     Confirmed once price CLOSES back above the intervening swing High. The zone
-//     spans from that swing High (top) down to the original swing Low (bottom).
-//   Bearish breaker: High -> Low -> Higher High -> Lower Low.
-//     Confirmed once price CLOSES back below the intervening swing Low. The zone
-//     spans from that swing High (top) down to the swing Low (bottom).
-// Structure is tracked with an internal zig-zag of alternating pivot highs/lows.
-// Zones extend right until price closes through them (optional invalidation), an
-// optional 50% midline is drawn, and only the most recent `Max Visible` remain.
-// A breaker that overlaps the displacement FVG can be flagged as a Unicorn.
-// All identifiers namespaced with `bb_` to avoid collisions with the host script.
-string GRP_BB   = "Breaker Blocks"
-bb_show         = input.bool(true,  "Display Breaker Blocks", group = GRP_BB, tooltip = "Master toggle for drawing breaker-block zones. Detection logic still runs so alerts keep firing.")
-bb_maxVisible   = input.int(10, "Max Visible", minval = 1, maxval = 100, group = GRP_BB, tooltip = "Keep only the most recent N breaker blocks on the chart. Older ones are removed to keep the chart clean and lightweight.")
-bb_swing        = input.int(5,  "Swing Detection (pivot bars)", minval = 1, maxval = 50, group = GRP_BB, tooltip = "Left/right bars used by the internal zig-zag to qualify a swing high/low. Larger = fewer, more significant breakers.")
-bb_useWick      = input.bool(true, "Use Wicks (off = candle bodies)", group = GRP_BB, tooltip = "On: zones use swing high/low extremes (wicks). Off: zones use the pivot candle bodies for tighter zones.")
-bb_show50       = input.bool(true, "Show 50% Line", group = GRP_BB, tooltip = "Plot a dashed line at the mid-point (50%) of each breaker block for refinement / entry anchoring.")
-bb_hideInvalid  = input.bool(true, "Hide When Invalidated", group = GRP_BB, tooltip = "Remove a breaker once price closes through it in the opposite direction (bullish hidden on a close below its low, bearish on a close above its high). Off keeps invalidated zones for study/backtesting.")
-bb_showLabel    = input.bool(false, "Show Zone Label", group = GRP_BB, tooltip = "Label each zone (Bull BB / Bear BB, or Unicorn when it overlaps the displacement FVG).")
-bb_markUnicorn  = input.bool(true, "Highlight Unicorn (breaker + FVG overlap)", group = GRP_BB, tooltip = "When a fresh same-direction fair-value gap overlaps the breaker block's range, treat it as a Unicorn setup and use the Unicorn colour/label.")
-
-bb_bullColRaw   = input.color(color.new(color.teal, 80), "Bullish Zone",  inline = "bbbull", group = GRP_BB)
-bb_bullBordRaw  = input.color(color.new(color.teal, 40), "Border",        inline = "bbbull", group = GRP_BB)
-bb_bearColRaw   = input.color(color.new(color.red, 80),  "Bearish Zone",  inline = "bbbear", group = GRP_BB)
-bb_bearBordRaw  = input.color(color.new(color.red, 40),  "Border",        inline = "bbbear", group = GRP_BB)
-bb_uniColRaw    = input.color(color.new(color.orange, 78), "Unicorn Zone", inline = "bbuni", group = GRP_BB)
-bb_uniBordRaw   = input.color(color.new(color.orange, 20), "Border",       inline = "bbuni", group = GRP_BB)
-
-// --- Breaker-block object ---
-type bb_Block
-    box   bx
-    line  mid
-    bool  bull
-    float top
-    float bot
-    bool  active
-
-var array<bb_Block> bb_list = array.new<bb_Block>()
-
-// --- Internal zig-zag of alternating pivots (index 0 = oldest kept) ---
-var array<float> bb_zP = array.new<float>()   // pivot price
-var array<int>   bb_zB = array.new<int>()      // pivot bar_index
-var array<bool>  bb_zH = array.new<bool>()     // true = swing high, false = swing low
-
-// Push a pivot into the zig-zag: alternate direction, keep the more extreme when
-// the same direction repeats. Arrays are passed by reference so mutation persists.
-bb_push(array<float> zP, array<int> zB, array<bool> zH, float p, int b, bool isH) =>
-    int n = array.size(zH)
-    if n > 0 and array.get(zH, n - 1) == isH
-        float lastP = array.get(zP, n - 1)
-        bool  moreEx = isH ? p > lastP : p < lastP
-        if moreEx
-            array.set(zP, n - 1, p)
-            array.set(zB, n - 1, b)
-    else
-        array.push(zP, p)
-        array.push(zB, b)
-        array.push(zH, isH)
-        if array.size(zH) > 8
-            array.shift(zP)
-            array.shift(zB)
-            array.shift(zH)
-
-float bb_ph = ta.pivothigh(bb_swing, bb_swing)
-float bb_pl = ta.pivotlow(bb_swing, bb_swing)
-int   bb_pvBar = bar_index - bb_swing
-
-if not na(bb_ph)
-    bb_push(bb_zP, bb_zB, bb_zH, bb_ph, bb_pvBar, true)
-if not na(bb_pl)
-    bb_push(bb_zP, bb_zB, bb_zH, bb_pl, bb_pvBar, false)
-
-// --- Pattern detection over the last three pivots ---
-var int bb_lastBullB = na
-var int bb_lastBearB = na
-
-bool  bb_bullFire = false
-bool  bb_bearFire = false
-float bb_zTop  = na
-float bb_zBot  = na
-int   bb_zLeft = na
-
-int bb_n = array.size(bb_zH)
-if bb_n >= 3 and barstate.isconfirmed
-    bool  h0 = array.get(bb_zH, bb_n - 1)
-    bool  h1 = array.get(bb_zH, bb_n - 2)
-    bool  h2 = array.get(bb_zH, bb_n - 3)
-    float p0 = array.get(bb_zP, bb_n - 1)
-    float p1 = array.get(bb_zP, bb_n - 2)
-    float p2 = array.get(bb_zP, bb_n - 3)
-    int   b1 = array.get(bb_zB, bb_n - 2)
-    // Bullish: Low(p2) -> High(p1) -> Lower Low(p0), close back above the High.
-    if (not h0) and h1 and (not h2) and p0 < p2 and close > p1 and b1 != bb_lastBullB
-        bb_bullFire := true
-        bb_lastBullB := b1
-        bb_zTop  := p1
-        bb_zBot  := p2
-        bb_zLeft := b1
-    // Bearish: High(p2) -> Low(p1) -> Higher High(p0), close back below the Low.
-    if h0 and (not h1) and h2 and p0 > p2 and close < p1 and b1 != bb_lastBearB
-        bb_bearFire := true
-        bb_lastBearB := b1
-        bb_zTop  := p2
-        bb_zBot  := p1
-        bb_zLeft := b1
-
-// Tighten to candle bodies when wicks are disabled.
-if (bb_bullFire or bb_bearFire) and not bb_useWick and not na(bb_zLeft)
-    int off = bar_index - bb_zLeft
-    if off >= 0 and off <= 4999
-        float bodyHi = math.max(open[off], close[off])
-        float bodyLo = math.min(open[off], close[off])
-        bb_zTop := math.min(bb_zTop, bodyHi)
-        bb_zBot := math.max(bb_zBot, bodyLo)
-        if bb_zTop < bb_zBot
-            float tmp = bb_zTop
-            bb_zTop := bb_zBot
-            bb_zBot := tmp
-
-// --- Unicorn: fresh same-direction FVG overlapping the breaker range ---
-bool bb_uni = false
-if bb_markUnicorn and (bb_bullFire or bb_bearFire) and not na(bb_zLeft)
-    int span = math.min(bar_index - bb_zLeft, 60)
-    if span >= 0
-        for k = 0 to span
-            if bb_bullFire and low[k] > high[k + 2]
-                if high[k + 2] <= bb_zTop and low[k] >= bb_zBot
-                    bb_uni := true
-                    break
-            if bb_bearFire and high[k] < low[k + 2]
-                if high[k] <= bb_zTop and low[k + 2] >= bb_zBot
-                    bb_uni := true
-                    break
-
-// --- Create the zone ---
-if bb_show and (bb_bullFire or bb_bearFire) and not na(bb_zTop) and not na(bb_zBot)
-    color fillCol = bb_uni ? bb_uniColRaw : bb_bullFire ? bb_bullColRaw : bb_bearColRaw
-    color bordCol = bb_uni ? bb_uniBordRaw : bb_bullFire ? bb_bullBordRaw : bb_bearBordRaw
-    string zTxt = ""
-    if bb_showLabel
-        zTxt := bb_uni ? "Unicorn" : bb_bullFire ? "Bull BB" : "Bear BB"
-    box nbx = box.new(bb_zLeft, bb_zTop, bar_index, bb_zBot, border_color = bordCol, bgcolor = fillCol, xloc = xloc.bar_index, text = zTxt, text_color = bordCol, text_size = size.tiny, text_halign = text.align_left, text_valign = bb_bullFire ? text.align_top : text.align_bottom)
-    line nml = na
-    if bb_show50
-        float midY = (bb_zTop + bb_zBot) / 2
-        nml := line.new(bb_zLeft, midY, bar_index, midY, color = bordCol, style = line.style_dashed, xloc = xloc.bar_index)
-    array.push(bb_list, bb_Block.new(nbx, nml, bb_bullFire, bb_zTop, bb_zBot, true))
-
-// --- Per-bar maintenance: extend active zones, invalidate on opposite close ---
-if array.size(bb_list) > 0
-    for i = array.size(bb_list) - 1 to 0
-        bb_Block bbo = array.get(bb_list, i)
-        if bbo.active
-            bool inval = bbo.bull ? close < bbo.bot : close > bbo.top
-            if inval
-                bbo.active := false
-                if bb_hideInvalid
-                    box.delete(bbo.bx)
-                    if not na(bbo.mid)
-                        line.delete(bbo.mid)
-                    array.remove(bb_list, i)
-            else
-                box.set_right(bbo.bx, bar_index)
-                if not na(bbo.mid)
-                    line.set_x2(bbo.mid, bar_index)
-
-// --- Cap to the most recent `Max Visible` zones ---
-while array.size(bb_list) > bb_maxVisible
-    bb_Block old = array.shift(bb_list)
-    box.delete(old.bx)
-    if not na(old.mid)
-        line.delete(old.mid)
-
-alertcondition(bb_bullFire, "Bullish Breaker Block", "Bullish breaker block formed")
-alertcondition(bb_bearFire, "Bearish Breaker Block", "Bearish breaker block formed")
-alertcondition(bb_bullFire and bb_uni, "Bullish Unicorn (Breaker + FVG)", "Bullish Unicorn: breaker block overlaps displacement FVG")
-alertcondition(bb_bearFire and bb_uni, "Bearish Unicorn (Breaker + FVG)", "Bearish Unicorn: breaker block overlaps displacement FVG")
-
-
-//+------------------------------------------------------------------------------------------------------------+//
 //+--- ICT HTF FVGs (fadi)                                                                                  ---+//
 //+------------------------------------------------------------------------------------------------------------+//
 // Ported (behavior-preserving) from the standalone "ICT HTF FVGs (fadi)" indicator.
@@ -4015,7 +3909,7 @@ type hfvg_Helper
     string name = "Helper"
 
 //+--- Settings ---+//
-var hfvg_GRP = "HTF FVG (ICT)"
+var hfvg_GRP = "FVG — Higher-Timeframe (ICT)"
 
 hfvg_Settings          hfvg_settings        = hfvg_Settings.new()
 hfvg_Imbalance_Settings hfvg_HTF_1_Settings = hfvg_Imbalance_Settings.new()
@@ -4081,7 +3975,7 @@ hfvg_settings.CE_color             := input.color(color.new(color.black,60), "",
 hfvg_settings.CE_style             := input.string('····', '', options = ['', '----', '····'], group=hfvg_GRP, inline="3")
 hfvg_settings.label_show           := input.bool(true, "Show Label", group=hfvg_GRP, inline="label")
 hfvg_settings.label_color          := input.color(color.new(color.black, 10), "", group=hfvg_GRP, inline='label')
-hfvg_settings.label_bgcolor        := input.color(color.new(color.white, 100), "", group=hfvg_GRP, inline='label')
+hfvg_settings.label_bgcolor        := input.color(color.new(color.black, 100), "", group=hfvg_GRP, inline='label')
 hfvg_settings.label_size           := input.string(size.small, "", [size.tiny, size.small, size.normal, size.large, size.huge], group=hfvg_GRP, inline="label")
 hfvg_settings.padding              := input.int(4, "Distance from current candle", minval=0, group=hfvg_GRP)
 hfvg_settings.buffer               := input.int(6, "Spacing between timeframes", minval=0, group=hfvg_GRP)
@@ -4323,104 +4217,26 @@ hfvg_FVG_6.AdjustMargins(hfvg_TF_6)
 
 
 //+------------------------------------------------------------------------------------------------------------+//
-//+--- ICT Fair Value Gaps (from "Simple ICT OB & FVG" by Gowtham Kannakaje L)                              ---+//
-//+------------------------------------------------------------------------------------------------------------+//
-// FVG-only port (behavior-preserving) — the Order Blocks and HTF-FVG parts of the source are intentionally
-// NOT included, per request. All identifiers namespaced with `gkf_` to avoid collisions with the host script.
-// © Gowtham Kannakaje L.
-
-// --- Inputs ---
-var gkf_GRP = "ICT FVG (GK)"
-
-gkf_mitType = input.string("Close", title="Mitigation Type", options=["Close", "Wick"], tooltip="Choose how Fair Value Gaps are mitigated", inline="gkf_first", group=gkf_GRP)
-gkf_mitLow  = gkf_mitType == "Close" ? close[1] : low
-gkf_mitHigh = gkf_mitType == "Close" ? close[1] : high
-
-gkf_simple  = input(true, title='Show simple version of the FVGs', tooltip="Select this to keep chart clean (box will not be extended)", inline="gkf_first", group=gkf_GRP)
-
-gkf_show       = input(true,  title='Show FVG Boxes', group=gkf_GRP, inline='gkf_3')
-gkf_delMit     = input(false, title='Delete Mitigated FVG', group=gkf_GRP, tooltip="Removes the mitigated Fair Value Gaps from the chart based on the Mitigation Type specified.", inline='gkf_3')
-gkf_bullBorder = input.color(color.rgb(76, 175, 80, 80),  title="FVG border: Bullish ", group=gkf_GRP, inline="gkf_4")
-gkf_bearBorder = input.color(color.rgb(255, 82, 82, 80),  title="Bearish", group=gkf_GRP, inline="gkf_4")
-gkf_bullBox    = input.color(color.rgb(76, 175, 80, 97),  title="FVG box:", group=gkf_GRP, inline="gkf_4")
-gkf_bearBox    = input.color(color.rgb(255, 82, 82, 97),  title="Bearish", group=gkf_GRP, inline="gkf_4")
-
-// --- Detection ---
-gkf_bullFVG = low - high[2] > 0  and open[1] < close[1]
-gkf_bearFVG = low[2] - high > 0  and open[1] > close[1]
-
-// --- Box arrays ---
-var box gkf_bull = na
-var box gkf_bear = na
-var gkf_bullArr = array.new_box()
-var gkf_bearArr = array.new_box()
-var box[] gkf_bullMit = array.new_box()
-var box[] gkf_bearMit = array.new_box()
-
-// --- Draw new FVGs ---
-if (gkf_bullFVG and gkf_show)
-    gkf_bull := box.new(bar_index-2, high[2], bar_index, low, border_color = gkf_simple ? color.rgb(76, 175, 79, 50) : gkf_bullBorder, bgcolor = gkf_bullBox, text = "", text_color = color.rgb(255, 255, 255, 80), text_size = size.small, extend = gkf_simple ? extend.none : extend.right)
-    array.push(gkf_bullArr, gkf_bull)
-
-if (gkf_bearFVG and gkf_show)
-    gkf_bear := box.new(bar_index-2, low[2], bar_index, high, border_color = gkf_simple ? color.rgb(255, 82, 82, 50) : gkf_bearBorder, bgcolor = gkf_bearBox, text = "", text_color = color.rgb(255, 255, 255, 80), text_size = size.small, extend = gkf_simple ? extend.none : extend.right)
-    array.push(gkf_bearArr, gkf_bear)
-
-// --- Bullish clean up / mitigation ---
-if array.size(gkf_bullArr) > 0 and not gkf_simple
-    for i = array.size(gkf_bullArr) - 1 to 0 by 1
-        XX = array.get(gkf_bullArr, i)
-        XXxx = box.get_bottom(XX)
-        XXx = box.get_top(XX)
-        // If the last close/low is below the low of the bullish FVG - remove the FVG
-        if gkf_mitLow < XXxx
-            box.set_right(XX, bar_index)
-            box.set_extend(XX, extend.none)
-            array.unshift(gkf_bullMit, XX)
-            array.remove(gkf_bullArr, i)
-            if gkf_delMit
-                box.delete(XX)
-
-// --- Bearish clean up / mitigation ---
-if array.size(gkf_bearArr) > 0 and not gkf_simple
-    for i = array.size(gkf_bearArr) - 1 to 0 by 1
-        XX = array.get(gkf_bearArr, i)
-        XXx = box.get_top(XX)
-        XXxx = box.get_bottom(XX)
-        // If the last close/high is above the high of the bearish FVG - remove the FVG
-        if gkf_mitHigh > XXx
-            box.set_right(XX, bar_index)
-            box.set_extend(XX, extend.none)
-            array.unshift(gkf_bearMit, XX)
-            array.remove(gkf_bearArr, i)
-            if gkf_delMit
-                box.delete(XX)
-
-// --- Alerts ---
-alertcondition((gkf_bullFVG),                 "Bullish FVG", "Bullish FVG")
-alertcondition((gkf_bearFVG),                 "Bearish FVG", "Bearish FVG")
-alertcondition((gkf_bullFVG or gkf_bearFVG),  "All FVG",     "All FVG")
-
-
-//+------------------------------------------------------------------------------------------------------------+//
 //+--- CISD by tncylyv  (Change In State of Delivery)                                                       ---+//
 //+------------------------------------------------------------------------------------------------------------+//
 // Visual port (behavior-preserving) of the standalone "CISD by tncylyv" indicator. Replaces the host script's
-// old on-chart CISD lines/labels (now disabled via `cisd_old_visual`). This is a self-contained visual +
-// MTF trend table and does NOT feed the C2/C3/C4/ATM models (those keep using bull_cisd_confirmed/bear_cisd_confirmed).
+// old on-chart CISD lines/labels (now disabled via `cisd_old_visual`). The +CISD / -CISD trigger detection is
+// computed earlier in the script (see "Chart-TF CISD trigger detection") so the ATM model confirms on the exact
+// same event drawn here; the C2/C3/C4 fractal engine still uses bull_cisd_confirmed/bear_cisd_confirmed.
 // All identifiers namespaced with `tcisd_`.
 
-var string tcisd_grpVisual = "CISD (tncylyv) — Visual"
-var string tcisd_grpColors = "CISD (tncylyv) — Colors"
-var string tcisd_grpDebug  = "CISD (tncylyv) — Debug"
-var string tcisd_grpPanel  = "CISD (tncylyv) — HTF Trend Panel"
+var string tcisd_grpVisual = "CISD (MTF) — Lines & Text"
+var string tcisd_grpColors = "CISD (MTF) — Colors"
+var string tcisd_grpDebug  = "CISD (MTF) — Debug"
+var string tcisd_grpPanel  = "Panel — MTF Trend Table (bottom-right)"
 
 tcisd_showActive = input.bool(false, "Show Active CISD Level (Plot)", group=tcisd_grpVisual)
 tcisd_display    = input.string("Both", "Triggered CISD Display", options=["Both", "Bullish Only", "Bearish Only", "None"], group=tcisd_grpVisual)
 tcisd_limitHist  = input.bool(true, "Limit Displayed Historical Lines", group=tcisd_grpVisual)
 tcisd_maxLines   = input.int(2, "Max Lines to Show", minval=1, maxval=10, group=tcisd_grpVisual)
 tcisd_extend     = input.int(0, "Extend Lines (Bars)", minval=0, group=tcisd_grpVisual, tooltip="0 = Boring normal length. >0 = Stretch that stuff into the future.")
-tcisd_showLabels = input.bool(true, "Show Labels", group=tcisd_grpVisual)
+tcisd_showLabels_in = input.bool(true, "Show Labels", group=tcisd_grpVisual, tooltip="CISD labels are automatically hidden on the Daily timeframe (line still shows).")
+tcisd_showLabels    = tcisd_showLabels_in and not timeframe.isdaily
 tcisd_labelPos   = input.string("Center", "Label Position", options=["Left", "Center", "Right"], group=tcisd_grpVisual)
 tcisd_lineWidth  = input.int(2, "Line Width", minval=1, group=tcisd_grpVisual)
 tcisd_labelSize  = input.string(size.small, "Label Size", options=[size.tiny, size.small, size.normal, size.large], group=tcisd_grpVisual)
@@ -4434,7 +4250,7 @@ tcisd_bearColor  = input.color(color.new(color.red, 0), "Bearish CISD", group=tc
 
 tcisd_debug      = input.bool(false, "Debug: Show Extreme Tracking", group=tcisd_grpDebug)
 
-tcisd_showTable  = input.bool(true, "Show Multi-Timeframe Table", group=tcisd_grpPanel)
+// tcisd_showTable is declared at the top of the script with the other box on/off toggles.
 tcisd_tablePos   = input.string("Bottom Right", "Table Position", options=["Top Right", "Middle Right", "Bottom Right", "Bottom Left"], group=tcisd_grpPanel)
 tcisd_tableSize  = input.string("Small", "Table Size", options=["Tiny", "Small", "Normal", "Large"], group=tcisd_grpPanel)
 
@@ -4448,153 +4264,33 @@ tcisd_decodeStyle(outfit) =>
 
 tcisd_chosenStyle = tcisd_decodeStyle(tcisd_lineStyle)
 
-var int   tcisd_vibes   = 0
-var float tcisd_entry   = na
-var int   tcisd_timeSet = na
-var float tcisd_pain    = na
-var label tcisd_sticky  = na
-var array<line>  tcisd_lines  = array.new<line>()
-var array<label> tcisd_labels = array.new<label>()
-
-tcisd_crystalBall(int bias) =>
-    int temporal_shift = 0
-    float extreme = open[0]
-    int candle_attitude = close[0] > open[0] ? 1 : close[0] < open[0] ? -1 : 0
-    if candle_attitude == 0 or candle_attitude != bias
-        [extreme, bar_index]
-    for i = 1 to 500
-        candle_attitude := close[i] > open[i] ? 1 : close[i] < open[i] ? -1 : 0
-        if candle_attitude == 0
-            continue
-        bool mood_match = candle_attitude == bias
-        if not mood_match
-            break
-        temporal_shift := i
-        if bias == 1
-            if open[i] < extreme
-                extreme := open[i]
-        else
-            if open[i] > extreme
-                extreme := open[i]
-    int extreme_shift = na
-    for k = 0 to temporal_shift
-        if open[k] == extreme
-            extreme_shift := k
-            break
-    [extreme, bar_index - extreme_shift]
-
-tcisd_archaeologist(int bias) =>
-    int i = 1
-    bool artifact_found = false
-    int max_shift = na
-    float extreme = na
-    for j = 1 to 500
-        i := j
-        int candle_attitude = close[i] > open[i] ? 1 : close[i] < open[i] ? -1 : 0
-        if candle_attitude == 0
-            continue
-        bool is_correct_era = candle_attitude == bias
-        if not artifact_found
-            if is_correct_era
-                artifact_found := true
-                max_shift := i
-                extreme := open[i]
-        else
-            if not is_correct_era
-                break
-            max_shift := i
-            if bias == 1
-                if open[i] < extreme
-                    extreme := open[i]
-            else
-                if open[i] > extreme
-                    extreme := open[i]
-    int extreme_shift = na
-    for k = 1 to max_shift
-        if open[k] == extreme
-            extreme_shift := k
-            break
-    [extreme, bar_index - extreme_shift]
-
-if tcisd_vibes == 0 and bar_index > 10
-    int first_impression = close > open ? 1 : close < open ? -1 : 0
-    if first_impression == 0
-        for k = 1 to 50
-            first_impression := close[k] > open[k] ? 1 : close[k] < open[k] ? -1 : 0
-            if first_impression != 0
-                break
-    if first_impression != 0
-        tcisd_vibes := first_impression
-        [origin_price, origin_time] = tcisd_crystalBall(first_impression)
-        tcisd_entry   := origin_price
-        tcisd_timeSet := origin_time
-        tcisd_pain    := first_impression == 1 ? high : low
-
-int   tcisd_candlePersonality = close > open ? 1 : close < open ? -1 : 0
-float tcisd_freshHopium = na
-int   tcisd_freshTimestamp = na
-
-if tcisd_vibes == 1
-    if high > tcisd_pain
-        tcisd_pain := high
-        if tcisd_candlePersonality == 1
-            [p_price, p_idx] = tcisd_crystalBall(1)
-            tcisd_freshHopium := p_price
-            tcisd_freshTimestamp := p_idx
-        else
-            [p_price, p_idx] = tcisd_archaeologist(1)
-            tcisd_freshHopium := p_price
-            tcisd_freshTimestamp := p_idx
-        tcisd_entry   := tcisd_freshHopium
-        tcisd_timeSet := tcisd_freshTimestamp
-else if tcisd_vibes == -1
-    if low < tcisd_pain
-        tcisd_pain := low
-        if tcisd_candlePersonality == -1
-            [p_price, p_idx] = tcisd_crystalBall(-1)
-            tcisd_freshHopium := p_price
-            tcisd_freshTimestamp := p_idx
-        else
-            [p_price, p_idx] = tcisd_archaeologist(-1)
-            tcisd_freshHopium := p_price
-            tcisd_freshTimestamp := p_idx
-        tcisd_entry   := tcisd_freshHopium
-        tcisd_timeSet := tcisd_freshTimestamp
-
-bool tcisd_shortsSqueezed = tcisd_vibes == -1 and close > tcisd_entry
-bool tcisd_longsRekt      = tcisd_vibes == 1  and close < tcisd_entry
-
-if tcisd_shortsSqueezed or tcisd_longsRekt
+// Detection/state (tcisd_vibes, functions, triggers) is computed earlier in the
+// script so the ATM model can confirm on the same event. Here we only render the
+// triggered CISD line/label from the captured fire payload.
+if tcisd_fire
     bool should_i_paint_it = false
     if tcisd_display == "Both"
         should_i_paint_it := true
     else if tcisd_display == "Bullish Only"
-        should_i_paint_it := tcisd_shortsSqueezed
+        should_i_paint_it := tcisd_fireBull
     else if tcisd_display == "Bearish Only"
-        should_i_paint_it := tcisd_longsRekt
+        should_i_paint_it := not tcisd_fireBull
     if should_i_paint_it
-        color mood_ring = tcisd_shortsSqueezed ? tcisd_bullColor : tcisd_bearColor
-        line tragedy_line = line.new(tcisd_timeSet, tcisd_entry, bar_index + tcisd_extend, tcisd_entry, color=mood_ring, width=tcisd_lineWidth, style=tcisd_chosenStyle)
+        color mood_ring = tcisd_fireBull ? tcisd_bullColor : tcisd_bearColor
+        line tragedy_line = line.new(tcisd_fireTime, tcisd_firePrice, bar_index + tcisd_extend, tcisd_firePrice, color=mood_ring, width=tcisd_lineWidth, style=tcisd_chosenStyle)
         array.push(tcisd_lines, tragedy_line)
-        label loud_noise = na
         if tcisd_showLabels
             int soapbox_location = na
             if tcisd_labelPos == "Left"
-                soapbox_location := tcisd_timeSet
+                soapbox_location := tcisd_fireTime
             else if tcisd_labelPos == "Right"
                 soapbox_location := bar_index + tcisd_extend
             else
-                soapbox_location := math.round((tcisd_timeSet + bar_index + tcisd_extend) / 2)
-            string gibberish = tcisd_shortsSqueezed ? tcisd_bullText : tcisd_bearText
-            color ink_color = tcisd_shortsSqueezed ? tcisd_bullColor : tcisd_bearColor
-            loud_noise := label.new(soapbox_location, tcisd_entry, gibberish, style=tcisd_shortsSqueezed ? label.style_label_down : label.style_label_up, color=color.new(#000000, 100), textcolor=ink_color, size=tcisd_labelSize, text_font_family=tcisd_fontFamily)
+                soapbox_location := math.round((tcisd_fireTime + bar_index + tcisd_extend) / 2)
+            string gibberish = tcisd_fireBull ? tcisd_bullText : tcisd_bearText
+            color ink_color = tcisd_fireBull ? tcisd_bullColor : tcisd_bearColor
+            label loud_noise = label.new(soapbox_location, tcisd_firePrice, gibberish, style=tcisd_fireBull ? label.style_label_down : label.style_label_up, color=color.new(#000000, 100), textcolor=ink_color, size=tcisd_labelSize, text_font_family=tcisd_fontFamily)
             array.push(tcisd_labels, loud_noise)
-    int new_emotional_state = tcisd_shortsSqueezed ? 1 : -1
-    tcisd_vibes := new_emotional_state
-    [reset_price, reset_time] = tcisd_crystalBall(new_emotional_state)
-    tcisd_entry   := reset_price
-    tcisd_timeSet := reset_time
-    tcisd_pain    := new_emotional_state == 1 ? high : low
 
 color tcisd_activeCrayon = tcisd_vibes == 1 ? tcisd_bullColor : tcisd_bearColor
 
@@ -4602,8 +4298,9 @@ plot(tcisd_showActive ? tcisd_entry : na, "Active CISD", color=tcisd_activeCrayo
 
 if tcisd_showActive and not na(tcisd_entry)
     label.delete(tcisd_sticky)
-    string status_msg = tcisd_vibes == 1 ? "+Active CISD" : "-Active CISD"
-    tcisd_sticky := label.new(bar_index, tcisd_entry, status_msg, color=color.new(tcisd_activeCrayon, 100), textcolor=tcisd_activeCrayon, style=label.style_label_left, size=size.small, text_font_family=tcisd_fontFamily)
+    if not timeframe.isdaily
+        string status_msg = tcisd_vibes == 1 ? "+Active CISD" : "-Active CISD"
+        tcisd_sticky := label.new(bar_index, tcisd_entry, status_msg, color=color.new(tcisd_activeCrayon, 100), textcolor=tcisd_activeCrayon, style=label.style_label_left, size=size.small, text_font_family=tcisd_fontFamily)
 
 int tcisd_hoardingLimit = tcisd_limitHist ? tcisd_maxLines : 450
 
