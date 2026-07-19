@@ -14,7 +14,11 @@ indicator("BPI Indicator", shorttitle = "BPI", overlay = true, max_bars_back = 5
 // === MASTER DISPLAY TOGGLES (always shown at top of Settings for easy access) ===
 string GRP_DISPLAY = "General"
 use_light_theme   = input.bool(false, "Use Light Theme (White Background)", group=GRP_DISPLAY, tooltip="Toggle between dark theme (black background) and light theme (white background). Light theme: green/red candles, black lines, black text.")
-show_top_infobox  = input.bool(true, "Show Top-Right Model Info Box", group="Panel — Top-Right Info Box", tooltip="Master toggle for the top-right BPI Models info box (ATM, Unicorn 1m, Unicorn 5m, Fractal).")
+// Box on/off toggles — grouped at the very top of Settings for quick access.
+string GRP_PANELS = "Panels — Show / Hide Boxes"
+show_top_infobox  = input.bool(true,  "Show Top-Right Info Box (ATM + Unicorn)", group=GRP_PANELS, tooltip="Master toggle for the top-right BPI Models info box (ATM + Unicorn).")
+show_fractal_box  = input.bool(true,  "Show Bottom-Right Fractal Info Box",      group=GRP_PANELS, tooltip="Master toggle for the bottom-right Fractal model info box (premium/discount tier, swept swing, CISD confirmation, bias).")
+tcisd_showTable   = input.bool(false, "Show Bottom-Right MTF Trend Table",       group=GRP_PANELS, tooltip="Multi-timeframe CISD trend table in the bottom-right corner. If both this and the Fractal box are on they share the same corner.")
 
 // Alert Settings
 alertFormat = input.text_area('{"ticker":"{ticker}", "interval":"{interval}", "alert":"{default}"}', "Custom alert message format", group="Alerts")
@@ -3206,6 +3210,49 @@ if show_model_atm and (tf_is_1m or tf_is_3m or tf_is_5m)
             atm_lastBar := bar_index
             atm_target  := "+CISD"
 
+// ---- Fractal model info-box state (no time gate) ---------------------------
+// Mirrors the ATM box (premium/discount tier + swept swing + CISD) but for the
+// built-in C2/C3/C4 fractal model, which runs the whole session with no killzone
+// window. Uses the fractal engine's own sweep + reclaim (bull_cisd_confirmed /
+// bear_cisd_confirmed) rather than the chart-TF label trigger.
+//   status: 0 inactive, 1 watching, 2 long-active, 3 short-active
+var int    frac_status = 0
+var int    frac_dir    = 0     // 2 = long (swept low), 3 = short (swept high)
+var string frac_swept  = ""
+var string frac_cisd   = ""
+
+// A fresh fractal sweep arms a watching setup in that direction.
+if c2_had_bull_sweep and not c2_had_bull_sweep[1]
+    frac_status := 1
+    frac_dir    := 2
+    frac_swept  := "Swing Low (SSL)"
+    frac_cisd   := "Awaiting +CISD"
+if c2_had_bear_sweep and not c2_had_bear_sweep[1]
+    frac_status := 1
+    frac_dir    := 3
+    frac_swept  := "Swing High (BSL)"
+    frac_cisd   := "Awaiting -CISD"
+
+// The fractal's own reclaim confirmation upgrades Watching → active.
+if frac_status == 1 and frac_dir == 2 and bull_cisd_confirmed
+    frac_status := 2
+    frac_cisd   := "+CISD"
+if frac_status == 1 and frac_dir == 3 and bear_cisd_confirmed
+    frac_status := 3
+    frac_cisd   := "-CISD"
+
+// Reset when the fractal engine clears the active sweep (invalidation / timeout).
+if frac_dir == 2 and not c2_had_bull_sweep and frac_status > 0
+    frac_status := 0
+    frac_dir    := 0
+    frac_swept  := ""
+    frac_cisd   := ""
+if frac_dir == 3 and not c2_had_bear_sweep and frac_status > 0
+    frac_status := 0
+    frac_dir    := 0
+    frac_swept  := ""
+    frac_cisd   := ""
+
 // ============================================================================
 // Unicorn Entry Model — INFO-BOX ONLY (multi-timeframe)
 // ----------------------------------------------------------------------------
@@ -3545,6 +3592,37 @@ if show_top_infobox and barstate.islast
     table.cell(infoTbl, 1, 9, t15,     text_color=c15, text_size=szRes, text_font_family=font.family_monospace)
     table.cell(infoTbl, 0, 10, "  30m",text_color=c30, text_size=szRes, text_font_family=font.family_monospace)
     table.cell(infoTbl, 1, 10, t30,    text_color=c30, text_size=szRes, text_font_family=font.family_monospace)
+
+
+// ---- Bottom-right Fractal model info box -----------------------------------
+// Same look/feel and premium/discount tier logic as the top-right ATM box, but
+// for the built-in fractal model and with NO killzone time window.
+var table fracTbl = na
+
+if show_fractal_box and barstate.islast
+    if na(fracTbl)
+        fracTbl := table.new(position.bottom_right, 2, 6, bgcolor=infobox_bg, border_color=color.new(color.gray, 50), frame_color=color.new(color.gray, 50), border_width=1, frame_width=1)
+
+    szF = f_resolveSize(infobox_size)
+    color cFrH = f_modelColor(frac_status, infobox_header_color)
+    color cFrT = f_modelColor(frac_status, infobox_text_color)
+
+    string frac_tierTxt = atm_tier == "None" ? "—" : atm_tier
+    string frac_biasTag = frac_dir == 0 ? "" : f_uniBias(frac_dir == 2, atm_isPremium, atm_isDiscount)
+    string frac_biasTxt = frac_biasTag == "" ? "—" : frac_biasTag
+
+    table.cell(fracTbl, 0, 0, syminfo.ticker, text_color=infobox_header_color, text_size=szF, text_font_family=font.family_monospace, bgcolor=color.new(color.black, 0))
+    table.cell(fracTbl, 1, 0, "Fractal",      text_color=infobox_header_color, text_size=szF, text_font_family=font.family_monospace, bgcolor=color.new(color.black, 0))
+    table.cell(fracTbl, 0, 1, "Status", text_color=cFrH, text_size=szF, text_font_family=font.family_monospace)
+    table.cell(fracTbl, 1, 1, f_statusDot(frac_status) + " " + f_statusText(frac_status), text_color=cFrT, text_size=szF, text_font_family=font.family_monospace)
+    table.cell(fracTbl, 0, 2, "  Tier",  text_color=cFrT, text_size=szF, text_font_family=font.family_monospace)
+    table.cell(fracTbl, 1, 2, frac_tierTxt, text_color=cFrT, text_size=szF, text_font_family=font.family_monospace)
+    table.cell(fracTbl, 0, 3, "  Swept", text_color=cFrT, text_size=szF, text_font_family=font.family_monospace)
+    table.cell(fracTbl, 1, 3, frac_swept == "" ? "—" : frac_swept, text_color=cFrT, text_size=szF, text_font_family=font.family_monospace)
+    table.cell(fracTbl, 0, 4, "  CISD", text_color=cFrT, text_size=szF, text_font_family=font.family_monospace)
+    table.cell(fracTbl, 1, 4, frac_cisd == "" ? "—" : frac_cisd, text_color=cFrT, text_size=szF, text_font_family=font.family_monospace)
+    table.cell(fracTbl, 0, 5, "  Bias", text_color=cFrT, text_size=szF, text_font_family=font.family_monospace)
+    table.cell(fracTbl, 1, 5, frac_biasTxt, text_color=cFrT, text_size=szF, text_font_family=font.family_monospace)
 
 
 
@@ -4158,7 +4236,7 @@ tcisd_bearColor  = input.color(color.new(color.red, 0), "Bearish CISD", group=tc
 
 tcisd_debug      = input.bool(false, "Debug: Show Extreme Tracking", group=tcisd_grpDebug)
 
-tcisd_showTable  = input.bool(false, "Show Multi-Timeframe Table", group=tcisd_grpPanel)
+// tcisd_showTable is declared at the top of the script with the other box on/off toggles.
 tcisd_tablePos   = input.string("Bottom Right", "Table Position", options=["Top Right", "Middle Right", "Bottom Right", "Bottom Left"], group=tcisd_grpPanel)
 tcisd_tableSize  = input.string("Small", "Table Size", options=["Tiny", "Small", "Normal", "Large"], group=tcisd_grpPanel)
 
