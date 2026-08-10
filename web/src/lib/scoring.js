@@ -14,6 +14,8 @@ export const MANDATORY_FAIL_CAP = 50
 export const HARD_STOP_CAP = 25
 
 const BONUS_RULES = [
+  { id: 'h4C2Sweeping', value: 8, label: '4H C2 sweeping liquidity as it builds' },
+  { id: 'h4C2IntoFvg', value: 5, label: 'C2 sweeping into an FVG on the same 4H candle' },
   { id: 'multiClosure', value: 5, label: 'Candle closure on more than one timeframe' },
   { id: 'pdStack3', value: 6, label: '3+ PD arrays stacked after the CISD' },
   { id: 'esNqAgree', value: 5, label: 'NQ and ES agree on the LTF CISD' },
@@ -24,7 +26,6 @@ const BONUS_RULES = [
 
 const PENALTY_RULES = [
   { id: 'beforeNineThirty', value: 20, label: 'Entering before 9:30 AM' },
-  { id: 'h4C2Swept', value: 15, label: 'C2 has not been swept', when: 'no' },
   { id: 'cisdWickOnly', value: 20, label: 'Entry CISD is wick-only, not a body close' },
   { id: 'rr2', value: 15, label: 'R:R below 2R', when: 'no' },
   { id: 'fightingBias', value: 20, label: 'Setup fights the daily bias' },
@@ -35,7 +36,6 @@ const WARNINGS = [
   { id: 'lastCisdAligned', when: 'no', text: 'Last CISD is against your direction — no entry trigger, wait for it to confirm' },
   { id: 'h4C2', when: 'no', text: 'No C2 on the 4H — there is no fractal leg to trade from' },
   { id: 'h4C2Direction', when: 'no', text: 'C2 opposes the daily bias — fighting structure' },
-  { id: 'h4C2Swept', when: 'no', text: 'C2 never swept — the manipulation leg is incomplete' },
   { id: 'entryCisd', when: 'no', text: 'No CISD on the entry timeframe — no entry trigger confirmed' },
   { id: 'cisdWickOnly', when: 'yes', text: 'Entry CISD is wick-only — not a valid body-close trigger' },
   { id: 'oteAtPdArray', when: 'no', text: 'OTE is not at your PD arrays — no precision entry available' },
@@ -201,6 +201,9 @@ function buildReasons(answers, finalScore, failedCount, hardStopped) {
       messages.push('Strong confluence from multiple timeframes')
     }
     if (isYes(answers, 'oteAtPdArray')) messages.push('OTE zone aligned with PD arrays — precision entry available')
+    if (isYes(answers, 'h4C2Sweeping') && isYes(answers, 'h4C2IntoFvg')) {
+      messages.push('C2 sweeping liquidity into an FVG — the strongest version of the 4H leg')
+    }
     if (isYes(answers, 'esNqAgree') && isYes(answers, 'dxyOpposite')) {
       messages.push('NQ, ES, and an inverse dollar all confirm — full correlation stack')
     }

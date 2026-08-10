@@ -22,8 +22,11 @@ on your chart, because every later question refers back to these levels:
 - coming from an **external swing** or an **internal FVG** (the thesis for the next high/low it delivers to)
 - daily bias **bullish or bearish** — everything downstream is judged against it
 
-**2. 4H power of three (25%).** C2 formed or forming (8, required), C2 in the direction of the daily bias (9, required),
-and C2 swept (8, required) — the sweep is needed whether the candle is still building or already closed.
+**2. 4H power of three (25%).** C2 formed or forming (12, required) and C2 in the direction of the daily bias (13,
+required). That is all it takes — a forming C2 counts, and the CISD plus candle closure on the timeframe below is what
+tells you one is coming before the candle is done. Everything else here only adds: C2 sweeping liquidity as it builds
++8%, sweeping into an FVG on the same candle +5% (the most powerful version), C2 at a daily POI +5%. A NO on any of
+those costs nothing.
 
 **3. CISD and closure scan (20%).** Is the last change in state of delivery in our direction (12, required — **answering
 NO hard stops the checklist at 25%**, there is nothing to trade until delivery turns), then which of **1H / 30M / 15M**
@@ -41,7 +44,7 @@ AM is a −20% penalty.
 
 **6. Correlation — confluence only, never a gate.** NQ and ES showing the same 3M/5M CISD is +5%; the dollar printing
 the *inverse* CISD at the same moment is +6% (the full triple-confirmation stack); the dollar moving *with* NQ/ES docks
-−10% but never blocks the trade. 4H C2 at a daily POI is +5%; explicitly fighting the daily bias is −20%.
+−10% but never blocks the trade. Explicitly fighting the daily bias is −20%.
 
 ### Score maths
 

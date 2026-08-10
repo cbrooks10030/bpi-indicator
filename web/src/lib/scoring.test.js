@@ -30,7 +30,7 @@ describe('calculateScore', () => {
 
   it('caps bonuses at 15 and clamps the total at 100', () => {
     const result = calculateScore({ ...perfect(), closures: ['1H', '15M'], pdArrays: ['FVG', 'Breaker', 'Order block'] })
-    expect(result.rawBonus).toBe(30)
+    expect(result.rawBonus).toBe(43)
     expect(result.appliedBonus).toBe(15)
     expect(result.finalScore).toBe(100)
   })
@@ -58,10 +58,9 @@ describe('calculateScore', () => {
   it('caps penalties at 50', () => {
     const answers = { ...perfect() }
     for (const id of NEGATIVE_MODIFIERS) answers[id] = 'yes'
-    answers.h4C2Swept = 'no'
     answers.rr2 = 'no'
     const result = calculateScore(answers)
-    expect(result.rawPenalty).toBe(100)
+    expect(result.rawPenalty).toBe(85)
     expect(result.appliedPenalty).toBe(50)
   })
 
@@ -70,6 +69,15 @@ describe('calculateScore', () => {
     expect(bearishInDiscount.baseScore).toBe(94)
     const bullishInDiscount = calculateScore({ ...perfect(), dailyBias: 'Bullish', pdTier: 'Discount' })
     expect(bullishInDiscount.baseScore).toBe(100)
+  })
+
+  it('treats the 4H C2 sweep and daily POI as bonuses, never requirements', () => {
+    const answers = { ...perfect(), h4C2Sweeping: 'no', h4C2IntoFvg: 'no', c2AtDailyPoi: 'no' }
+    const result = calculateScore(answers)
+    expect(result.failedMandatory).toEqual([])
+    expect(result.baseScore).toBe(100)
+    expect(result.penalties).toEqual([])
+    expect(result.finalScore).toBe(100)
   })
 
   it('rewards the full correlation stack', () => {
