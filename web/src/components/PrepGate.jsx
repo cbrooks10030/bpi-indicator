@@ -12,10 +12,6 @@ export default function PrepGate({ answers, onChange, complete, onContinue }) {
         Required before any trade
       </span>
       <h2 className="mt-4 text-2xl font-extrabold sm:text-3xl">Daily prep</h2>
-      <p className="mt-2 text-sm text-slate-400">
-        Unscored and unskippable. Every later question refers back to these levels, so the checklist stays locked until
-        all of it is marked on your chart.
-      </p>
 
       <ul className="mt-6 space-y-3">
         {PREP_ITEMS.map((item) => {
@@ -26,23 +22,20 @@ export default function PrepGate({ answers, onChange, complete, onContinue }) {
                 type="button"
                 whileTap={{ scale: 0.99 }}
                 onClick={() => onChange(item.id, !done)}
-                className={`flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition-colors ${
+                className={`flex w-full items-center gap-3 rounded-2xl border p-4 text-left transition-colors ${
                   done
                     ? 'border-emerald-400/50 bg-emerald-500/10'
                     : 'border-white/10 bg-white/5 hover:border-[#6d4aff]/60'
                 }`}
               >
                 <span
-                  className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border text-sm font-black ${
+                  className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border text-sm font-black ${
                     done ? 'border-emerald-400 bg-emerald-500 text-slate-950' : 'border-white/25 text-transparent'
                   }`}
                 >
                   ✓
                 </span>
-                <span>
-                  <span className="block font-bold text-slate-100">{item.text}</span>
-                  <span className="mt-1 block text-sm text-slate-400">{item.detail}</span>
-                </span>
+                <span className="font-bold text-slate-100">{item.text}</span>
               </motion.button>
             </li>
           )
@@ -52,7 +45,6 @@ export default function PrepGate({ answers, onChange, complete, onContinue }) {
       {PREP_SELECTS.map((item) => (
         <div key={item.id} className="mt-6">
           <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">{item.text}</p>
-          <p className="mt-1 text-sm text-slate-400">{item.detail}</p>
           <div className="mt-3 grid grid-cols-2 gap-3">
             {item.options.map((option) => {
               const active = answers[item.id] === option

@@ -11,26 +11,10 @@ export const DECISIONS = {
  * item is marked, because these are the levels the later questions refer back to.
  */
 export const PREP_ITEMS = [
-  {
-    id: 'prepLiquidity',
-    text: 'External and internal liquidity identified',
-    detail: 'Both sides. These are the draws every lower timeframe question refers back to.',
-  },
-  {
-    id: 'prepPdhPdl',
-    text: 'Previous day high and low marked',
-    detail: 'The reference for where price is coming from and which swing it is reaching for.',
-  },
-  {
-    id: 'prepNextFvgs',
-    text: 'Next FVGs mapped',
-    detail: 'Whether the draw is swing → FVG or FVG → swing.',
-  },
-  {
-    id: 'prepVolumeImbalance',
-    text: 'Volume imbalances marked',
-    detail: 'Any daily volume imbalance sitting in the path of the draw.',
-  },
+  { id: 'prepLiquidity', text: 'External and internal liquidity identified' },
+  { id: 'prepPdhPdl', text: 'Previous day high and low marked' },
+  { id: 'prepNextFvgs', text: 'Next FVGs mapped' },
+  { id: 'prepVolumeImbalance', text: 'Volume imbalances marked' },
 ]
 
 export const PREP_SELECTS = [
@@ -38,13 +22,11 @@ export const PREP_SELECTS = [
     id: 'prepOrigin',
     text: 'Coming from',
     options: ['External swing', 'Internal FVG'],
-    detail: 'What price is leaving — this sets the thesis for which high or low it delivers to next.',
   },
   {
     id: 'dailyBias',
     text: 'Daily bias',
     options: ['Bullish', 'Bearish'],
-    detail: 'Every question below is judged against this direction.',
   },
 ]
 
