@@ -1,0 +1,18 @@
+{
+  "name": "Trading Entry Decision Game",
+  "short_name": "Entry Game",
+  "description": "ICT + TT Fractal + ATM trade entry decision game with weighted scoring.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#6d4aff",
+  "icons": [
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
