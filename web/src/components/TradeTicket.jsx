@@ -97,7 +97,7 @@ export default function TradeTicket({ symbol, bias, trade, onStart, onUpdate, on
           }
           className="mt-3 w-full rounded-2xl bg-emerald-500 px-4 py-3 text-xs font-black uppercase tracking-widest text-slate-950"
         >
-          I'm in a trade right now
+          I&apos;m in a trade right now
         </motion.button>
         <p className="mt-2 text-[11px] leading-relaxed text-slate-500">
           Prices are yours to type — this page has no market feed. Fill them in late if you had to; the clock
@@ -187,7 +187,7 @@ export default function TradeTicket({ symbol, bias, trade, onStart, onUpdate, on
         onClick={() => onClose(closeTrade(trade, { exit: mark }))}
         className="mt-3 w-full rounded-2xl bg-rose-500 px-4 py-3 text-xs font-black uppercase tracking-widest text-white disabled:bg-white/10 disabled:text-slate-500"
       >
-        I'm out — write the journal
+        I&apos;m out — write the journal
       </motion.button>
     </div>
   )

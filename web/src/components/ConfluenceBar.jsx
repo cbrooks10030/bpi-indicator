@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   CONFLUENCE_GROUPS,
@@ -46,10 +46,28 @@ function Pick({ label, options, value, onPick }) {
 export default function ConfluenceBar({ answers, onChange, bias, onJump, insight }) {
   const [openGroup, setOpenGroup] = useState(null)
   const [draft, setDraft] = useState(EMPTY)
+  const shell = useRef(null)
   const entries = readEntries(answers)
   const group = openGroup ? GROUPS_BY_ID[openGroup] : null
   const needsAsset = Boolean(group?.asset)
   const ready = draft.itemId && draft.timeframe && (group?.violation || draft.direction) && (!needsAsset || draft.asset)
+
+  // The row stays a thin strip: the picker is a dropdown that closes on Escape or a click away.
+  useEffect(() => {
+    if (!openGroup) return undefined
+    const onPointerDown = (event) => {
+      if (shell.current && !shell.current.contains(event.target)) setOpenGroup(null)
+    }
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setOpenGroup(null)
+    }
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [openGroup])
 
   const toggleGroup = (id) => {
     setOpenGroup((value) => (value === id ? null : id))
@@ -77,7 +95,7 @@ export default function ConfluenceBar({ answers, onChange, bias, onJump, insight
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-3">
+    <div ref={shell} className="relative mx-auto max-w-6xl px-4 pb-2">
       <div className="flex flex-wrap gap-1.5">
         {CONFLUENCE_GROUPS.map((item) => {
           const count = entries.filter((entry) => entry.groupId === item.id).length
@@ -114,12 +132,13 @@ export default function ConfluenceBar({ answers, onChange, bias, onJump, insight
         {group && (
           <motion.div
             key={group.id}
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18 }}
+            className="absolute left-4 right-4 top-full z-30 sm:right-auto sm:w-[30rem]"
           >
-            <div className="mt-2 space-y-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+            <div className="max-h-[60vh] space-y-3 overflow-y-auto rounded-2xl border border-white/15 bg-slate-950/95 p-3 shadow-2xl shadow-black/60 backdrop-blur">
               <p className="text-xs text-slate-400">{group.hint}</p>
 
               <Pick
@@ -166,6 +185,13 @@ export default function ConfluenceBar({ answers, onChange, bias, onJump, insight
                   className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-[11px] font-black uppercase tracking-widest text-slate-300"
                 >
                   Open the {group.stageId === 'h4' ? '4H' : group.stageId === 'live' ? 'live' : '5M + 3M'} page
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOpenGroup(null)}
+                  className="ml-auto rounded-xl px-3 py-2 text-[11px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-300"
+                >
+                  Close
                 </button>
               </div>
             </div>
