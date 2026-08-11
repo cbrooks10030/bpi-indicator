@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import AttachButton from './AttachButton'
 import { PREP_ITEMS, PREP_SELECTS } from '../lib/model'
 
 export default function PrepGate({ answers, onChange, complete, focusId }) {
@@ -19,6 +20,11 @@ export default function PrepGate({ answers, onChange, complete, focusId }) {
         <span className="shrink-0 rounded-full bg-rose-500/20 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-rose-300">
           Required
         </span>
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-3">
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">The whole daily chart</p>
+        <AttachButton questionId="stage:prep" label="Attach your daily chart" />
       </div>
 
       <ul className="mt-6 space-y-3">
@@ -45,6 +51,7 @@ export default function PrepGate({ answers, onChange, complete, focusId }) {
                 </span>
                 <span className="font-bold text-slate-100">{item.text}</span>
               </motion.button>
+              <AttachButton questionId={item.id} label={`Attach the chart behind "${item.text}"`} />
             </li>
           )
         })}

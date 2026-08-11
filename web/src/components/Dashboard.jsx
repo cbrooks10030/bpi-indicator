@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { bandFor } from '../lib/scoring'
+import { dayLessons, summarizeDay } from '../lib/review'
 import { clearAllData, computeStats, deleteChecklist, downloadCsv, isPersistent, updateChecklist } from '../lib/storage'
 
 const BAND_TEXT = { green: 'text-emerald-400', yellow: 'text-amber-300', red: 'text-rose-400' }
@@ -92,6 +93,52 @@ function EditModal({ entry, onClose, onSave }) {
   )
 }
 
+/** Everything journalled today, read back as one page before the next session. */
+function DaySummary({ checklists }) {
+  const today = new Date().toDateString()
+  const records = checklists.filter((entry) => new Date(entry.timestamp).toDateString() === today)
+  if (!records.length) return null
+  const summary = summarizeDay(records)
+  const lessons = dayLessons(summary)
+
+  return (
+    <section className="mt-8 rounded-3xl border border-[#6d4aff]/40 bg-[#6d4aff]/[0.08] p-5">
+      <p className="text-[11px] font-black uppercase tracking-widest text-[#c3b4ff]">Today</p>
+      <p className="mt-1 text-2xl font-black text-white">
+        {summary.wins}W / {summary.losses}L ·{' '}
+        <span className={summary.net >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
+          {summary.net >= 0 ? '+' : '−'}${Math.abs(summary.net)}
+        </span>{' '}
+        <span className="text-slate-400">{summary.totalR}R</span>
+      </p>
+      <p className="mt-1 text-xs text-slate-400">
+        {summary.inMacro} in a macro · {summary.outOfWindow} outside 9:30–11:00
+      </p>
+      {lessons.length > 0 && (
+        <ul className="mt-3 space-y-1">
+          {lessons.map((line) => (
+            <li key={line} className="text-xs text-slate-200">
+              · {line}
+            </li>
+          ))}
+        </ul>
+      )}
+      <ul className="mt-3 space-y-1.5">
+        {records.map((entry) => (
+          <li key={entry.id} className="rounded-2xl border border-white/10 bg-slate-950/40 px-3 py-2 text-xs">
+            <span className="font-bold text-slate-100">
+              {entry.review?.enteredAt ?? new Date(entry.timestamp).toLocaleTimeString()} · {entry.symbol} ·{' '}
+              {entry.outcome || 'no result'}
+            </span>
+            {entry.review?.reason && <span className="text-slate-400"> — {entry.review.reason}</span>}
+            {entry.review?.note && <p className="mt-1 italic text-slate-400">“{entry.review.note}”</p>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
 export default function Dashboard({ checklists, onChange }) {
   const [editing, setEditing] = useState(null)
   const [confirmClear, setConfirmClear] = useState(false)
@@ -132,6 +179,8 @@ export default function Dashboard({ checklists, onChange }) {
           before closing the tab.
         </p>
       )}
+
+      <DaySummary checklists={checklists} />
 
       <h3 className="mt-8 text-xs font-bold uppercase tracking-widest text-slate-500">Recent checklists</h3>
       {!recent.length ? (

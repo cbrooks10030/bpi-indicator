@@ -2,12 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import ConfluenceBar from './components/ConfluenceBar'
 import Dashboard from './components/Dashboard'
+import LegalPage from './components/LegalPage'
 import LivePanel from './components/LivePanel'
 import PrepGate from './components/PrepGate'
+import RecallPanel from './components/RecallPanel'
 import ResetButton from './components/ResetButton'
 import ResultPage from './components/ResultPage'
 import ScoreRail from './components/ScoreRail'
 import TimeframePage from './components/TimeframePage'
+import TradeDebrief from './components/TradeDebrief'
 import TradeTicket from './components/TradeTicket'
 import { celebrate } from './lib/celebrate'
 import { nyClock } from './lib/clock'
@@ -15,11 +18,13 @@ import { STAGES, isPrepComplete, isStageComplete, stageSkipped } from './lib/mod
 import { calculateScore, isAnswered } from './lib/scoring'
 import { outcomeOf } from './lib/trade'
 import { smtInsight } from './lib/confluence'
+import { tagRun } from './lib/attachments'
 import { loadChecklists, loadDraft, saveChecklist, saveDraft } from './lib/storage'
 
 const TABS = [
   { id: 'checklist', label: 'Checklist' },
   { id: 'dashboard', label: 'Dashboard' },
+  { id: 'legal', label: 'Legal' },
 ]
 
 /** Reopening a saved draft picks up on the first timeframe still missing an answer. */
@@ -46,6 +51,8 @@ export default function App() {
   const [focusId, setFocusId] = useState(null)
   // The open position, if the trader has said they are in one.
   const [trade, setTrade] = useState(() => loadDraft()?.trade ?? null)
+  // A just-closed trade waiting on its debrief before it lands in the journal.
+  const [debrief, setDebrief] = useState(null)
   const lastBand = useRef('red')
 
   // The clock is part of the score, so it ticks to the second.
@@ -151,27 +158,39 @@ export default function App() {
     setDetour(null)
     setFocusId(null)
     setTrade(null)
+    // Screenshots from the abandoned run are filed away rather than deleted.
+    tagRun(`discarded-${Date.now()}`).catch(() => {})
     lastBand.current = 'red'
   }
 
-  /** Closing out writes the whole run — answers, score, and the fills — into the journal. */
-  const finishTrade = (closed) => {
-    saveChecklist({
+  /** Closing out writes the whole run — answers, score, fills, and the debrief — into the journal. */
+  const finishTrade = (closed, review = null) => {
+    const record = saveChecklist({
+      symbol,
+      answers,
+      score: result.finalScore,
+      decision: result.decision.key,
+      notes: review?.note ? [notes, review.note].filter(Boolean).join('\n') : notes,
+      trade: closed,
+      review,
+      pnl: closed.pnl === null ? '' : Math.round(closed.pnl * 100) / 100,
+      outcome: outcomeOf(closed.pnl),
+    })
+    tagRun(record.id).catch(() => {})
+    setChecklists(loadChecklists())
+    setTrade(null)
+    setDebrief(null)
+  }
+
+  const persist = () => {
+    const record = saveChecklist({
       symbol,
       answers,
       score: result.finalScore,
       decision: result.decision.key,
       notes,
-      trade: closed,
-      pnl: closed.pnl === null ? '' : Math.round(closed.pnl * 100) / 100,
-      outcome: outcomeOf(closed.pnl),
     })
-    setChecklists(loadChecklists())
-    setTrade(null)
-  }
-
-  const persist = () => {
-    saveChecklist({ symbol, answers, score: result.finalScore, decision: result.decision.key, notes })
+    tagRun(record.id).catch(() => {})
     setChecklists(loadChecklists())
     setSaved(true)
   }
@@ -258,7 +277,9 @@ export default function App() {
         )}
       </header>
 
-      {tab === 'dashboard' ? (
+      {tab === 'legal' ? (
+        <LegalPage />
+      ) : tab === 'dashboard' ? (
         <Dashboard checklists={checklists} onChange={setChecklists} />
       ) : (
         <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -365,8 +386,12 @@ export default function App() {
               now={now}
               onStart={setTrade}
               onUpdate={(patch) => setTrade((value) => ({ ...value, ...patch }))}
-              onClose={finishTrade}
+              onClose={(closed) => {
+                setTrade(null)
+                setDebrief(closed)
+              }}
             />
+            <RecallPanel answers={answers} score={result.finalScore} checklists={checklists} now={now} />
             <ScoreRail
               result={result}
               clock={clock}
@@ -378,6 +403,16 @@ export default function App() {
           </aside>
         </div>
       )}
+
+      <AnimatePresence>
+        {debrief && (
+          <TradeDebrief
+            trade={debrief}
+            onSave={(review) => finishTrade(debrief, review)}
+            onSkip={() => finishTrade(debrief)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }

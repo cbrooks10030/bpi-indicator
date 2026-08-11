@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import AttachButton from './AttachButton'
 import { questionText } from '../lib/model'
 
 function YesNo({ value, onChange }) {
@@ -83,6 +84,7 @@ function QuestionRow({ question, answers, value, onChange, focused }) {
             )}
           </div>
           {question.hint && <p className="mt-2 text-xs leading-relaxed text-slate-400">{question.hint}</p>}
+          <AttachButton questionId={question.id} label={`Attach the chart behind "${question.text}"`} />
         </div>
 
         {question.type === 'multi' ? (
@@ -148,6 +150,13 @@ export default function TimeframePage({ stage, answers, onChange, pageNumber, pa
           <p className="mt-1 text-lg font-black text-slate-200">{stage.total}%</p>
           <p className="text-[10px] uppercase tracking-widest text-slate-500">of the score</p>
         </div>
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-3">
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+          The whole {stage.timeframe} chart
+        </p>
+        <AttachButton questionId={`stage:${stage.id}`} label={`Attach your ${stage.timeframe} chart`} />
       </div>
 
       <ul className="mt-6 space-y-3">

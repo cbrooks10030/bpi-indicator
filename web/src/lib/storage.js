@@ -70,6 +70,7 @@ export function saveChecklist(entry) {
     outcome: entry.outcome ?? '',
     pnl: entry.pnl ?? '',
     trade: entry.trade ?? null,
+    review: entry.review ?? null,
   }
   writeKey(STORAGE_KEY, [record, ...list])
   return record
@@ -116,7 +117,7 @@ export function computeStats(list) {
   return { total, avgScore, winRate, gradedCount: graded.length, netPnl, executed }
 }
 
-const CSV_COLUMNS = ['id', 'timestamp', 'symbol', 'score', 'decision', 'outcome', 'pnl', 'notes', 'trade', 'answers']
+const CSV_COLUMNS = ['id', 'timestamp', 'symbol', 'score', 'decision', 'outcome', 'pnl', 'notes', 'trade', 'review', 'answers']
 
 function csvCell(value) {
   const text = typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value ?? '')
