@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { SYMBOLS } from '../lib/model'
+import BiasBanner from './BiasBanner'
 import SessionClock from './SessionClock'
 
 const BANDS = {
@@ -35,12 +36,39 @@ function Dial({ score, band }) {
   )
 }
 
-/** The always-visible column: probability, clock, cautions, and what is still in your favour. */
-export default function ScoreRail({ result, clock, symbol, onSymbolChange, onJump }) {
+/** One clickable line in the rail — tapping it walks back to the question behind it. */
+function JumpItem({ item, prefix, className, onJump, jumpState }) {
+  const { ok, reason } = jumpState(item.stageId)
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => onJump(item.stageId, item.questionId)}
+        disabled={!ok}
+        title={reason}
+        className={`w-full text-left text-xs leading-relaxed ${className} ${
+          ok ? 'underline-offset-2 hover:underline' : 'cursor-default opacity-80'
+        }`}
+      >
+        <span className="font-black">{prefix}</span> {item.text}
+      </button>
+    </li>
+  )
+}
+
+/** The always-visible column: bias, probability, clock, what you have, and what is missing. */
+export default function ScoreRail({ result, clock, symbol, onSymbolChange, onJump, jumpState }) {
   const band = BANDS[result.band]
 
   return (
     <div className="space-y-4">
+      <BiasBanner
+        bias={result.bias}
+        entryTf={result.entry.entryTf}
+        onEdit={() => onJump('prep', 'dailyBias')}
+        editable={jumpState('prep').ok}
+      />
+
       <div className={`rounded-3xl border bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-4 ${band.border}`}>
         <div className="flex gap-1.5">
           {SYMBOLS.map((item) => (
@@ -99,15 +127,14 @@ export default function ScoreRail({ result, clock, symbol, onSymbolChange, onJum
         <ul className="mt-2 space-y-2">
           {result.cautions.length ? (
             result.cautions.map((caution) => (
-              <li key={caution.text}>
-                <button
-                  type="button"
-                  onClick={() => onJump(caution.stageId)}
-                  className="text-left text-xs leading-relaxed text-amber-100/90 underline-offset-2 hover:underline"
-                >
-                  {caution.text}
-                </button>
-              </li>
+              <JumpItem
+                key={caution.text}
+                item={caution}
+                prefix="⚠"
+                className="text-amber-100/90"
+                onJump={onJump}
+                jumpState={jumpState}
+              />
             ))
           ) : (
             <li className="text-xs text-slate-500">Nothing is blocking the trade right now.</li>
@@ -116,16 +143,51 @@ export default function ScoreRail({ result, clock, symbol, onSymbolChange, onJum
       </div>
 
       <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-        <p className="text-[11px] font-black uppercase tracking-widest text-emerald-300">In your favour</p>
+        <p className="text-[11px] font-black uppercase tracking-widest text-emerald-300">What you have</p>
         <ul className="mt-2 space-y-1">
           {result.inFavour.length ? (
             result.inFavour.map((item) => (
-              <li key={item} className="text-xs text-slate-300">
-                + {item}
-              </li>
+              <JumpItem
+                key={item.text}
+                item={item}
+                prefix="+"
+                className="text-slate-300"
+                onJump={onJump}
+                jumpState={jumpState}
+              />
             ))
           ) : (
             <li className="text-xs text-slate-500">Nothing confirmed yet.</li>
+          )}
+        </ul>
+      </div>
+
+      <div
+        className={`rounded-2xl border p-4 ${
+          result.stillNeeded.length ? 'border-[#6d4aff]/50 bg-[#6d4aff]/10' : 'border-emerald-400/40 bg-emerald-500/10'
+        }`}
+      >
+        <p
+          className={`text-[11px] font-black uppercase tracking-widest ${
+            result.stillNeeded.length ? 'text-[#c3b4ff]' : 'text-emerald-300'
+          }`}
+        >
+          {result.stillNeeded.length ? 'Still necessary' : 'Every requirement met'}
+        </p>
+        <ul className="mt-2 space-y-1">
+          {result.stillNeeded.length ? (
+            result.stillNeeded.map((item) => (
+              <JumpItem
+                key={item.questionId}
+                item={item}
+                prefix={item.answered ? '✕' : '○'}
+                className="text-slate-300"
+                onJump={onJump}
+                jumpState={jumpState}
+              />
+            ))
+          ) : (
+            <li className="text-xs text-emerald-200/80">Every required condition is confirmed.</li>
           )}
         </ul>
       </div>

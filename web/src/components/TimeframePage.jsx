@@ -46,12 +46,16 @@ function Options({ options, isActive, onPick, className = '' }) {
   )
 }
 
-function QuestionRow({ question, answers, value, onChange }) {
+function QuestionRow({ question, answers, value, onChange, focused }) {
   const isChoice = question.type === 'multi' || question.type === 'select'
   const values = Array.isArray(value) ? value : []
 
   return (
-    <li className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+    <li
+      className={`rounded-2xl border p-4 transition-colors ${
+        focused ? 'border-[#6d4aff] bg-[#6d4aff]/15 shadow-lg shadow-[#6d4aff]/20' : 'border-white/10 bg-white/[0.04]'
+      }`}
+    >
       <div className={`flex gap-4 ${isChoice ? 'flex-col' : 'items-center justify-between'}`}>
         <div className="min-w-0">
           <p className="font-bold text-slate-100">{questionText(question, answers)}</p>
@@ -99,7 +103,23 @@ function QuestionRow({ question, answers, value, onChange }) {
   )
 }
 
-export default function TimeframePage({ stage, answers, onChange, pageNumber, pageCount }) {
+/** The bias chosen on the daily, pinned to the top of every timeframe page. */
+function BiasPill({ bias }) {
+  if (!bias) return null
+  const bullish = bias === 'Bullish'
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-widest ${
+        bullish ? 'border-emerald-400/50 bg-emerald-500/15 text-emerald-300' : 'border-rose-400/50 bg-rose-500/15 text-rose-300'
+      }`}
+    >
+      <span aria-hidden>{bullish ? '🐂' : '🐻'}</span>
+      {bullish ? '▲' : '▼'} {bias} only
+    </span>
+  )
+}
+
+export default function TimeframePage({ stage, answers, onChange, pageNumber, pageCount, bias, focusId }) {
   return (
     <motion.section
       key={stage.id}
@@ -117,6 +137,9 @@ export default function TimeframePage({ stage, answers, onChange, pageNumber, pa
             {stage.title}
             <span className="text-slate-500"> · {stage.subtitle}</span>
           </p>
+          <div className="mt-3">
+            <BiasPill bias={bias} />
+          </div>
         </div>
         <div className="shrink-0 text-right">
           <p className="text-[11px] uppercase tracking-widest text-slate-500">
@@ -140,6 +163,7 @@ export default function TimeframePage({ stage, answers, onChange, pageNumber, pa
               answers={answers}
               value={answers[question.id]}
               onChange={(next) => onChange(question.id, next)}
+              focused={focusId === question.id}
             />
           </motion.div>
         ))}

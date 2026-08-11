@@ -46,7 +46,9 @@ export default function LivePanel({ answers, onChange, inFavour }) {
       <div className="mt-5 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4">
         <p className="text-[11px] font-black uppercase tracking-widest text-emerald-300">Still on your side</p>
         <p className="mt-1.5 text-sm text-emerald-100/90">
-          {inFavour.length ? inFavour.join(' · ') : 'Nothing confirmed yet — there is nothing holding this trade up.'}
+          {inFavour.length
+            ? inFavour.map((item) => item.text).join(' · ')
+            : 'Nothing confirmed yet — there is nothing holding this trade up.'}
         </p>
       </div>
     </section>

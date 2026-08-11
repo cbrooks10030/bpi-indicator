@@ -145,48 +145,78 @@ export function cautions(answers, nowMinutes = null) {
     list.push({ stageId: 'm53', text: 'Past 11:00 in New York — your window is done, no new trades today.' })
   }
   for (const flag of LIVE_FLAGS) {
-    if (answers[flag.id] === true) list.push({ stageId: 'live', text: `${flag.text} — the setup is degrading.` })
+    if (answers[flag.id] === true) {
+      list.push({ stageId: 'live', questionId: flag.id, text: `${flag.text} — the setup is degrading.` })
+    }
   }
   if (isNo(answers, 'lastCisdAligned')) {
     list.push({
       stageId: 'h1',
+      questionId: 'lastCisdAligned',
       text: 'The last change in state of delivery is against your bias — wait for delivery to confirm before entering.',
     })
   }
   if (ltfCisdOpposed(answers)) {
     list.push({
       stageId: 'm53',
+      questionId: 'ltfCisdDirection',
       text: `Current CISD is ${answers.ltfCisdDirection.toLowerCase()} against a ${answers.dailyBias.toLowerCase()} bias — you do not have your trigger yet.`,
     })
   }
   if (closureMissing(answers)) {
     list.push({
       stageId: 'm15',
+      questionId: 'm15Closure',
       text: 'No candle closure on the 1H, 30M, or 15M — there is no fractal leg to take a continuation entry from.',
     })
   }
   return list
 }
 
-/** What is still working for the trade — the rail lists these next to the cautions. */
+/** Points a rail item back at the question that produced it, so the trader can go and change it. */
+function target(questionId, text) {
+  return { questionId, stageId: QUESTIONS_BY_ID[questionId]?.stageId ?? null, text }
+}
+
+/** What is already working for the trade — every item links back to the answer behind it. */
 export function inFavour(answers) {
   const list = []
-  for (const array of selected(answers, 'pdArrays')) list.push(`${array} in play after the CISD`)
-  if (isYes(answers, 'oteAtPdArray')) list.push('OTE overlapping those arrays')
-  if (isYes(answers, 'entryFvg')) list.push('FVG beside the latest CISD')
-  if (isYes(answers, 'breakerMarked')) list.push('Breaker block marked')
-  if (isYes(answers, 'h4C2Sweeping')) list.push('4H C2 swept liquidity')
+  for (const array of selected(answers, 'pdArrays')) list.push(target('pdArrays', `${array} in play after the CISD`))
+  if (isYes(answers, 'oteAtPdArray')) list.push(target('oteAtPdArray', 'OTE overlapping those arrays'))
+  if (isYes(answers, 'entryFvg')) list.push(target('entryFvg', 'FVG beside the latest CISD'))
+  if (isYes(answers, 'breakerMarked')) list.push(target('breakerMarked', 'Breaker block marked'))
+  if (isYes(answers, 'h4C2Sweeping')) list.push(target('h4C2Sweeping', '4H C2 swept liquidity'))
   for (const item of CLOSURE_QUESTIONS) {
-    if (isYes(answers, `${item.id}Sweep`)) list.push(`${item.timeframe} closure swept liquidity`)
+    const id = `${item.id}Sweep`
+    if (isYes(answers, id)) list.push(target(id, `${item.timeframe} closure swept liquidity`))
   }
-  if (isYes(answers, 'h4C2IntoFvg')) list.push('4H C2 delivered into an FVG')
-  if (isYes(answers, 'c2AtDailyPoi')) list.push('4H C2 at a daily POI')
-  if (isYes(answers, 'esNqAgree')) list.push('NQ and ES agreeing')
-  if (isYes(answers, 'dxyOpposite')) list.push('Dollar inverse at the same time')
-  if (opensAligned(answers)) list.push(`Price ${answers.opensLocation.toLowerCase()} the midnight and 8:30 opens`)
-  if (tierAligned(answers)) list.push(`Trading in ${answers.pdTier.toLowerCase()}`)
-  if (isYes(answers, 'rr2')) list.push('R:R at 2R or better')
+  if (isYes(answers, 'h4C2IntoFvg')) list.push(target('h4C2IntoFvg', '4H C2 delivered into an FVG'))
+  if (isYes(answers, 'c2AtDailyPoi')) list.push(target('c2AtDailyPoi', '4H C2 at a daily POI'))
+  if (isYes(answers, 'esNqAgree')) list.push(target('esNqAgree', 'NQ and ES agreeing'))
+  if (isYes(answers, 'dxyOpposite')) list.push(target('dxyOpposite', 'Dollar inverse at the same time'))
+  if (opensAligned(answers)) {
+    list.push(target('opensLocation', `Price ${answers.opensLocation.toLowerCase()} the midnight and 8:30 opens`))
+  }
+  if (tierAligned(answers)) list.push(target('pdTier', `Trading in ${answers.pdTier.toLowerCase()}`))
+  if (isYes(answers, 'rr2')) list.push(target('rr2', 'R:R at 2R or better'))
   return list
+}
+
+/**
+ * The conditions the setup still has to produce: every required question that is
+ * unanswered or answered NO, so the rail can say what the trade is missing.
+ */
+export function stillNeeded(answers) {
+  return activeQuestions(answers)
+    .filter((question) => question.mandatory)
+    .filter((question) => !isAnswered(question, answers) || mandatoryFailed(question, answers))
+    .map((question) => ({
+      questionId: question.id,
+      stageId: question.stageId,
+      timeframe: question.timeframe,
+      text: questionText(question, answers),
+      answered: isAnswered(question, answers),
+    }))
 }
 
 /**
@@ -282,7 +312,9 @@ export function calculateScore(answers = {}, { nowMinutes = null } = {}) {
     mandatoryCapped: capped && adjusted > MANDATORY_FAIL_CAP,
     noClosure,
     session,
+    bias: answers.dailyBias ?? null,
     inFavour: inFavour(answers),
+    stillNeeded: stillNeeded(answers),
     cautions: cautions(answers, nowMinutes),
     reasons: buildReasons(answers, finalScore, failed.length, hardStopped, cautions(answers, nowMinutes)),
     yesReasons,

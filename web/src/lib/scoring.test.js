@@ -152,7 +152,33 @@ describe('calculateScore', () => {
     expect(result.appliedPenalty).toBe(25)
     expect(result.finalScore).toBeLessThan(100)
     expect(result.cautions.map((caution) => caution.stageId)).toContain('live')
-    expect(result.inFavour).toContain('FVG in play after the CISD')
+    expect(result.inFavour.map((item) => item.text)).toContain('FVG in play after the CISD')
+    // Every rail item points back at the answer behind it so the trader can change it mid-trade.
+    expect(result.inFavour.every((item) => item.questionId && item.stageId)).toBe(true)
+  })
+
+  it('lists what the setup still needs, pointing back at each question', () => {
+    const empty = calculateScore(prep())
+    expect(empty.stillNeeded.map((item) => item.questionId)).toEqual([
+      'h4C2',
+      'h4C2Direction',
+      'lastCisdAligned',
+      'entryCisd',
+      'oteAtPdArray',
+      'rr2',
+    ])
+    expect(empty.stillNeeded.every((item) => item.stageId && item.answered === false)).toBe(true)
+
+    const failing = calculateScore({ ...perfect(), rr2: 'no' })
+    expect(failing.stillNeeded).toEqual([
+      { questionId: 'rr2', stageId: 'm53', timeframe: '5M + 3M', text: 'R:R ≥ 2R to the next draw on liquidity?', answered: true },
+    ])
+    expect(calculateScore(perfect()).stillNeeded).toEqual([])
+  })
+
+  it('carries the daily bias through to every page', () => {
+    expect(calculateScore(perfect()).bias).toBe('Bearish')
+    expect(calculateScore({}).bias).toBe(null)
   })
 
   it('generates warnings below 50%', () => {

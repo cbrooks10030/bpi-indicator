@@ -36,6 +36,9 @@ export default function App() {
   const [step, setStep] = useState(() => firstUnanswered(loadDraft()?.answers ?? {}))
   // Furthest timeframe reached — the top bars walk back to any of these, never forward.
   const [reached, setReached] = useState(step)
+  // Set while the trader detours to fix an earlier answer, so they can hop back.
+  const [detour, setDetour] = useState(null)
+  const [focusId, setFocusId] = useState(null)
   const lastBand = useRef('red')
 
   // The clock is part of the score, so it ticks to the second.
@@ -103,12 +106,33 @@ export default function App() {
         : current.kind === 'stage'
           ? isStageComplete(current.stage, next, isAnswered)
           : false
-    if (filled) window.setTimeout(() => goTo(index + 1), 450)
+    // On a detour the trader goes back the way they came, not onward.
+    if (filled && !detour) window.setTimeout(() => goTo(index + 1), 450)
   }
 
-  const jumpTo = (stageId) => {
+  /** Only timeframes already walked are reachable — the rail never skips ahead. */
+  const jumpState = (stageId) => {
     const target = steps.findIndex((item) => item.key === stageId)
-    if (target >= 0) goTo(target)
+    if (target < 0) return { ok: false, reason: 'Nothing to open for this one' }
+    if (target === index) return { ok: false, reason: 'You are already on this timeframe' }
+    if (target > reached) return { ok: false, reason: 'You have not reached that timeframe yet' }
+    return { ok: true, reason: `Go and change this on the ${steps[target].timeframe}` }
+  }
+
+  /** Rail items walk the trader back to the answer behind them, remembering the way home. */
+  const jumpTo = (stageId, questionId = null) => {
+    const target = steps.findIndex((item) => item.key === stageId)
+    if (!jumpState(stageId).ok) return
+    setDetour({ index, timeframe: current.timeframe })
+    setFocusId(questionId)
+    goTo(target)
+  }
+
+  const returnFromDetour = () => {
+    if (!detour) return
+    goTo(detour.index)
+    setDetour(null)
+    setFocusId(null)
   }
 
   const reset = () => {
@@ -117,6 +141,8 @@ export default function App() {
     setSaved(false)
     setStep(0)
     setReached(0)
+    setDetour(null)
+    setFocusId(null)
     lastBand.current = 'red'
   }
 
@@ -212,7 +238,7 @@ export default function App() {
                   exit={{ opacity: 0, y: -24, filter: 'blur(6px)' }}
                   transition={{ duration: 0.35 }}
                 >
-                  <PrepGate answers={answers} onChange={setAnswer} complete={complete} />
+                  <PrepGate answers={answers} onChange={setAnswer} complete={complete} focusId={focusId} />
                 </motion.div>
               ) : current.kind === 'stage' ? (
                 <TimeframePage
@@ -222,6 +248,8 @@ export default function App() {
                   onChange={setAnswer}
                   pageNumber={index + 1}
                   pageCount={steps.length}
+                  bias={result.bias}
+                  focusId={focusId}
                 />
               ) : current.kind === 'live' ? (
                 <motion.div
@@ -254,6 +282,18 @@ export default function App() {
               )}
             </AnimatePresence>
 
+            {detour && detour.index !== index && (
+              <motion.button
+                type="button"
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                onClick={returnFromDetour}
+                className="mt-4 w-full rounded-2xl border border-[#6d4aff]/50 bg-[#6d4aff]/15 px-5 py-3 text-sm font-black uppercase tracking-widest text-[#c3b4ff]"
+              >
+                ↩ Back to {detour.timeframe} where you were
+              </motion.button>
+            )}
+
             {current.kind !== 'result' && (
               <div className="mt-5 flex gap-3">
                 <button
@@ -278,7 +318,14 @@ export default function App() {
           </main>
 
           <aside className="lg:sticky lg:top-28 lg:self-start">
-            <ScoreRail result={result} clock={clock} symbol={symbol} onSymbolChange={setSymbol} onJump={jumpTo} />
+            <ScoreRail
+              result={result}
+              clock={clock}
+              symbol={symbol}
+              onSymbolChange={setSymbol}
+              onJump={jumpTo}
+              jumpState={jumpState}
+            />
           </aside>
         </div>
       )}

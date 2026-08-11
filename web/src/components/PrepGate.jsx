@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { PREP_ITEMS, PREP_SELECTS } from '../lib/model'
 
-export default function PrepGate({ answers, onChange, complete }) {
+export default function PrepGate({ answers, onChange, complete, focusId }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -51,7 +51,12 @@ export default function PrepGate({ answers, onChange, complete }) {
       </ul>
 
       {PREP_SELECTS.map((item) => (
-        <div key={item.id} className="mt-6">
+        <div
+          key={item.id}
+          className={`mt-6 rounded-2xl ${
+            focusId === item.id ? 'border border-[#6d4aff] bg-[#6d4aff]/15 p-4' : ''
+          }`}
+        >
           <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500">{item.text}</p>
           <div className="mt-3 grid grid-cols-2 gap-3">
             {item.options.map((option) => {

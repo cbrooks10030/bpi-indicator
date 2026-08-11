@@ -299,7 +299,8 @@ export function stageSkipped(stage, answers = {}) {
 
 /** Questions that count right now, given the entry timeframe the trader picked. */
 export function activeQuestions(answers = {}) {
-  return STAGES.filter((stage) => !stageSkipped(stage, answers)).flatMap((stage) => stage.questions)
+  const skipped = new Set(STAGES.filter((stage) => stageSkipped(stage, answers)).map((stage) => stage.id))
+  return ALL_QUESTIONS.filter((question) => !skipped.has(question.stageId))
 }
 
 export function isStageComplete(stage, answers, isAnswered) {
