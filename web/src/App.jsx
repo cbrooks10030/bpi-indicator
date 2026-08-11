@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import Dashboard from './components/Dashboard'
 import LivePanel from './components/LivePanel'
 import PrepGate from './components/PrepGate'
+import ResetButton from './components/ResetButton'
 import ResultPage from './components/ResultPage'
 import ScoreRail from './components/ScoreRail'
 import TimeframePage from './components/TimeframePage'
@@ -172,6 +173,7 @@ export default function App() {
             >
               {result.finalScore}%
             </span>
+            <ResetButton onReset={reset} size="compact" />
             {TABS.map((item) => (
               <button
                 key={item.id}
@@ -313,6 +315,12 @@ export default function App() {
                 >
                   {complete ? `Continue — ${steps[index + 1]?.timeframe ?? 'verdict'}` : 'Answer every question to continue'}
                 </motion.button>
+              </div>
+            )}
+
+            {current.kind !== 'result' && (
+              <div className="mt-3">
+                <ResetButton onReset={reset} />
               </div>
             )}
           </main>

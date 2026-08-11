@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import ResetButton from './ResetButton'
 
 const BAND_STYLES = {
   green: {
@@ -141,13 +142,7 @@ export default function ResultPage({ result, symbol, notes, onNotesChange, onSav
         >
           {saved ? 'Saved to local storage ✓' : 'Save checklist'}
         </motion.button>
-        <button
-          type="button"
-          onClick={onReset}
-          className="rounded-2xl border border-white/10 px-5 py-3 text-sm font-black uppercase tracking-widest text-slate-500"
-        >
-          New
-        </button>
+        <ResetButton onReset={onReset} size="compact" />
       </div>
     </motion.section>
   )
