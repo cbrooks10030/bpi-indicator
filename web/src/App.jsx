@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import Dashboard from './components/Dashboard'
-import DecisionModal from './components/DecisionModal'
+import LivePanel from './components/LivePanel'
 import PrepGate from './components/PrepGate'
-import QuestionCard from './components/QuestionCard'
-import ScoreHeader from './components/ScoreHeader'
+import ResultPage from './components/ResultPage'
+import ScoreRail from './components/ScoreRail'
+import TimeframePage from './components/TimeframePage'
 import { celebrate } from './lib/celebrate'
-import { ALL_QUESTIONS } from './lib/model'
+import { nyClock } from './lib/clock'
+import { STAGES, isPrepComplete, isStageComplete, stageSkipped } from './lib/model'
 import { calculateScore, isAnswered } from './lib/scoring'
 import { loadChecklists, loadDraft, saveChecklist, saveDraft } from './lib/storage'
 
@@ -20,16 +22,46 @@ export default function App() {
   const [answers, setAnswers] = useState(() => loadDraft()?.answers ?? {})
   const [symbol, setSymbol] = useState(() => loadDraft()?.symbol ?? 'MNQ')
   const [notes, setNotes] = useState('')
-  const [index, setIndex] = useState(0)
-  const [inPrep, setInPrep] = useState(true)
-  const [showModal, setShowModal] = useState(false)
   const [saved, setSaved] = useState(false)
   const [checklists, setChecklists] = useState(() => loadChecklists())
+  const [now, setNow] = useState(() => new Date())
+  const [step, setStep] = useState(0)
   const lastBand = useRef('red')
 
-  const result = useMemo(() => calculateScore(answers), [answers])
-  const question = ALL_QUESTIONS[index]
-  const complete = ALL_QUESTIONS.every((item) => isAnswered(item, answers))
+  // The clock is part of the score, so it ticks to the second.
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const clock = useMemo(() => nyClock(now), [now])
+  const result = useMemo(() => calculateScore(answers, { nowMinutes: clock.minutes }), [answers, clock.minutes])
+
+  // Prep, then a page per timeframe the trader has not opted out of, then the verdict.
+  const steps = useMemo(() => {
+    const stages = STAGES.filter((stage) => !stageSkipped(stage, answers)).map((stage) => ({
+      kind: 'stage',
+      stage,
+      key: stage.id,
+      timeframe: stage.timeframe,
+    }))
+    return [
+      { kind: 'prep', key: 'prep', timeframe: 'Daily' },
+      ...stages,
+      { kind: 'live', key: 'live', timeframe: 'Live' },
+      { kind: 'result', key: 'result', timeframe: 'Verdict' },
+    ]
+  }, [answers])
+
+  const index = Math.min(step, steps.length - 1)
+  const current = steps[index]
+
+  const complete =
+    current.kind === 'prep'
+      ? isPrepComplete(answers)
+      : current.kind === 'stage'
+        ? isStageComplete(current.stage, answers, isAnswered)
+        : true
 
   useEffect(() => {
     saveDraft({ answers, symbol })
@@ -41,174 +73,179 @@ export default function App() {
     lastBand.current = result.band
   }, [result.band])
 
+  const advance = () => setStep((value) => Math.min(value + 1, steps.length - 1))
+
+  /** Answering the last question on a page carries the trader to the next timeframe. */
   const setAnswer = (id, value) => {
-    setAnswers((current) => ({ ...current, [id]: value }))
+    const next = { ...answers, [id]: value }
+    setAnswers(next)
     setSaved(false)
+    const filled =
+      current.kind === 'prep'
+        ? isPrepComplete(next)
+        : current.kind === 'stage'
+          ? isStageComplete(current.stage, next, isAnswered)
+          : false
+    if (filled) window.setTimeout(() => setStep((value2) => Math.min(value2 + 1, steps.length)), 450)
   }
 
-  const answer = (value) => {
-    setAnswer(question.id, value)
-    // Multi-selects stay put so several timeframes or arrays can be ticked.
-    if (question.type !== 'multi' && index < ALL_QUESTIONS.length - 1) {
-      setTimeout(() => setIndex((current) => Math.min(current + 1, ALL_QUESTIONS.length - 1)), 260)
-    }
+  const jumpTo = (stageId) => {
+    const target = steps.findIndex((item) => item.key === stageId)
+    if (target >= 0) setStep(target)
   }
 
   const reset = () => {
     setAnswers({})
     setNotes('')
-    setIndex(0)
-    setInPrep(true)
-    setShowModal(false)
     setSaved(false)
+    setStep(0)
     lastBand.current = 'red'
   }
 
   const persist = () => {
-    saveChecklist({
-      symbol,
-      answers,
-      score: result.finalScore,
-      decision: result.decision.key,
-      notes,
-    })
+    saveChecklist({ symbol, answers, score: result.finalScore, decision: result.decision.key, notes })
     setChecklists(loadChecklists())
     setSaved(true)
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,rgba(109,74,255,0.18),transparent_55%)]">
-      <ScoreHeader
-        score={result.finalScore}
-        band={result.band}
-        answered={result.answeredCount}
-        total={result.totalCount}
-        symbol={symbol}
-        onSymbolChange={setSymbol}
-        bias={answers.dailyBias}
-        entryTf={result.entry.entryTf}
-      />
+    <div className="min-h-screen bg-slate-950 bg-[radial-gradient(circle_at_top,rgba(109,74,255,0.18),transparent_55%)] pb-16">
+      <header className="sticky top-0 z-20 border-b border-white/10 bg-slate-950/85 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+          <div className="flex items-baseline gap-3">
+            <span className="text-lg font-black tracking-tight text-white">Entry Decision</span>
+            <span className="font-mono text-xs font-bold tabular-nums text-slate-400">NY {clock.label}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span
+              className={`text-xl font-black tabular-nums ${
+                result.band === 'green'
+                  ? 'text-emerald-300'
+                  : result.band === 'yellow'
+                    ? 'text-amber-300'
+                    : 'text-rose-300'
+              }`}
+            >
+              {result.finalScore}%
+            </span>
+            {TABS.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setTab(item.id)}
+                className={`rounded-xl px-3 py-1.5 text-[11px] font-black uppercase tracking-widest transition-colors ${
+                  tab === item.id ? 'bg-[#6d4aff] text-white' : 'bg-white/5 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="mx-auto flex max-w-6xl gap-1.5 px-4 pb-3">
+          {steps.map((item, position) => (
+            <div key={item.key} className="flex-1">
+              <div
+                className={`h-1.5 rounded-full transition-colors ${
+                  position < index ? 'bg-[#6d4aff]' : position === index ? 'bg-[#a48bff]' : 'bg-white/10'
+                }`}
+              />
+              <p
+                className={`mt-1 hidden text-center text-[9px] font-black uppercase tracking-widest sm:block ${
+                  position === index ? 'text-[#c3b4ff]' : 'text-slate-600'
+                }`}
+              >
+                {item.timeframe}
+              </p>
+            </div>
+          ))}
+        </div>
+      </header>
 
-      <div className="mx-auto flex max-w-3xl gap-2 px-4 pt-4">
-        {TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => setTab(item.id)}
-            className={`flex-1 rounded-2xl px-4 py-2.5 text-sm font-bold uppercase tracking-widest transition-colors ${
-              tab === item.id
-                ? 'bg-[#6d4aff] text-white'
-                : 'border border-white/10 bg-white/5 text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'checklist' ? (
-        <div className="mx-auto max-w-3xl px-4 py-6">
-          {inPrep ? (
-            <PrepGate
-              answers={answers}
-              onChange={setAnswer}
-              complete={result.prepComplete}
-              onContinue={() => setInPrep(false)}
-            />
-          ) : (
-            <>
-              <AnimatePresence mode="wait">
-                <QuestionCard
-                  key={question.id}
-                  question={question}
+      {tab === 'dashboard' ? (
+        <Dashboard checklists={checklists} onChange={setChecklists} />
+      ) : (
+        <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <main className="min-w-0">
+            <AnimatePresence mode="wait">
+              {current.kind === 'prep' ? (
+                <motion.div
+                  key="prep"
+                  initial={{ opacity: 0, y: 24, filter: 'blur(6px)' }}
+                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                  exit={{ opacity: 0, y: -24, filter: 'blur(6px)' }}
+                  transition={{ duration: 0.35 }}
+                >
+                  <PrepGate answers={answers} onChange={setAnswer} complete={complete} />
+                </motion.div>
+              ) : current.kind === 'stage' ? (
+                <TimeframePage
+                  key={current.stage.id}
+                  stage={current.stage}
                   answers={answers}
-                  index={index}
-                  total={ALL_QUESTIONS.length}
-                  value={answers[question.id]}
-                  onChange={answer}
+                  onChange={setAnswer}
+                  pageNumber={index + 1}
+                  pageCount={steps.length}
                 />
-              </AnimatePresence>
-
-              {result.hardStopped && (
-                <p className="mt-4 rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm font-semibold text-rose-200">
-                  Delivery is against you — the last CISD never turned. No trade until it does.
-                </p>
+              ) : current.kind === 'live' ? (
+                <motion.div
+                  key="live"
+                  initial={{ opacity: 0, y: 24, filter: 'blur(6px)' }}
+                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                  exit={{ opacity: 0, y: -24, filter: 'blur(6px)' }}
+                  transition={{ duration: 0.35 }}
+                >
+                  <LivePanel answers={answers} onChange={setAnswer} inFavour={result.inFavour} />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="result"
+                  initial={{ opacity: 0, y: 24, filter: 'blur(6px)' }}
+                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                  exit={{ opacity: 0, y: -24, filter: 'blur(6px)' }}
+                  transition={{ duration: 0.35 }}
+                >
+                  <ResultPage
+                    result={result}
+                    symbol={symbol}
+                    notes={notes}
+                    onNotesChange={setNotes}
+                    onSave={persist}
+                    saved={saved}
+                    onReset={reset}
+                  />
+                </motion.div>
               )}
+            </AnimatePresence>
 
+            {current.kind !== 'result' && (
               <div className="mt-5 flex gap-3">
                 <button
                   type="button"
-                  onClick={() => (index === 0 ? setInPrep(true) : setIndex((current) => current - 1))}
-                  className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold uppercase tracking-widest text-slate-300"
+                  onClick={() => setStep((value) => Math.max(value - 1, 0))}
+                  disabled={index === 0}
+                  className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-black uppercase tracking-widest text-slate-300 disabled:text-slate-600"
                 >
                   Back
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIndex((current) => Math.min(current + 1, ALL_QUESTIONS.length - 1))}
-                  disabled={index === ALL_QUESTIONS.length - 1}
-                  className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-bold uppercase tracking-widest text-slate-300 disabled:opacity-40"
-                >
-                  Next
                 </button>
                 <motion.button
                   type="button"
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => setShowModal(true)}
+                  onClick={advance}
                   disabled={!complete}
-                  className="flex-1 rounded-2xl bg-[#6d4aff] px-5 py-3 text-sm font-bold uppercase tracking-widest text-white shadow-lg shadow-[#6d4aff]/30 disabled:bg-white/10 disabled:text-slate-500 disabled:shadow-none"
+                  className="flex-1 rounded-2xl bg-[#6d4aff] px-5 py-3 text-sm font-black uppercase tracking-widest text-white shadow-lg shadow-[#6d4aff]/30 disabled:bg-white/10 disabled:text-slate-500 disabled:shadow-none"
                 >
-                  {complete ? 'Get decision' : `${result.totalCount - result.answeredCount} left`}
+                  {complete ? `Continue — ${steps[index + 1]?.timeframe ?? 'verdict'}` : 'Answer every question to continue'}
                 </motion.button>
               </div>
+            )}
+          </main>
 
-              <div className="mt-6 grid grid-cols-2 gap-3 text-xs text-slate-400 sm:grid-cols-4">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <p className="uppercase tracking-widest text-slate-500">Base</p>
-                  <p className="mt-1 text-lg font-bold text-slate-100">{result.baseScore}%</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <p className="uppercase tracking-widest text-slate-500">Bonus</p>
-                  <p className="mt-1 text-lg font-bold text-emerald-400">+{result.appliedBonus}%</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <p className="uppercase tracking-widest text-slate-500">Penalty</p>
-                  <p className="mt-1 text-lg font-bold text-rose-400">−{result.appliedPenalty}%</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <p className="uppercase tracking-widest text-slate-500">Entry TF</p>
-                  <p className="mt-1 text-lg font-bold text-slate-100">{result.entry.entryTf ?? '—'}</p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={reset}
-                className="mt-6 w-full rounded-2xl border border-white/10 px-4 py-3 text-xs font-bold uppercase tracking-widest text-slate-500"
-              >
-                Reset checklist
-              </button>
-            </>
-          )}
+          <aside className="lg:sticky lg:top-28 lg:self-start">
+            <ScoreRail result={result} clock={clock} symbol={symbol} onSymbolChange={setSymbol} onJump={jumpTo} />
+          </aside>
         </div>
-      ) : (
-        <Dashboard checklists={checklists} onChange={setChecklists} />
       )}
-
-      <AnimatePresence>
-        {showModal && (
-          <DecisionModal
-            result={result}
-            symbol={symbol}
-            notes={notes}
-            onNotesChange={setNotes}
-            onSave={persist}
-            saved={saved}
-            onClose={() => setShowModal(false)}
-            onReset={reset}
-          />
-        )}
-      </AnimatePresence>
     </div>
   )
 }

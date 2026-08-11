@@ -8,10 +8,18 @@ export default function PrepGate({ answers, onChange, complete, onContinue }) {
       animate={{ opacity: 1, y: 0 }}
       className="rounded-3xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-5 shadow-2xl shadow-black/40 sm:p-7"
     >
-      <span className="rounded-full bg-rose-500/20 px-2.5 py-1 text-[11px] font-bold uppercase tracking-widest text-rose-300">
-        Required before any trade
-      </span>
-      <h2 className="mt-4 text-2xl font-extrabold sm:text-3xl">Daily prep</h2>
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-[0.3em] text-[#a48bff]">Answering on the</p>
+          <h2 className="text-4xl font-black leading-none tracking-tight text-white sm:text-6xl">DAILY</h2>
+          <p className="mt-2 text-sm font-semibold text-slate-300">
+            Prep<span className="text-slate-500"> · mark these before anything else</span>
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full bg-rose-500/20 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-rose-300">
+          Required
+        </span>
+      </div>
 
       <ul className="mt-6 space-y-3">
         {PREP_ITEMS.map((item) => {
@@ -68,15 +76,13 @@ export default function PrepGate({ answers, onChange, complete, onContinue }) {
         </div>
       ))}
 
-      <motion.button
-        type="button"
-        whileTap={{ scale: 0.98 }}
-        onClick={onContinue}
-        disabled={!complete}
-        className="mt-8 w-full rounded-2xl bg-[#6d4aff] px-5 py-4 text-sm font-bold uppercase tracking-widest text-white shadow-lg shadow-[#6d4aff]/30 disabled:bg-white/10 disabled:text-slate-500 disabled:shadow-none"
+      <p
+        className={`mt-8 rounded-2xl px-5 py-4 text-center text-sm font-black uppercase tracking-widest ${
+          complete ? 'bg-emerald-500/15 text-emerald-300' : 'bg-white/5 text-slate-500'
+        }`}
       >
-        {complete ? 'Prep done — start the checklist' : 'Complete every item to unlock'}
-      </motion.button>
+        {complete ? 'Prep done — walk it down' : 'Complete every item to unlock'}
+      </p>
     </motion.div>
   )
 }
