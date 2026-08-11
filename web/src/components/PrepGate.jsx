@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { PREP_ITEMS, PREP_SELECTS } from '../lib/model'
 
-export default function PrepGate({ answers, onChange, complete, onContinue }) {
+export default function PrepGate({ answers, onChange, complete }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}

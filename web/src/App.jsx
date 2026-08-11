@@ -17,6 +17,14 @@ const TABS = [
   { id: 'dashboard', label: 'Dashboard' },
 ]
 
+/** Reopening a saved draft picks up on the first timeframe still missing an answer. */
+function firstUnanswered(answers) {
+  if (!isPrepComplete(answers)) return 0
+  const stages = STAGES.filter((stage) => !stageSkipped(stage, answers))
+  const position = stages.findIndex((stage) => !isStageComplete(stage, answers, isAnswered))
+  return position === -1 ? stages.length + 1 : position + 1
+}
+
 export default function App() {
   const [tab, setTab] = useState('checklist')
   const [answers, setAnswers] = useState(() => loadDraft()?.answers ?? {})
@@ -25,7 +33,9 @@ export default function App() {
   const [saved, setSaved] = useState(false)
   const [checklists, setChecklists] = useState(() => loadChecklists())
   const [now, setNow] = useState(() => new Date())
-  const [step, setStep] = useState(0)
+  const [step, setStep] = useState(() => firstUnanswered(loadDraft()?.answers ?? {}))
+  // Furthest timeframe reached — the top bars walk back to any of these, never forward.
+  const [reached, setReached] = useState(step)
   const lastBand = useRef('red')
 
   // The clock is part of the score, so it ticks to the second.
@@ -56,6 +66,13 @@ export default function App() {
   const index = Math.min(step, steps.length - 1)
   const current = steps[index]
 
+  /** Walking to a timeframe unlocks its bar in the header for the rest of the run. */
+  const goTo = (position) => {
+    const target = Math.max(0, Math.min(position, steps.length - 1))
+    setStep(target)
+    setReached((value) => Math.max(value, target))
+  }
+
   const complete =
     current.kind === 'prep'
       ? isPrepComplete(answers)
@@ -73,7 +90,7 @@ export default function App() {
     lastBand.current = result.band
   }, [result.band])
 
-  const advance = () => setStep((value) => Math.min(value + 1, steps.length - 1))
+  const advance = () => goTo(index + 1)
 
   /** Answering the last question on a page carries the trader to the next timeframe. */
   const setAnswer = (id, value) => {
@@ -86,12 +103,12 @@ export default function App() {
         : current.kind === 'stage'
           ? isStageComplete(current.stage, next, isAnswered)
           : false
-    if (filled) window.setTimeout(() => setStep((value2) => Math.min(value2 + 1, steps.length)), 450)
+    if (filled) window.setTimeout(() => goTo(index + 1), 450)
   }
 
   const jumpTo = (stageId) => {
     const target = steps.findIndex((item) => item.key === stageId)
-    if (target >= 0) setStep(target)
+    if (target >= 0) goTo(target)
   }
 
   const reset = () => {
@@ -99,6 +116,7 @@ export default function App() {
     setNotes('')
     setSaved(false)
     setStep(0)
+    setReached(0)
     lastBand.current = 'red'
   }
 
@@ -142,24 +160,42 @@ export default function App() {
             ))}
           </div>
         </div>
-        <div className="mx-auto flex max-w-6xl gap-1.5 px-4 pb-3">
-          {steps.map((item, position) => (
-            <div key={item.key} className="flex-1">
-              <div
-                className={`h-1.5 rounded-full transition-colors ${
-                  position < index ? 'bg-[#6d4aff]' : position === index ? 'bg-[#a48bff]' : 'bg-white/10'
-                }`}
-              />
-              <p
-                className={`mt-1 hidden text-center text-[9px] font-black uppercase tracking-widest sm:block ${
-                  position === index ? 'text-[#c3b4ff]' : 'text-slate-600'
-                }`}
+        <nav className="mx-auto flex max-w-6xl gap-1.5 px-4 pb-3">
+          {steps.map((item, position) => {
+            const unlocked = position <= reached
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => unlocked && goTo(position)}
+                disabled={!unlocked}
+                title={unlocked ? `Back to ${item.timeframe}` : `Answer the questions in front of you first`}
+                className={`group flex-1 rounded-md pt-1 ${unlocked ? 'cursor-pointer' : 'cursor-not-allowed'}`}
               >
-                {item.timeframe}
-              </p>
-            </div>
-          ))}
-        </div>
+                <span
+                  className={`block h-1.5 rounded-full transition-colors ${
+                    position === index
+                      ? 'bg-[#a48bff]'
+                      : unlocked
+                        ? 'bg-[#6d4aff] group-hover:bg-[#a48bff]'
+                        : 'bg-white/10'
+                  }`}
+                />
+                <span
+                  className={`mt-1 hidden text-center text-[9px] font-black uppercase tracking-widest sm:block ${
+                    position === index
+                      ? 'text-[#c3b4ff]'
+                      : unlocked
+                        ? 'text-slate-400 group-hover:text-[#c3b4ff]'
+                        : 'text-slate-600'
+                  }`}
+                >
+                  {item.timeframe}
+                </span>
+              </button>
+            )
+          })}
+        </nav>
       </header>
 
       {tab === 'dashboard' ? (
@@ -222,7 +258,7 @@ export default function App() {
               <div className="mt-5 flex gap-3">
                 <button
                   type="button"
-                  onClick={() => setStep((value) => Math.max(value - 1, 0))}
+                  onClick={() => goTo(index - 1)}
                   disabled={index === 0}
                   className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-black uppercase tracking-widest text-slate-300 disabled:text-slate-600"
                 >
