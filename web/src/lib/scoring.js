@@ -1,4 +1,5 @@
 import { sessionState } from './clock'
+import { describeEntry, entryStage, entryValue, readEntries } from './confluence'
 import {
   CLOSURE_QUESTIONS,
   activeQuestions,
@@ -163,6 +164,11 @@ export function cautions(answers, nowMinutes = null) {
       text: `Current CISD is ${answers.ltfCisdDirection.toLowerCase()} against a ${answers.dailyBias.toLowerCase()} bias — you do not have your trigger yet.`,
     })
   }
+  for (const entry of readEntries(answers)) {
+    if (entryValue(entry, answers.dailyBias) < 0) {
+      list.push({ stageId: entryStage(entry) ?? 'live', text: `${describeEntry(entry)} is working against you.` })
+    }
+  }
   if (closureMissing(answers)) {
     list.push({
       stageId: 'm15',
@@ -199,6 +205,11 @@ export function inFavour(answers) {
   }
   if (tierAligned(answers)) list.push(target('pdTier', `Trading in ${answers.pdTier.toLowerCase()}`))
   if (isYes(answers, 'rr2')) list.push(target('rr2', 'R:R at 2R or better'))
+  for (const entry of readEntries(answers)) {
+    if (entryValue(entry, answers.dailyBias) > 0) {
+      list.push({ questionId: null, stageId: entryStage(entry), text: describeEntry(entry) })
+    }
+  }
   return list
 }
 
@@ -275,6 +286,14 @@ export function calculateScore(answers = {}, { nowMinutes = null } = {}) {
     if (session.macro) bonuses.push({ label: `Inside the ${session.macro.label}`, value: MACRO_BONUS })
   }
   if (session.phase === 'pre') penalties.push({ label: 'Before the 9:30 open', value: PRE_OPEN_PENALTY })
+
+  // Confluences the trader added by hand: with the bias they add, against it they cost.
+  for (const entry of readEntries(answers)) {
+    const value = entryValue(entry, answers.dailyBias)
+    if (value > 0) bonuses.push({ label: describeEntry(entry), value })
+    else if (value < 0) penalties.push({ label: describeEntry(entry), value: -value })
+  }
+
   for (const flag of LIVE_FLAGS) {
     if (answers[flag.id] === true) penalties.push({ label: flag.text, value: flag.value })
   }

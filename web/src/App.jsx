@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import ConfluenceBar from './components/ConfluenceBar'
 import Dashboard from './components/Dashboard'
 import LivePanel from './components/LivePanel'
 import PrepGate from './components/PrepGate'
@@ -7,10 +8,13 @@ import ResetButton from './components/ResetButton'
 import ResultPage from './components/ResultPage'
 import ScoreRail from './components/ScoreRail'
 import TimeframePage from './components/TimeframePage'
+import TradeTicket from './components/TradeTicket'
 import { celebrate } from './lib/celebrate'
 import { nyClock } from './lib/clock'
 import { STAGES, isPrepComplete, isStageComplete, stageSkipped } from './lib/model'
 import { calculateScore, isAnswered } from './lib/scoring'
+import { outcomeOf } from './lib/trade'
+import { smtInsight } from './lib/confluence'
 import { loadChecklists, loadDraft, saveChecklist, saveDraft } from './lib/storage'
 
 const TABS = [
@@ -40,6 +44,8 @@ export default function App() {
   // Set while the trader detours to fix an earlier answer, so they can hop back.
   const [detour, setDetour] = useState(null)
   const [focusId, setFocusId] = useState(null)
+  // The open position, if the trader has said they are in one.
+  const [trade, setTrade] = useState(() => loadDraft()?.trade ?? null)
   const lastBand = useRef('red')
 
   // The clock is part of the score, so it ticks to the second.
@@ -85,8 +91,8 @@ export default function App() {
         : true
 
   useEffect(() => {
-    saveDraft({ answers, symbol })
-  }, [answers, symbol])
+    saveDraft({ answers, symbol, trade })
+  }, [answers, symbol, trade])
 
   useEffect(() => {
     const order = { red: 0, yellow: 1, green: 2 }
@@ -144,7 +150,24 @@ export default function App() {
     setReached(0)
     setDetour(null)
     setFocusId(null)
+    setTrade(null)
     lastBand.current = 'red'
+  }
+
+  /** Closing out writes the whole run — answers, score, and the fills — into the journal. */
+  const finishTrade = (closed) => {
+    saveChecklist({
+      symbol,
+      answers,
+      score: result.finalScore,
+      decision: result.decision.key,
+      notes,
+      trade: closed,
+      pnl: closed.pnl === null ? '' : Math.round(closed.pnl * 100) / 100,
+      outcome: outcomeOf(closed.pnl),
+    })
+    setChecklists(loadChecklists())
+    setTrade(null)
   }
 
   const persist = () => {
@@ -224,6 +247,15 @@ export default function App() {
             )
           })}
         </nav>
+        {tab === 'checklist' && (
+          <ConfluenceBar
+            answers={answers}
+            onChange={setAnswer}
+            bias={result.bias}
+            onJump={(stageId) => jumpTo(stageId)}
+            insight={smtInsight(answers, symbol)}
+          />
+        )}
       </header>
 
       {tab === 'dashboard' ? (
@@ -325,7 +357,16 @@ export default function App() {
             )}
           </main>
 
-          <aside className="lg:sticky lg:top-28 lg:self-start">
+          <aside className="space-y-4 lg:sticky lg:top-28 lg:self-start">
+            <TradeTicket
+              symbol={symbol}
+              bias={result.bias}
+              trade={trade}
+              now={now}
+              onStart={setTrade}
+              onUpdate={(patch) => setTrade((value) => ({ ...value, ...patch }))}
+              onClose={finishTrade}
+            />
             <ScoreRail
               result={result}
               clock={clock}
