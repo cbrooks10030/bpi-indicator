@@ -87,6 +87,12 @@ hide_htf_candles = input.bool(false, "Hide?", group=GRP_HTF)
 htf_candles      = input.int(4, "HTF Candles", minval=1, maxval=20, group=GRP_HTF)
 htf_size         = input.string("Small", "Size", options=["Small", "Medium", "Large"], group=GRP_HTF)
 htf_offset       = input.int(10, "Offset", minval=0, maxval=100, group=GRP_HTF)
+htf_spacing      = input.int(2, "Spacing", minval=0, maxval=20, group=GRP_HTF)
+show_htf_time_labels = input.bool(true, "Time Labels", group=GRP_HTF, inline="strip_time")
+htf_time_label_color = input.color(color.gray, "", group=GRP_HTF, inline="strip_time")
+show_htf_model_labels = input.bool(true, "Projected Model Labels", group=GRP_HTF)
+htf_strip_label_size = input.string(size.tiny, "Strip Label Size", options=[size.tiny, size.small, size.normal, size.large], group=GRP_HTF)
+htf_eq_extension = input.int(3, "CE Extension", minval=0, maxval=50, group=GRP_HTF)
 
 bull_body   = input.color(color.new(#98fb98, 0), "Bull Body", group=GRP_HTF, inline="body")
 bear_body   = input.color(color.new(color.black, 0), "Bear Body", group=GRP_HTF, inline="body")
@@ -262,6 +268,16 @@ string auto_htf = tf_sec == 60    ? "15"  :
 
 string htf = fractal_mode == "Automatic" ? auto_htf : custom_htf
 int htf_ms = timeframe.in_seconds(htf) * 1000
+
+f_htf_strip_time_label(int t, int tf_ms) =>
+    if tf_ms >= 86400000
+        f_pad2(month(t, syminfo.timezone)) + "/" + f_pad2(dayofmonth(t, syminfo.timezone)) + "/" + f_pad2(year(t, syminfo.timezone) % 100)
+    else
+        int hour_24 = hour(t, syminfo.timezone)
+        int hour_12 = hour_24 % 12
+        hour_12 := hour_12 == 0 ? 12 : hour_12
+        string suffix = hour_24 >= 12 ? "PM" : "AM"
+        str.tostring(hour_12) + ":" + f_pad2(minute(t, syminfo.timezone)) + " " + suffix
 
 // ============================================================
 // HTF DATA — TWO SEPARATE SECURITY CALLS TO PREVENT FLASH
@@ -1164,9 +1180,10 @@ if barstate.islast
 
     int num = math.min(htf_candles, 20)
     int candle_w = htf_size == "Large" ? 5 : htf_size == "Medium" ? 3 : 1
-    int step = candle_w + 2
+    int step = candle_w + htf_spacing
     int base_x = bar_index + htf_offset + 8
     int half = math.max(1, math.round(candle_w / 2))
+    string strip_label_size = f_resolveSize(htf_strip_label_size)
 
     // HTF projected candles
     // Hide? hides projected HTF candles, HTF open, L/H lines, sweeps, and wick 50%.
@@ -1200,6 +1217,10 @@ if barstate.islast
                 if show_lh_lines
                     array.push(lines, line.new(t, h, t + htf_ms, h, xloc=xloc.bar_time, color=lh_color, style=f_style(lh_style), width=lh_width))
                     array.push(lines, line.new(t, l, t + htf_ms, l, xloc=xloc.bar_time, color=lh_color, style=f_style(lh_style), width=lh_width))
+
+                if show_htf_time_labels
+                    float label_gap = math.max(syminfo.mintick * 10, (h - l) * 0.05)
+                    array.push(labels, label.new(x, l - label_gap * 2, f_htf_strip_time_label(t, htf_ms), xloc=xloc.bar_index, style=label.style_label_up, color=color.new(color.black, 100), textcolor=htf_time_label_color, size=strip_label_size, text_font_family=font.family_monospace))
 
             if show_oc_time
                 array.push(lines, line.new(t, l, t, h, xloc=xloc.bar_time, extend=extend.both, color=oc_color, style=f_style(oc_style), width=oc_width))
@@ -1300,16 +1321,28 @@ if barstate.islast
         if show_model_labels
             if show_c2
                 f_label(f_mid_time(c2t, htf_ms), bearish ? c2h : c2l, "C2", state_col, true)
+                if not hide_htf_candles and show_htf_model_labels and not na(c2l)
+                    float c2_label_gap = math.max(syminfo.mintick * 10, math.abs(c2h - c2l) * 0.05)
+                    int c2_x = base_x + (num - 1 - c2_idx) * step
+                    array.push(labels, label.new(c2_x, c2l - c2_label_gap, "C2", xloc=xloc.bar_index, style=label.style_label_up, color=color.new(color.black, 100), textcolor=state_col, size=strip_label_size, text_font_family=font.family_monospace))
             if show_follow_through and show_c3 and c3_idx >= 0
                 int c3t = array.get(arr_t, c3_idx)
                 float c3h = array.get(arr_h, c3_idx)
                 float c3l = array.get(arr_l, c3_idx)
                 f_label(f_mid_time(c3t, htf_ms), bearish ? c3h : c3l, "C3", state_col, true)
+                if not hide_htf_candles and show_htf_model_labels and not na(c3l)
+                    float c3_label_gap = math.max(syminfo.mintick * 10, math.abs(c3h - c3l) * 0.05)
+                    int c3_x = base_x + (num - 1 - c3_idx) * step
+                    array.push(labels, label.new(c3_x, c3l - c3_label_gap, "C3", xloc=xloc.bar_index, style=label.style_label_up, color=color.new(color.black, 100), textcolor=state_col, size=strip_label_size, text_font_family=font.family_monospace))
             if show_follow_through and show_c4 and c4_idx >= 0
                 int c4t = array.get(arr_t, c4_idx)
                 float c4h = array.get(arr_h, c4_idx)
                 float c4l = array.get(arr_l, c4_idx)
                 f_label(f_mid_time(c4t, htf_ms), bearish ? c4h : c4l, "C4", state_col, true)
+                if not hide_htf_candles and show_htf_model_labels and not na(c4l)
+                    float c4_label_gap = math.max(syminfo.mintick * 10, math.abs(c4h - c4l) * 0.05)
+                    int c4_x = base_x + (num - 1 - c4_idx) * step
+                    array.push(labels, label.new(c4_x, c4l - c4_label_gap, "C4", xloc=xloc.bar_index, style=label.style_label_up, color=color.new(color.black, 100), textcolor=state_col, size=strip_label_size, text_font_family=font.family_monospace))
 
         setups_drawn += 1
 
@@ -1325,8 +1358,8 @@ if barstate.islast
 
             if not na(eq_o) and not na(eq_h) and not na(eq_l) and not na(eq_c) and not na(eq_t)
                 int eq_x_mid = base_x + (num - 1 - eq_i) * step
-                int eq_x_left = eq_x_mid - half
-                int eq_x_right = eq_x_mid + half
+                int eq_x_left = eq_x_mid - half - htf_eq_extension
+                int eq_x_right = eq_x_mid + half + htf_eq_extension
                 float eq_price = f_htf_candle_eq_price(eq_o, eq_h, eq_l, eq_c)
 
                 if not na(eq_price)
