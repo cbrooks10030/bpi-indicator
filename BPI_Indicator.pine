@@ -3099,27 +3099,27 @@ uni_detect() =>
     if sLow
         loBar := bar_index
         loPx  := lastPL
-        float t1 = na
-        float b1 = na
+        float bullBrkTop = na
+        float bullBrkBot = na
         for k = 0 to uni_lookback
             if close[k] < open[k]
-                t1 := high[k]
-                b1 := low[k]
+                bullBrkTop := high[k]
+                bullBrkBot := low[k]
                 break
-        bBrkT := t1
-        bBrkB := b1
+        bBrkT := bullBrkTop
+        bBrkB := bullBrkBot
     if sHigh
         hiBar := bar_index
         hiPx  := lastPH
-        float t2 = na
-        float b2 = na
+        float bearBrkTop = na
+        float bearBrkBot = na
         for k = 0 to uni_lookback
             if close[k] > open[k]
-                t2 := high[k]
-                b2 := low[k]
+                bearBrkTop := high[k]
+                bearBrkBot := low[k]
                 break
-        sBrkT := t2
-        sBrkB := b2
+        sBrkT := bearBrkTop
+        sBrkB := bearBrkBot
     bool bullFVG = low > high[2]
     bool bearFVG = high < low[2]
     float bGap = low - high[2]
@@ -3301,14 +3301,14 @@ if show_top_infobox and barstate.islast
     // Unicorn is multi-TF (3m/5m/15m/30m) and reads the same on any chart TF.
     int    uniAnyDir = ud3 != 0 ? ud3 : ud5 != 0 ? ud5 : ud15 != 0 ? ud15 : ud30
     color  cUniH = f_modelColor(uniAnyDir, infobox_header_color)
-    color  c3  = f_modelColor(ud3,  infobox_text_color)
-    color  c5  = f_modelColor(ud5,  infobox_text_color)
-    color  c15 = f_modelColor(ud15, infobox_text_color)
-    color  c30 = f_modelColor(ud30, infobox_text_color)
-    string t3  = ud3  == 2 ? "▲ Bull · " + up3  : ud3  == 3 ? "▼ Bear · " + up3  : "—"
-    string t5  = ud5  == 2 ? "▲ Bull · " + up5  : ud5  == 3 ? "▼ Bear · " + up5  : "—"
-    string t15 = ud15 == 2 ? "▲ Bull · " + up15 : ud15 == 3 ? "▼ Bear · " + up15 : "—"
-    string t30 = ud30 == 2 ? "▲ Bull · " + up30 : ud30 == 3 ? "▼ Bear · " + up30 : "—"
+    color  cUni3  = f_modelColor(ud3,  infobox_text_color)
+    color  cUni5  = f_modelColor(ud5,  infobox_text_color)
+    color  cUni15 = f_modelColor(ud15, infobox_text_color)
+    color  cUni30 = f_modelColor(ud30, infobox_text_color)
+    string tUni3  = ud3  == 2 ? "▲ Bull · " + up3  : ud3  == 3 ? "▼ Bear · " + up3  : "—"
+    string tUni5  = ud5  == 2 ? "▲ Bull · " + up5  : ud5  == 3 ? "▼ Bear · " + up5  : "—"
+    string tUni15 = ud15 == 2 ? "▲ Bull · " + up15 : ud15 == 3 ? "▼ Bear · " + up15 : "—"
+    string tUni30 = ud30 == 2 ? "▲ Bull · " + up30 : ud30 == 3 ? "▼ Bear · " + up30 : "—"
 
     // Header (compact: ticker only, drop the timeframe to narrow column 0)
     table.cell(infoTbl, 0, 0, syminfo.ticker, text_color=infobox_header_color, text_size=szRes, text_font_family=font.family_monospace, bgcolor=color.new(color.black, 0))
@@ -3329,14 +3329,14 @@ if show_top_infobox and barstate.islast
     // ---- Unicorn section (multi-TF; info-box only, reads on any chart TF) ----
     table.cell(infoTbl, 0, 6, "Unicorn", text_color=cUniH, text_size=szRes, text_font_family=font.family_monospace)
     table.cell(infoTbl, 1, 6, "MTF",     text_color=cUniH, text_size=szRes, text_font_family=font.family_monospace)
-    table.cell(infoTbl, 0, 7, "  3m",  text_color=c3,  text_size=szRes, text_font_family=font.family_monospace)
-    table.cell(infoTbl, 1, 7, t3,      text_color=c3,  text_size=szRes, text_font_family=font.family_monospace)
-    table.cell(infoTbl, 0, 8, "  5m",  text_color=c5,  text_size=szRes, text_font_family=font.family_monospace)
-    table.cell(infoTbl, 1, 8, t5,      text_color=c5,  text_size=szRes, text_font_family=font.family_monospace)
-    table.cell(infoTbl, 0, 9, "  15m", text_color=c15, text_size=szRes, text_font_family=font.family_monospace)
-    table.cell(infoTbl, 1, 9, t15,     text_color=c15, text_size=szRes, text_font_family=font.family_monospace)
-    table.cell(infoTbl, 0, 10, "  30m",text_color=c30, text_size=szRes, text_font_family=font.family_monospace)
-    table.cell(infoTbl, 1, 10, t30,    text_color=c30, text_size=szRes, text_font_family=font.family_monospace)
+    table.cell(infoTbl, 0, 7, "  3m",  text_color=cUni3,  text_size=szRes, text_font_family=font.family_monospace)
+    table.cell(infoTbl, 1, 7, tUni3,   text_color=cUni3,  text_size=szRes, text_font_family=font.family_monospace)
+    table.cell(infoTbl, 0, 8, "  5m",  text_color=cUni5,  text_size=szRes, text_font_family=font.family_monospace)
+    table.cell(infoTbl, 1, 8, tUni5,   text_color=cUni5,  text_size=szRes, text_font_family=font.family_monospace)
+    table.cell(infoTbl, 0, 9, "  15m", text_color=cUni15, text_size=szRes, text_font_family=font.family_monospace)
+    table.cell(infoTbl, 1, 9, tUni15,  text_color=cUni15, text_size=szRes, text_font_family=font.family_monospace)
+    table.cell(infoTbl, 0, 10, "  30m",text_color=cUni30, text_size=szRes, text_font_family=font.family_monospace)
+    table.cell(infoTbl, 1, 10, tUni30, text_color=cUni30, text_size=szRes, text_font_family=font.family_monospace)
 
 
 
@@ -3645,21 +3645,21 @@ int   bb_zLeft = na
 int bb_n = array.size(bb_zH)
 if bb_n >= 3 and barstate.isconfirmed
     bool  h0 = array.get(bb_zH, bb_n - 1)
-    bool  h1 = array.get(bb_zH, bb_n - 2)
-    bool  h2 = array.get(bb_zH, bb_n - 3)
+    bool  bb_h1 = array.get(bb_zH, bb_n - 2)
+    bool  bb_h2 = array.get(bb_zH, bb_n - 3)
     float p0 = array.get(bb_zP, bb_n - 1)
     float p1 = array.get(bb_zP, bb_n - 2)
     float p2 = array.get(bb_zP, bb_n - 3)
     int   b1 = array.get(bb_zB, bb_n - 2)
     // Bullish: Low(p2) -> High(p1) -> Lower Low(p0), close back above the High.
-    if (not h0) and h1 and (not h2) and p0 < p2 and close > p1 and b1 != bb_lastBullB
+    if (not h0) and bb_h1 and (not bb_h2) and p0 < p2 and close > p1 and b1 != bb_lastBullB
         bb_bullFire := true
         bb_lastBullB := b1
         bb_zTop  := p1
         bb_zBot  := p2
         bb_zLeft := b1
     // Bearish: High(p2) -> Low(p1) -> Higher High(p0), close back below the Low.
-    if h0 and (not h1) and h2 and p0 > p2 and close < p1 and b1 != bb_lastBearB
+    if h0 and (not bb_h1) and bb_h2 and p0 > p2 and close < p1 and b1 != bb_lastBearB
         bb_bearFire := true
         bb_lastBearB := b1
         bb_zTop  := p2
@@ -3998,17 +3998,20 @@ method CheckMitigated(hfvg_ImbalanceStructure IS, o, h, l, c) =>
         for i = IS.imbalance.size() - 1 to 0
             imb = IS.imbalance.get(i)
             if not imb.mitigated
-                switch hfvg_settings.mitigated_type
+                bool mitigated_now = switch hfvg_settings.mitigated_type
                     "None" =>
-                        imb.mitigated := false
+                        false
                     'Wick filled' =>
-                        imb.mitigated := imb.open <= imb.close ? low <= imb.open : high >= imb.open
+                        imb.open <= imb.close ? low <= imb.open : high >= imb.open
                     'Body filled' =>
-                        imb.mitigated := imb.open < imb.close ? math.min(o, c) <= imb.open : math.max(o, c) >= imb.open
+                        imb.open < imb.close ? math.min(o, c) <= imb.open : math.max(o, c) >= imb.open
                     'Wick filled half' =>
-                        imb.mitigated := imb.open <= imb.close ? low <= imb.middle : high >= imb.middle
+                        imb.open <= imb.close ? low <= imb.middle : high >= imb.middle
                     'Body filled half' =>
-                        imb.mitigated := imb.open <= imb.close ? math.min(o, c) <= imb.middle : math.max(o, c) >= imb.middle
+                        imb.open <= imb.close ? math.min(o, c) <= imb.middle : math.max(o, c) >= imb.middle
+                    =>
+                        false
+                imb.mitigated := mitigated_now
                 if imb.mitigated
                     if not hfvg_settings.mitigated_show
                         if not na(imb.box)

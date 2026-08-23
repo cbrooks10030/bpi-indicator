@@ -259,17 +259,20 @@ method CheckMitigated(hfvg_ImbalanceStructure IS, o, h, l, c) =>
         for i = IS.imbalance.size() - 1 to 0
             imb = IS.imbalance.get(i)
             if not imb.mitigated
-                switch hfvg_settings.mitigated_type
+                bool mitigated_now = switch hfvg_settings.mitigated_type
                     "None" =>
-                        imb.mitigated := false
+                        false
                     'Wick filled' =>
-                        imb.mitigated := imb.open <= imb.close ? low <= imb.open : high >= imb.open
+                        imb.open <= imb.close ? low <= imb.open : high >= imb.open
                     'Body filled' =>
-                        imb.mitigated := imb.open < imb.close ? math.min(o, c) <= imb.open : math.max(o, c) >= imb.open
+                        imb.open < imb.close ? math.min(o, c) <= imb.open : math.max(o, c) >= imb.open
                     'Wick filled half' =>
-                        imb.mitigated := imb.open <= imb.close ? low <= imb.middle : high >= imb.middle
+                        imb.open <= imb.close ? low <= imb.middle : high >= imb.middle
                     'Body filled half' =>
-                        imb.mitigated := imb.open <= imb.close ? math.min(o, c) <= imb.middle : math.max(o, c) >= imb.middle
+                        imb.open <= imb.close ? math.min(o, c) <= imb.middle : math.max(o, c) >= imb.middle
+                    =>
+                        false
+                imb.mitigated := mitigated_now
                 if imb.mitigated
                     if not hfvg_settings.mitigated_show
                         if not na(imb.box)
