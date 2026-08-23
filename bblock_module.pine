@@ -64,7 +64,7 @@ bb_push(array<float> zP, array<int> zB, array<bool> zH, float p, int b, bool isH
         array.push(zP, p)
         array.push(zB, b)
         array.push(zH, isH)
-        if array.size(zH) > 8
+        while array.size(zH) > 8
             array.shift(zP)
             array.shift(zB)
             array.shift(zH)
