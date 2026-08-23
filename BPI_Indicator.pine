@@ -986,10 +986,10 @@ f_smt_add(string _type, int _x1, float _y1, int _x2, float _y2, float _score, st
             float oldScore = array.get(smt_scores, i)
 
             if oldType == _type and math.abs(_x2 - oldBar) <= smt_mergeBars
-                if _score > oldScore
+                bool replace_old = _score > oldScore
+                if replace_old
                     f_smt_delete(i)
-                else
-                    skip := true
+                skip := not replace_old
                 break
 
     if not skip
