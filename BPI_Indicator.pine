@@ -93,6 +93,16 @@ htf_time_label_color = input.color(color.gray, "", group=GRP_HTF, inline="strip_
 show_htf_model_labels = input.bool(true, "Projected Model Labels", group=GRP_HTF)
 htf_strip_label_size = input.string(size.tiny, "Strip Label Size", options=[size.tiny, size.small, size.normal, size.large], group=GRP_HTF)
 htf_eq_extension = input.int(3, "CE Extension", minval=0, maxval=50, group=GRP_HTF)
+htf2_show = input.bool(true, "HTF 2", group=GRP_HTF, inline="htf2")
+htf2_tf = input.timeframe("30", "TF", group=GRP_HTF, inline="htf2")
+htf3_show = input.bool(true, "HTF 3", group=GRP_HTF, inline="htf3")
+htf3_tf = input.timeframe("60", "TF", group=GRP_HTF, inline="htf3")
+htf4_show = input.bool(true, "HTF 4", group=GRP_HTF, inline="htf4")
+htf4_tf = input.timeframe("240", "TF", group=GRP_HTF, inline="htf4")
+htf5_show = input.bool(false, "HTF 5", group=GRP_HTF, inline="htf5")
+htf5_tf = input.timeframe("1D", "TF", group=GRP_HTF, inline="htf5")
+htf_space_between = input.int(10, "Space Between Timeframes", minval=0, maxval=200, group=GRP_HTF)
+show_htf_timeframe_labels = input.bool(true, "Timeframe Labels", group=GRP_HTF)
 
 bull_body   = input.color(color.new(#98fb98, 0), "Bull Body", group=GRP_HTF, inline="body")
 bear_body   = input.color(color.new(color.black, 0), "Bear Body", group=GRP_HTF, inline="body")
@@ -329,6 +339,76 @@ else
       open[16],high[16],low[16],close[16],time[16], open[17],high[17],low[17],close[17],time[17], open[18],high[18],low[18],close[18],time[18], open[19],high[19],low[19],close[19],time[19]],
       lookahead=barmerge.lookahead_on)
 
+// Additional HTF strips are visualization-only. HTF1's arr_* arrays remain the
+// sole source for the fractal, CISD, SMT, T-Spot, and FVG-compatibility engines.
+[htf2_o0, htf2_h0, htf2_l0, htf2_c0, htf2_t0, htf2_o1, htf2_h1, htf2_l1, htf2_c1, htf2_t1,
+ htf2_o2, htf2_h2, htf2_l2, htf2_c2, htf2_t2, htf2_o3, htf2_h3, htf2_l3, htf2_c3, htf2_t3,
+ htf2_o4, htf2_h4, htf2_l4, htf2_c4, htf2_t4, htf2_o5, htf2_h5, htf2_l5, htf2_c5, htf2_t5,
+ htf2_o6, htf2_h6, htf2_l6, htf2_c6, htf2_t6, htf2_o7, htf2_h7, htf2_l7, htf2_c7, htf2_t7] =
+    request.security(syminfo.tickerid, htf2_tf,
+    [open, high, low, close, time, open[1], high[1], low[1], close[1], time[1],
+     open[2], high[2], low[2], close[2], time[2], open[3], high[3], low[3], close[3], time[3],
+     open[4], high[4], low[4], close[4], time[4], open[5], high[5], low[5], close[5], time[5],
+     open[6], high[6], low[6], close[6], time[6], open[7], high[7], low[7], close[7], time[7]],
+    lookahead=barmerge.lookahead_off)
+
+[htf3_o0, htf3_h0, htf3_l0, htf3_c0, htf3_t0, htf3_o1, htf3_h1, htf3_l1, htf3_c1, htf3_t1,
+ htf3_o2, htf3_h2, htf3_l2, htf3_c2, htf3_t2, htf3_o3, htf3_h3, htf3_l3, htf3_c3, htf3_t3,
+ htf3_o4, htf3_h4, htf3_l4, htf3_c4, htf3_t4, htf3_o5, htf3_h5, htf3_l5, htf3_c5, htf3_t5,
+ htf3_o6, htf3_h6, htf3_l6, htf3_c6, htf3_t6, htf3_o7, htf3_h7, htf3_l7, htf3_c7, htf3_t7] =
+    request.security(syminfo.tickerid, htf3_tf,
+    [open, high, low, close, time, open[1], high[1], low[1], close[1], time[1],
+     open[2], high[2], low[2], close[2], time[2], open[3], high[3], low[3], close[3], time[3],
+     open[4], high[4], low[4], close[4], time[4], open[5], high[5], low[5], close[5], time[5],
+     open[6], high[6], low[6], close[6], time[6], open[7], high[7], low[7], close[7], time[7]],
+    lookahead=barmerge.lookahead_off)
+
+[htf4_o0, htf4_h0, htf4_l0, htf4_c0, htf4_t0, htf4_o1, htf4_h1, htf4_l1, htf4_c1, htf4_t1,
+ htf4_o2, htf4_h2, htf4_l2, htf4_c2, htf4_t2, htf4_o3, htf4_h3, htf4_l3, htf4_c3, htf4_t3,
+ htf4_o4, htf4_h4, htf4_l4, htf4_c4, htf4_t4, htf4_o5, htf4_h5, htf4_l5, htf4_c5, htf4_t5,
+ htf4_o6, htf4_h6, htf4_l6, htf4_c6, htf4_t6, htf4_o7, htf4_h7, htf4_l7, htf4_c7, htf4_t7] =
+    request.security(syminfo.tickerid, htf4_tf,
+    [open, high, low, close, time, open[1], high[1], low[1], close[1], time[1],
+     open[2], high[2], low[2], close[2], time[2], open[3], high[3], low[3], close[3], time[3],
+     open[4], high[4], low[4], close[4], time[4], open[5], high[5], low[5], close[5], time[5],
+     open[6], high[6], low[6], close[6], time[6], open[7], high[7], low[7], close[7], time[7]],
+    lookahead=barmerge.lookahead_off)
+
+[htf5_o0, htf5_h0, htf5_l0, htf5_c0, htf5_t0, htf5_o1, htf5_h1, htf5_l1, htf5_c1, htf5_t1,
+ htf5_o2, htf5_h2, htf5_l2, htf5_c2, htf5_t2, htf5_o3, htf5_h3, htf5_l3, htf5_c3, htf5_t3,
+ htf5_o4, htf5_h4, htf5_l4, htf5_c4, htf5_t4, htf5_o5, htf5_h5, htf5_l5, htf5_c5, htf5_t5,
+ htf5_o6, htf5_h6, htf5_l6, htf5_c6, htf5_t6, htf5_o7, htf5_h7, htf5_l7, htf5_c7, htf5_t7] =
+    request.security(syminfo.tickerid, htf5_tf,
+    [open, high, low, close, time, open[1], high[1], low[1], close[1], time[1],
+     open[2], high[2], low[2], close[2], time[2], open[3], high[3], low[3], close[3], time[3],
+     open[4], high[4], low[4], close[4], time[4], open[5], high[5], low[5], close[5], time[5],
+     open[6], high[6], low[6], close[6], time[6], open[7], high[7], low[7], close[7], time[7]],
+    lookahead=barmerge.lookahead_off)
+
+array<float> htf2_o = array.from(htf2_o0, htf2_o1, htf2_o2, htf2_o3, htf2_o4, htf2_o5, htf2_o6, htf2_o7)
+array<float> htf2_h = array.from(htf2_h0, htf2_h1, htf2_h2, htf2_h3, htf2_h4, htf2_h5, htf2_h6, htf2_h7)
+array<float> htf2_l = array.from(htf2_l0, htf2_l1, htf2_l2, htf2_l3, htf2_l4, htf2_l5, htf2_l6, htf2_l7)
+array<float> htf2_c = array.from(htf2_c0, htf2_c1, htf2_c2, htf2_c3, htf2_c4, htf2_c5, htf2_c6, htf2_c7)
+array<int> htf2_t = array.from(htf2_t0, htf2_t1, htf2_t2, htf2_t3, htf2_t4, htf2_t5, htf2_t6, htf2_t7)
+
+array<float> htf3_o = array.from(htf3_o0, htf3_o1, htf3_o2, htf3_o3, htf3_o4, htf3_o5, htf3_o6, htf3_o7)
+array<float> htf3_h = array.from(htf3_h0, htf3_h1, htf3_h2, htf3_h3, htf3_h4, htf3_h5, htf3_h6, htf3_h7)
+array<float> htf3_l = array.from(htf3_l0, htf3_l1, htf3_l2, htf3_l3, htf3_l4, htf3_l5, htf3_l6, htf3_l7)
+array<float> htf3_c = array.from(htf3_c0, htf3_c1, htf3_c2, htf3_c3, htf3_c4, htf3_c5, htf3_c6, htf3_c7)
+array<int> htf3_t = array.from(htf3_t0, htf3_t1, htf3_t2, htf3_t3, htf3_t4, htf3_t5, htf3_t6, htf3_t7)
+
+array<float> htf4_o = array.from(htf4_o0, htf4_o1, htf4_o2, htf4_o3, htf4_o4, htf4_o5, htf4_o6, htf4_o7)
+array<float> htf4_h = array.from(htf4_h0, htf4_h1, htf4_h2, htf4_h3, htf4_h4, htf4_h5, htf4_h6, htf4_h7)
+array<float> htf4_l = array.from(htf4_l0, htf4_l1, htf4_l2, htf4_l3, htf4_l4, htf4_l5, htf4_l6, htf4_l7)
+array<float> htf4_c = array.from(htf4_c0, htf4_c1, htf4_c2, htf4_c3, htf4_c4, htf4_c5, htf4_c6, htf4_c7)
+array<int> htf4_t = array.from(htf4_t0, htf4_t1, htf4_t2, htf4_t3, htf4_t4, htf4_t5, htf4_t6, htf4_t7)
+
+array<float> htf5_o = array.from(htf5_o0, htf5_o1, htf5_o2, htf5_o3, htf5_o4, htf5_o5, htf5_o6, htf5_o7)
+array<float> htf5_h = array.from(htf5_h0, htf5_h1, htf5_h2, htf5_h3, htf5_h4, htf5_h5, htf5_h6, htf5_h7)
+array<float> htf5_l = array.from(htf5_l0, htf5_l1, htf5_l2, htf5_l3, htf5_l4, htf5_l5, htf5_l6, htf5_l7)
+array<float> htf5_c = array.from(htf5_c0, htf5_c1, htf5_c2, htf5_c3, htf5_c4, htf5_c5, htf5_c6, htf5_c7)
+array<int> htf5_t = array.from(htf5_t0, htf5_t1, htf5_t2, htf5_t3, htf5_t4, htf5_t5, htf5_t6, htf5_t7)
+
 var float[] arr_o = array.new<float>(20, na)
 var float[] arr_h = array.new<float>(20, na)
 var float[] arr_l = array.new<float>(20, na)
@@ -400,6 +480,17 @@ f_clear() =>
     for eqLine in htfEqLines
         line.delete(eqLine)
     array.clear(boxes), array.clear(lines), array.clear(labels), array.clear(htfEqLines)
+
+f_draw_strip_candle(int strip_x, int strip_half, float strip_o, float strip_h, float strip_l, float strip_c) =>
+    bool strip_bull = strip_c >= strip_o
+    float strip_body_top = math.max(strip_o, strip_c)
+    float strip_body_bot = math.min(strip_o, strip_c)
+    if strip_body_top == strip_body_bot
+        strip_body_top += syminfo.mintick
+    array.push(boxes, box.new(strip_x - strip_half, strip_body_top, strip_x + strip_half, strip_body_bot, xloc=xloc.bar_index, bgcolor=strip_bull ? bull_body : bear_body, border_color=strip_bull ? bull_border : bear_border, border_width=1))
+    array.push(lines, line.new(strip_x, strip_h, strip_x, strip_body_top, xloc=xloc.bar_index, color=strip_bull ? bull_wick : bear_wick, width=1))
+    array.push(lines, line.new(strip_x, strip_body_bot, strip_x, strip_l, xloc=xloc.bar_index, color=strip_bull ? bull_wick : bear_wick, width=1))
+    1
 
 // ============================================================
 // LOWER-TF SCANNERS
@@ -778,6 +869,36 @@ f_htf_candle_eq_price(float o, float h, float l, float c) =>
                     else
                         eq := (math.min(o, c) + l) / 2.0
     eq
+
+f_draw_extra_strip(string strip_tf, int strip_count, int strip_base_x, int strip_step, int strip_half, array<float> strip_os, array<float> strip_hs, array<float> strip_ls, array<float> strip_cs, array<int> strip_ts, string strip_label_size) =>
+    int strip_drawn = 0
+    float strip_highest = na
+    int strip_tf_ms = timeframe.in_seconds(strip_tf) * 1000
+    if not hide_htf_candles
+        for strip_i = 0 to strip_count - 1
+            float strip_o = array.get(strip_os, strip_i)
+            float strip_h = array.get(strip_hs, strip_i)
+            float strip_l = array.get(strip_ls, strip_i)
+            float strip_c = array.get(strip_cs, strip_i)
+            int strip_t = array.get(strip_ts, strip_i)
+            if na(strip_o) or na(strip_h) or na(strip_l) or na(strip_c) or na(strip_t)
+                continue
+            int strip_x = strip_base_x + (strip_count - 1 - strip_i) * strip_step
+            f_draw_strip_candle(strip_x, strip_half, strip_o, strip_h, strip_l, strip_c)
+            float strip_label_gap = math.max(syminfo.mintick * 10, (strip_h - strip_l) * 0.05)
+            if show_htf_time_labels
+                array.push(labels, label.new(strip_x, strip_l - strip_label_gap, f_htf_strip_time_label(strip_t, strip_tf_ms), xloc=xloc.bar_index, style=label.style_label_up, color=color.new(color.black, 100), textcolor=htf_time_label_color, size=strip_label_size, text_font_family=font.family_monospace))
+            if show_eq
+                float strip_eq_price = f_htf_candle_eq_price(strip_o, strip_h, strip_l, strip_c)
+                if not na(strip_eq_price)
+                    array.push(htfEqLines, line.new(strip_x - strip_half - htf_eq_extension, strip_eq_price, strip_x + strip_half + htf_eq_extension, strip_eq_price, xloc=xloc.bar_index, color=eq_color, width=eq_width, style=f_style(eq_style)))
+            strip_highest := na(strip_highest) ? strip_h : math.max(strip_highest, strip_h)
+            strip_drawn += 1
+        if show_htf_timeframe_labels and strip_drawn > 0
+            int strip_label_x = strip_base_x + int(math.round((strip_count - 1) * strip_step / 2.0))
+            float strip_label_gap = syminfo.mintick * 20
+            array.push(labels, label.new(strip_label_x, strip_highest + strip_label_gap, f_tf_label(strip_tf), xloc=xloc.bar_index, style=label.style_label_down, color=color.new(color.black, 100), textcolor=htf_time_label_color, size=strip_label_size, text_font_family=font.family_monospace))
+    strip_drawn
 
 f_wick_eq_price(bool bearish, float o, float h, float l, float c) =>
     // Legacy wrapper kept so the rest of the Fractal Model can compile.
@@ -1197,19 +1318,10 @@ if barstate.islast
             int t = array.get(arr_t, i)
             if na(o) or na(h) or na(l) or na(c) or na(t)
                 continue
-            bool bull = c >= o
             int x = base_x + (num - 1 - i) * step
-            int xl = x - half
-            int xr = x + half
-            float body_top = math.max(o, c)
-            float body_bot = math.min(o, c)
-            if body_top == body_bot
-                body_top += syminfo.mintick
 
             if not hide_htf_candles
-                array.push(boxes, box.new(xl, body_top, xr, body_bot, xloc=xloc.bar_index, bgcolor=bull ? bull_body : bear_body, border_color=bull ? bull_border : bear_border, border_width=1))
-                array.push(lines, line.new(x, h, x, body_top, xloc=xloc.bar_index, color=bull ? bull_wick : bear_wick, width=1))
-                array.push(lines, line.new(x, body_bot, x, l, xloc=xloc.bar_index, color=bull ? bull_wick : bear_wick, width=1))
+                f_draw_strip_candle(x, half, o, h, l, c)
 
                 if show_htf_open and i == 0
                     array.push(lines, line.new(t, o, time, o, xloc=xloc.bar_time, color=htf_open_color, style=f_style(htf_open_style), width=htf_open_width))
@@ -1224,6 +1336,17 @@ if barstate.islast
 
             if show_oc_time
                 array.push(lines, line.new(t, l, t, h, xloc=xloc.bar_time, extend=extend.both, color=oc_color, style=f_style(oc_style), width=oc_width))
+
+    if not hide_htf_candles and show_htf_timeframe_labels
+        float htf1_highest = na
+        for htf1_i = 0 to num - 1
+            float htf1_h = array.get(arr_h, htf1_i)
+            int htf1_t = array.get(arr_t, htf1_i)
+            if not na(htf1_h) and not na(htf1_t)
+                htf1_highest := na(htf1_highest) ? htf1_h : math.max(htf1_highest, htf1_h)
+        if not na(htf1_highest)
+            int htf1_label_x = base_x + int(math.round((num - 1) * step / 2.0))
+            array.push(labels, label.new(htf1_label_x, htf1_highest + syminfo.mintick * 20, f_tf_label(htf), xloc=xloc.bar_index, style=label.style_label_down, color=color.new(color.black, 100), textcolor=htf_time_label_color, size=strip_label_size, text_font_family=font.family_monospace))
 
     // First Presented FVG for each active HTF candle
     if show_first_presented_fvg
@@ -1364,6 +1487,21 @@ if barstate.islast
 
                 if not na(eq_price)
                     array.push(htfEqLines, line.new(eq_x_left, eq_price, eq_x_right, eq_price, xloc=xloc.bar_index, color=eq_color, width=eq_width, style=f_style(eq_style)))
+
+    // Additional visualization-only HTF strips. They never feed the model engines.
+    int extra_num = math.min(htf_candles, 8)
+    int extra_base_x = base_x + num * step + htf_space_between
+    if htf2_show
+        f_draw_extra_strip(htf2_tf, extra_num, extra_base_x, step, half, htf2_o, htf2_h, htf2_l, htf2_c, htf2_t, strip_label_size)
+        extra_base_x += extra_num * step + htf_space_between
+    if htf3_show
+        f_draw_extra_strip(htf3_tf, extra_num, extra_base_x, step, half, htf3_o, htf3_h, htf3_l, htf3_c, htf3_t, strip_label_size)
+        extra_base_x += extra_num * step + htf_space_between
+    if htf4_show
+        f_draw_extra_strip(htf4_tf, extra_num, extra_base_x, step, half, htf4_o, htf4_h, htf4_l, htf4_c, htf4_t, strip_label_size)
+        extra_base_x += extra_num * step + htf_space_between
+    if htf5_show
+        f_draw_extra_strip(htf5_tf, extra_num, extra_base_x, step, half, htf5_o, htf5_h, htf5_l, htf5_c, htf5_t, strip_label_size)
 
     // Global CISD lines
     int cisd_drawn = 0
