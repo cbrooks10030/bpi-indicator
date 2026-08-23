@@ -1491,17 +1491,19 @@ if barstate.islast
     // Additional visualization-only HTF strips. They never feed the model engines.
     int extra_num = math.min(htf_candles, 8)
     int extra_base_x = base_x + num * step + htf_space_between
+    int extra_drawn = 0
     if htf2_show
-        f_draw_extra_strip(htf2_tf, extra_num, extra_base_x, step, half, htf2_o, htf2_h, htf2_l, htf2_c, htf2_t, strip_label_size)
+        extra_drawn := f_draw_extra_strip(htf2_tf, extra_num, extra_base_x, step, half, htf2_o, htf2_h, htf2_l, htf2_c, htf2_t, strip_label_size)
         extra_base_x += extra_num * step + htf_space_between
     if htf3_show
-        f_draw_extra_strip(htf3_tf, extra_num, extra_base_x, step, half, htf3_o, htf3_h, htf3_l, htf3_c, htf3_t, strip_label_size)
+        extra_drawn := f_draw_extra_strip(htf3_tf, extra_num, extra_base_x, step, half, htf3_o, htf3_h, htf3_l, htf3_c, htf3_t, strip_label_size)
         extra_base_x += extra_num * step + htf_space_between
     if htf4_show
-        f_draw_extra_strip(htf4_tf, extra_num, extra_base_x, step, half, htf4_o, htf4_h, htf4_l, htf4_c, htf4_t, strip_label_size)
+        extra_drawn := f_draw_extra_strip(htf4_tf, extra_num, extra_base_x, step, half, htf4_o, htf4_h, htf4_l, htf4_c, htf4_t, strip_label_size)
         extra_base_x += extra_num * step + htf_space_between
     if htf5_show
-        f_draw_extra_strip(htf5_tf, extra_num, extra_base_x, step, half, htf5_o, htf5_h, htf5_l, htf5_c, htf5_t, strip_label_size)
+        extra_drawn := f_draw_extra_strip(htf5_tf, extra_num, extra_base_x, step, half, htf5_o, htf5_h, htf5_l, htf5_c, htf5_t, strip_label_size)
+        extra_base_x += extra_num * step + htf_space_between
 
     // Global CISD lines
     int cisd_drawn = 0
