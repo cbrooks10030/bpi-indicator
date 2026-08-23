@@ -503,7 +503,9 @@ f_cisd_archaeologist(int bias_dir) =>
                 break
     [extreme, bar_index - extreme_shift]
 
-bool cisd_engine_on = require_cisd or show_bull_cisd or show_bear_cisd
+// Detection always runs — the ATM/Unicorn models consume the CISD triggers.
+// The CISD line drawing stays gated on show_bull_cisd / show_bear_cisd.
+bool cisd_engine_on = true
 
 if cisd_engine_on and cisd_vibes == 0 and bar_index > 10
     int first_impression = close > open ? 1 : close < open ? -1 : 0
