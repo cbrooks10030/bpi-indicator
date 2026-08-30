@@ -1610,10 +1610,10 @@ pdh_color           = input.color(color.new(color.red, 0), "PDH Color", inline="
 pdl_color           = input.color(color.new(color.red, 0), "PDL Color", inline="pdhlc", group=GRP_DAILY)
 show_daily_labels   = input.bool(true, "Show Daily Text Labels", group=GRP_DAILY, tooltip="If off, lines still show but text labels are hidden.")
 daily_line_width    = input.int(1, "Daily Line Width", minval=1, maxval=4, group=GRP_DAILY)
-daily_line_style_in = input.string("solid", "Daily Line Style", options=["solid","dashed","dotted"], group=GRP_DAILY)
+daily_line_style_in = input.string("dotted", "Daily Line Style", options=["solid","dashed","dotted"], group=GRP_DAILY)
 daily_label_size    = input.string(SIZE_SMALL, "Daily Label Size", options=[SIZE_TINY, SIZE_SMALL, SIZE_NORMAL, SIZE_LARGE, SIZE_HUGE], group=GRP_DAILY)
-daily_label_pos_in  = input.string("Center", "Daily Label Position", options=["Above","Below","Left","Right","Center"], group=GRP_DAILY, tooltip="Where the Daily High/Low, PDH/PDL text sits relative to the end of the line. 'Center' has NO callout arrow — text sits directly at the anchor. Above/Below/Left/Right use a Pine callout label whose body visibly extends past the anchor.")
-daily_label_padding = input.int(0, "Daily Label Padding (bars)", minval=0, maxval=500, group=GRP_DAILY, tooltip="Bars between the label anchor and the end of the line. 0 = text sits exactly at the line end. Increase to push text further from the line end.")
+daily_label_pos_in  = input.string("Right", "Daily Label Position", options=["Above","Below","Left","Right","Center"], group=GRP_DAILY, tooltip="Where the Daily High/Low, PDH/PDL text sits relative to the end of the line. 'Center' has NO callout arrow — text sits directly at the anchor. Above/Below/Left/Right use a Pine callout label whose body visibly extends past the anchor.")
+daily_label_padding = input.int(10, "Daily Label Padding (bars)", minval=0, maxval=500, group=GRP_DAILY, tooltip="Bars between the label anchor and the end of the line. 0 = text sits exactly at the line end. Increase to push text further from the line end.")
 daily_line_style    = daily_line_style_in == "dashed" ? line.style_dashed : daily_line_style_in == "dotted" ? line.style_dotted : line.style_solid
 
 // Map a friendly position string to a Pine label style.
@@ -1650,6 +1650,7 @@ daily_label_x_offset   = daily_label_pos_in   == "Left" ? -daily_label_padding  
 // Right edge of a still-active session line: it runs past the last bar up to the label's
 // x so the line reads into its text instead of stopping short of it.
 session_line_end = bar_index + math.max(session_label_x_offset, 0)
+daily_line_end   = bar_index + math.max(daily_label_x_offset, 0)
 
 // Resolve the x-anchor + label style for a session H/L label.
 //  - Not swept: label at the right edge using the user's Session Label Position.
@@ -2412,7 +2413,7 @@ if show_daily_high and not na(cur_day_high)
         dh_line  := line.new(cur_day_start_bar, cur_day_high, bar_index, cur_day_high, color=daily_high_color, width=daily_line_width, style=daily_line_style)
         dh_label := label.new(bar_index + daily_label_x_offset, cur_day_high, text_daily_visible ? "Daily High" : "", color=color.new(color.white, 100), textcolor=daily_high_color, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
     line.set_xy1(dh_line, cur_day_start_bar, cur_day_high)
-    line.set_xy2(dh_line, bar_index, cur_day_high)
+    line.set_xy2(dh_line, daily_line_end, cur_day_high)
     label.set_xy(dh_label, bar_index + daily_label_x_offset, cur_day_high)
 
 // Draw / update current-day low
@@ -2421,7 +2422,7 @@ if show_daily_low and not na(cur_day_low)
         dl_line  := line.new(cur_day_start_bar, cur_day_low, bar_index, cur_day_low, color=daily_low_color, width=daily_line_width, style=daily_line_style)
         dl_label := label.new(bar_index + daily_label_x_offset, cur_day_low, text_daily_visible ? "Daily Low" : "", color=color.new(color.white, 100), textcolor=daily_low_color, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
     line.set_xy1(dl_line, cur_day_start_bar, cur_day_low)
-    line.set_xy2(dl_line, bar_index, cur_day_low)
+    line.set_xy2(dl_line, daily_line_end, cur_day_low)
     label.set_xy(dl_label, bar_index + daily_label_x_offset, cur_day_low)
 
 // Draw / update previous-day high (horizontal, extends to current bar)
@@ -2429,7 +2430,7 @@ if show_pdh and not na(prev_day_high)
     if na(pdh_line)
         pdh_line  := line.new(prev_day_start_bar, prev_day_high, bar_index, prev_day_high, color=pdh_color, width=daily_line_width, style=daily_line_style)
         pdh_label := label.new(bar_index + daily_label_x_offset, prev_day_high, text_daily_visible ? "PDH" : "", color=color.new(color.white, 100), textcolor=pdh_color, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
-    line.set_xy2(pdh_line, bar_index, prev_day_high)
+    line.set_xy2(pdh_line, daily_line_end, prev_day_high)
     label.set_xy(pdh_label, bar_index + daily_label_x_offset, prev_day_high)
 
 // Draw / update previous-day low
@@ -2437,7 +2438,7 @@ if show_pdl and not na(prev_day_low)
     if na(pdl_line)
         pdl_line  := line.new(prev_day_start_bar, prev_day_low, bar_index, prev_day_low, color=pdl_color, width=daily_line_width, style=daily_line_style)
         pdl_label := label.new(bar_index + daily_label_x_offset, prev_day_low, text_daily_visible ? "PDL" : "", color=color.new(color.white, 100), textcolor=pdl_color, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
-    line.set_xy2(pdl_line, bar_index, prev_day_low)
+    line.set_xy2(pdl_line, daily_line_end, prev_day_low)
     label.set_xy(pdl_label, bar_index + daily_label_x_offset, prev_day_low)
 
 
