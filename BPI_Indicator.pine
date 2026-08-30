@@ -341,100 +341,43 @@ else
 
 // Additional HTF strips are visualization-only. HTF1's arr_* arrays remain the
 // sole source for the fractal, CISD, SMT, T-Spot, and FVG-compatibility engines.
-[htf2_o0, htf2_h0, htf2_l0, htf2_c0, htf2_t0, htf2_o1, htf2_h1, htf2_l1, htf2_c1, htf2_t1,
- htf2_o2, htf2_h2, htf2_l2, htf2_c2, htf2_t2, htf2_o3, htf2_h3, htf2_l3, htf2_c3, htf2_t3,
- htf2_o4, htf2_h4, htf2_l4, htf2_c4, htf2_t4, htf2_o5, htf2_h5, htf2_l5, htf2_c5, htf2_t5,
- htf2_o6, htf2_h6, htf2_l6, htf2_c6, htf2_t6, htf2_o7, htf2_h7, htf2_l7, htf2_c7, htf2_t7] =
-    request.security(syminfo.tickerid, htf2_tf,
-    [open, high, low, close, time, open[1], high[1], low[1], close[1], time[1],
-     open[2], high[2], low[2], close[2], time[2], open[3], high[3], low[3], close[3], time[3],
-     open[4], high[4], low[4], close[4], time[4], open[5], high[5], low[5], close[5], time[5],
-     open[6], high[6], low[6], close[6], time[6], open[7], high[7], low[7], close[7], time[7]],
-    lookahead=barmerge.lookahead_off)
+f_extra_strip_series(float strip_o, float strip_h, float strip_l, float strip_c, int strip_t) =>
+    var array<float> hist_o = array.new<float>(8, na)
+    var array<float> hist_h = array.new<float>(8, na)
+    var array<float> hist_l = array.new<float>(8, na)
+    var array<float> hist_c = array.new<float>(8, na)
+    var array<int>   hist_t = array.new<int>(8, na)
+    if not na(strip_t)
+        int prev_t = array.get(hist_t, 0)
+        if na(prev_t) or prev_t != strip_t
+            for shift_i = 7 to 1
+                array.set(hist_o, shift_i, array.get(hist_o, shift_i - 1))
+                array.set(hist_h, shift_i, array.get(hist_h, shift_i - 1))
+                array.set(hist_l, shift_i, array.get(hist_l, shift_i - 1))
+                array.set(hist_c, shift_i, array.get(hist_c, shift_i - 1))
+                array.set(hist_t, shift_i, array.get(hist_t, shift_i - 1))
+        array.set(hist_o, 0, strip_o)
+        array.set(hist_h, 0, strip_h)
+        array.set(hist_l, 0, strip_l)
+        array.set(hist_c, 0, strip_c)
+        array.set(hist_t, 0, strip_t)
+    [hist_o, hist_h, hist_l, hist_c, hist_t]
 
-[htf3_o0, htf3_h0, htf3_l0, htf3_c0, htf3_t0, htf3_o1, htf3_h1, htf3_l1, htf3_c1, htf3_t1,
- htf3_o2, htf3_h2, htf3_l2, htf3_c2, htf3_t2, htf3_o3, htf3_h3, htf3_l3, htf3_c3, htf3_t3,
- htf3_o4, htf3_h4, htf3_l4, htf3_c4, htf3_t4, htf3_o5, htf3_h5, htf3_l5, htf3_c5, htf3_t5,
- htf3_o6, htf3_h6, htf3_l6, htf3_c6, htf3_t6, htf3_o7, htf3_h7, htf3_l7, htf3_c7, htf3_t7] =
-    request.security(syminfo.tickerid, htf3_tf,
-    [open, high, low, close, time, open[1], high[1], low[1], close[1], time[1],
-     open[2], high[2], low[2], close[2], time[2], open[3], high[3], low[3], close[3], time[3],
-     open[4], high[4], low[4], close[4], time[4], open[5], high[5], low[5], close[5], time[5],
-     open[6], high[6], low[6], close[6], time[6], open[7], high[7], low[7], close[7], time[7]],
-    lookahead=barmerge.lookahead_off)
+[htf2_ro, htf2_rh, htf2_rl, htf2_rc, htf2_rt] = request.security(syminfo.tickerid, htf2_tf, [open, high, low, close, time], lookahead=barmerge.lookahead_off)
+[htf3_ro, htf3_rh, htf3_rl, htf3_rc, htf3_rt] = request.security(syminfo.tickerid, htf3_tf, [open, high, low, close, time], lookahead=barmerge.lookahead_off)
+[htf4_ro, htf4_rh, htf4_rl, htf4_rc, htf4_rt] = request.security(syminfo.tickerid, htf4_tf, [open, high, low, close, time], lookahead=barmerge.lookahead_off)
+[htf5_ro, htf5_rh, htf5_rl, htf5_rc, htf5_rt] = request.security(syminfo.tickerid, htf5_tf, [open, high, low, close, time], lookahead=barmerge.lookahead_off)
 
-[htf4_o0, htf4_h0, htf4_l0, htf4_c0, htf4_t0, htf4_o1, htf4_h1, htf4_l1, htf4_c1, htf4_t1,
- htf4_o2, htf4_h2, htf4_l2, htf4_c2, htf4_t2, htf4_o3, htf4_h3, htf4_l3, htf4_c3, htf4_t3,
- htf4_o4, htf4_h4, htf4_l4, htf4_c4, htf4_t4, htf4_o5, htf4_h5, htf4_l5, htf4_c5, htf4_t5,
- htf4_o6, htf4_h6, htf4_l6, htf4_c6, htf4_t6, htf4_o7, htf4_h7, htf4_l7, htf4_c7, htf4_t7] =
-    request.security(syminfo.tickerid, htf4_tf,
-    [open, high, low, close, time, open[1], high[1], low[1], close[1], time[1],
-     open[2], high[2], low[2], close[2], time[2], open[3], high[3], low[3], close[3], time[3],
-     open[4], high[4], low[4], close[4], time[4], open[5], high[5], low[5], close[5], time[5],
-     open[6], high[6], low[6], close[6], time[6], open[7], high[7], low[7], close[7], time[7]],
-    lookahead=barmerge.lookahead_off)
+[htf2_o, htf2_h, htf2_l, htf2_c, htf2_t] = f_extra_strip_series(htf2_ro, htf2_rh, htf2_rl, htf2_rc, htf2_rt)
+[htf3_o, htf3_h, htf3_l, htf3_c, htf3_t] = f_extra_strip_series(htf3_ro, htf3_rh, htf3_rl, htf3_rc, htf3_rt)
+[htf4_o, htf4_h, htf4_l, htf4_c, htf4_t] = f_extra_strip_series(htf4_ro, htf4_rh, htf4_rl, htf4_rc, htf4_rt)
+[htf5_o, htf5_h, htf5_l, htf5_c, htf5_t] = f_extra_strip_series(htf5_ro, htf5_rh, htf5_rl, htf5_rc, htf5_rt)
 
-[htf5_o0, htf5_h0, htf5_l0, htf5_c0, htf5_t0, htf5_o1, htf5_h1, htf5_l1, htf5_c1, htf5_t1,
- htf5_o2, htf5_h2, htf5_l2, htf5_c2, htf5_t2, htf5_o3, htf5_h3, htf5_l3, htf5_c3, htf5_t3,
- htf5_o4, htf5_h4, htf5_l4, htf5_c4, htf5_t4, htf5_o5, htf5_h5, htf5_l5, htf5_c5, htf5_t5,
- htf5_o6, htf5_h6, htf5_l6, htf5_c6, htf5_t6, htf5_o7, htf5_h7, htf5_l7, htf5_c7, htf5_t7] =
-    request.security(syminfo.tickerid, htf5_tf,
-    [open, high, low, close, time, open[1], high[1], low[1], close[1], time[1],
-     open[2], high[2], low[2], close[2], time[2], open[3], high[3], low[3], close[3], time[3],
-     open[4], high[4], low[4], close[4], time[4], open[5], high[5], low[5], close[5], time[5],
-     open[6], high[6], low[6], close[6], time[6], open[7], high[7], low[7], close[7], time[7]],
-    lookahead=barmerge.lookahead_off)
-
-array<float> htf2_o = array.from(htf2_o0, htf2_o1, htf2_o2, htf2_o3, htf2_o4, htf2_o5, htf2_o6, htf2_o7)
-array<float> htf2_h = array.from(htf2_h0, htf2_h1, htf2_h2, htf2_h3, htf2_h4, htf2_h5, htf2_h6, htf2_h7)
-array<float> htf2_l = array.from(htf2_l0, htf2_l1, htf2_l2, htf2_l3, htf2_l4, htf2_l5, htf2_l6, htf2_l7)
-array<float> htf2_c = array.from(htf2_c0, htf2_c1, htf2_c2, htf2_c3, htf2_c4, htf2_c5, htf2_c6, htf2_c7)
-array<int> htf2_t = array.from(htf2_t0, htf2_t1, htf2_t2, htf2_t3, htf2_t4, htf2_t5, htf2_t6, htf2_t7)
-
-array<float> htf3_o = array.from(htf3_o0, htf3_o1, htf3_o2, htf3_o3, htf3_o4, htf3_o5, htf3_o6, htf3_o7)
-array<float> htf3_h = array.from(htf3_h0, htf3_h1, htf3_h2, htf3_h3, htf3_h4, htf3_h5, htf3_h6, htf3_h7)
-array<float> htf3_l = array.from(htf3_l0, htf3_l1, htf3_l2, htf3_l3, htf3_l4, htf3_l5, htf3_l6, htf3_l7)
-array<float> htf3_c = array.from(htf3_c0, htf3_c1, htf3_c2, htf3_c3, htf3_c4, htf3_c5, htf3_c6, htf3_c7)
-array<int> htf3_t = array.from(htf3_t0, htf3_t1, htf3_t2, htf3_t3, htf3_t4, htf3_t5, htf3_t6, htf3_t7)
-
-array<float> htf4_o = array.from(htf4_o0, htf4_o1, htf4_o2, htf4_o3, htf4_o4, htf4_o5, htf4_o6, htf4_o7)
-array<float> htf4_h = array.from(htf4_h0, htf4_h1, htf4_h2, htf4_h3, htf4_h4, htf4_h5, htf4_h6, htf4_h7)
-array<float> htf4_l = array.from(htf4_l0, htf4_l1, htf4_l2, htf4_l3, htf4_l4, htf4_l5, htf4_l6, htf4_l7)
-array<float> htf4_c = array.from(htf4_c0, htf4_c1, htf4_c2, htf4_c3, htf4_c4, htf4_c5, htf4_c6, htf4_c7)
-array<int> htf4_t = array.from(htf4_t0, htf4_t1, htf4_t2, htf4_t3, htf4_t4, htf4_t5, htf4_t6, htf4_t7)
-
-array<float> htf5_o = array.from(htf5_o0, htf5_o1, htf5_o2, htf5_o3, htf5_o4, htf5_o5, htf5_o6, htf5_o7)
-array<float> htf5_h = array.from(htf5_h0, htf5_h1, htf5_h2, htf5_h3, htf5_h4, htf5_h5, htf5_h6, htf5_h7)
-array<float> htf5_l = array.from(htf5_l0, htf5_l1, htf5_l2, htf5_l3, htf5_l4, htf5_l5, htf5_l6, htf5_l7)
-array<float> htf5_c = array.from(htf5_c0, htf5_c1, htf5_c2, htf5_c3, htf5_c4, htf5_c5, htf5_c6, htf5_c7)
-array<int> htf5_t = array.from(htf5_t0, htf5_t1, htf5_t2, htf5_t3, htf5_t4, htf5_t5, htf5_t6, htf5_t7)
-
-var float[] arr_o = array.new<float>(20, na)
-var float[] arr_h = array.new<float>(20, na)
-var float[] arr_l = array.new<float>(20, na)
-var float[] arr_c = array.new<float>(20, na)
-var int[]   arr_t = array.new<int>(20, 0)
-
-array.set(arr_o, 0, o0),   array.set(arr_h, 0, h0),   array.set(arr_l, 0, l0),   array.set(arr_c, 0, c0),   array.set(arr_t, 0, t0)
-array.set(arr_o, 1, o1),   array.set(arr_h, 1, h1),   array.set(arr_l, 1, l1),   array.set(arr_c, 1, c1),   array.set(arr_t, 1, t1)
-array.set(arr_o, 2, o2),   array.set(arr_h, 2, h2),   array.set(arr_l, 2, l2),   array.set(arr_c, 2, c2),   array.set(arr_t, 2, t2)
-array.set(arr_o, 3, o3),   array.set(arr_h, 3, h3),   array.set(arr_l, 3, l3),   array.set(arr_c, 3, c3),   array.set(arr_t, 3, t3)
-array.set(arr_o, 4, o4),   array.set(arr_h, 4, h4),   array.set(arr_l, 4, l4),   array.set(arr_c, 4, c4),   array.set(arr_t, 4, t4)
-array.set(arr_o, 5, o5),   array.set(arr_h, 5, h5),   array.set(arr_l, 5, l5),   array.set(arr_c, 5, c5),   array.set(arr_t, 5, t5)
-array.set(arr_o, 6, o6),   array.set(arr_h, 6, h6),   array.set(arr_l, 6, l6),   array.set(arr_c, 6, c6),   array.set(arr_t, 6, t6)
-array.set(arr_o, 7, o7),   array.set(arr_h, 7, h7),   array.set(arr_l, 7, l7),   array.set(arr_c, 7, c7),   array.set(arr_t, 7, t7)
-array.set(arr_o, 8, o8),   array.set(arr_h, 8, h8),   array.set(arr_l, 8, l8),   array.set(arr_c, 8, c8),   array.set(arr_t, 8, t8)
-array.set(arr_o, 9, o9),   array.set(arr_h, 9, h9),   array.set(arr_l, 9, l9),   array.set(arr_c, 9, c9),   array.set(arr_t, 9, t9)
-array.set(arr_o, 10, o10), array.set(arr_h, 10, h10), array.set(arr_l, 10, l10), array.set(arr_c, 10, c10), array.set(arr_t, 10, t10)
-array.set(arr_o, 11, o11), array.set(arr_h, 11, h11), array.set(arr_l, 11, l11), array.set(arr_c, 11, c11), array.set(arr_t, 11, t11)
-array.set(arr_o, 12, o12), array.set(arr_h, 12, h12), array.set(arr_l, 12, l12), array.set(arr_c, 12, c12), array.set(arr_t, 12, t12)
-array.set(arr_o, 13, o13), array.set(arr_h, 13, h13), array.set(arr_l, 13, l13), array.set(arr_c, 13, c13), array.set(arr_t, 13, t13)
-array.set(arr_o, 14, o14), array.set(arr_h, 14, h14), array.set(arr_l, 14, l14), array.set(arr_c, 14, c14), array.set(arr_t, 14, t14)
-array.set(arr_o, 15, o15), array.set(arr_h, 15, h15), array.set(arr_l, 15, l15), array.set(arr_c, 15, c15), array.set(arr_t, 15, t15)
-array.set(arr_o, 16, o16), array.set(arr_h, 16, h16), array.set(arr_l, 16, l16), array.set(arr_c, 16, c16), array.set(arr_t, 16, t16)
-array.set(arr_o, 17, o17), array.set(arr_h, 17, h17), array.set(arr_l, 17, l17), array.set(arr_c, 17, c17), array.set(arr_t, 17, t17)
-array.set(arr_o, 18, o18), array.set(arr_h, 18, h18), array.set(arr_l, 18, l18), array.set(arr_c, 18, c18), array.set(arr_t, 18, t18)
-array.set(arr_o, 19, o19), array.set(arr_h, 19, h19), array.set(arr_l, 19, l19), array.set(arr_c, 19, c19), array.set(arr_t, 19, t19)
+float[] arr_o = array.from(o0, o1, o2, o3, o4, o5, o6, o7, o8, o9, o10, o11, o12, o13, o14, o15, o16, o17, o18, o19)
+float[] arr_h = array.from(h0, h1, h2, h3, h4, h5, h6, h7, h8, h9, h10, h11, h12, h13, h14, h15, h16, h17, h18, h19)
+float[] arr_l = array.from(l0, l1, l2, l3, l4, l5, l6, l7, l8, l9, l10, l11, l12, l13, l14, l15, l16, l17, l18, l19)
+float[] arr_c = array.from(c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19)
+int[]   arr_t = array.from(t0, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12, t13, t14, t15, t16, t17, t18, t19)
 // HTF FVG price levels for downstream POI classification only.
 var array<float> htfFVG_top = array.new<float>()
 var array<float> htfFVG_bot = array.new<float>()
