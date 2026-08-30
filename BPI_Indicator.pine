@@ -4465,7 +4465,6 @@ ts_show_dpurge  = input.bool(true,  "Double Purge (D-Purge)", group=GRP_TS)
 ts_show_mss     = input.bool(true,  "Show MSS Break", group=GRP_TS)
 ts_show_zone    = input.bool(true,  "Show LTF FVG / iFVG Zone", group=GRP_TS)
 ts_show_isweep  = input.bool(true,  "Show i-Sweep Retest", group=GRP_TS)
-ts_show_entry   = input.bool(true,  "Show Entry Marker", group=GRP_TS)
 ts_bull_col     = input.color(color.new(#2962ff, 0), "Bullish", inline="tscol", group=GRP_TS)
 ts_bear_col     = input.color(color.new(#f23645, 0), "Bearish", inline="tscol", group=GRP_TS)
 ts_area_transp  = input.int(90,     "Sweep Area Opacity", minval=0, maxval=100, group=GRP_TS)
@@ -4520,7 +4519,6 @@ type TSSetup
     label  dpLabel      = na
     label  innerLabel   = na
     line   iLine        = na
-    label  entryLabel   = na
 
 var array<TSSwing> ts_bsl = array.new<TSSwing>()
 var array<TSSwing> ts_ssl = array.new<TSSwing>()
@@ -4614,8 +4612,6 @@ ts_delete(TSSetup m) =>
         line.delete(m.iLine)
     if not na(m.innerLabel)
         label.delete(m.innerLabel)
-    if not na(m.entryLabel)
-        label.delete(m.entryLabel)
     true
 
 // --- Rolling swing liquidity (context swings that the sweep hunts) ---
@@ -4763,9 +4759,6 @@ ts_check_isweep(TSSetup m) =>
             if ts_show_isweep
                 m.iLine      := line.new(m.zoneBar, m.innerTarget, bar_index + ts_pad, m.innerTarget, color=ts_iswp_col, width=1, style=line.style_dotted)
                 m.innerLabel := label.new(bar_index + ts_pad, m.innerTarget, "iSweep", style=label.style_label_left, color=color.new(color.white, 100), textcolor=lbl_text_col, size=size.tiny, text_font_family=font.family_monospace)
-            if ts_show_entry
-                float off = (high - low) * 0.25
-                m.entryLabel := label.new(bar_index, m.isBull ? low - off : high + off, "", style=m.isBull ? label.style_triangleup : label.style_triangledown, color=m.isBull ? ts_bull_col : ts_bear_col, size=size.tiny)
             m.entryDone := true
             m.status    := "Entry"
             if ts_alerts
