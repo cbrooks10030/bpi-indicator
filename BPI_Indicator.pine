@@ -1561,10 +1561,10 @@ open_830_label_text = input.string("8:30", "8:30 Open Label", group=GRP_SESSIONS
 
 show_session_labels = input.bool(true, "Show Session Text Labels", group=GRP_SESSIONS, tooltip="If off, lines still show but text labels are hidden.")
 session_line_width = input.int(1, "Session Line Width", minval=1, maxval=4, group=GRP_SESSIONS)
-session_line_style_in = input.string("solid", "Session Line Style", options=["solid","dashed","dotted"], group=GRP_SESSIONS)
+session_line_style_in = input.string("dotted", "Session Line Style", options=["solid","dashed","dotted"], group=GRP_SESSIONS)
 session_label_size = input.string(SIZE_SMALL, "Session Label Size", options=[SIZE_TINY, SIZE_SMALL, SIZE_NORMAL, SIZE_LARGE, SIZE_HUGE], group=GRP_SESSIONS)
 session_label_pos_in = input.string("Right", "Session Label Position", options=["Above","Below","Left","Right","Center","Inside-Left"], group=GRP_SESSIONS, tooltip="Where each session's text sits relative to the end of its line. 'Inside-Left' pins the RIGHT edge of the text to the end of the line so the text reads BACK into the line and never overflows past the endpoint. 'Center' has NO callout arrow — text sits directly at the anchor (may overflow past line end). Above/Below/Left/Right use a Pine callout label.")
-session_label_padding = input.int(0, "Session Label Nudge (signed bars, −500 to +500)", minval=-500, maxval=500, group=GRP_SESSIONS, tooltip="Signed horizontal nudge for the session label. 0 = label sits at the chart's right edge (current bar). NEGATIVE values pull the text BACKWARD (left, into history). POSITIVE values push the text FORWARD (right, into the future / projection area). Range −500 to +500 bars. NOTE: if the slider in Settings still shows 0 as the minimum after updating the script, that's a TradingView input cache — remove the indicator from the chart and re-add it.")
+session_label_padding = input.int(10, "Session Label Nudge (signed bars, −500 to +500)", minval=-500, maxval=500, group=GRP_SESSIONS, tooltip="Signed horizontal nudge for the session label. 0 = label sits at the chart's right edge (current bar). NEGATIVE values pull the text BACKWARD (left, into history). POSITIVE values push the text FORWARD (right, into the future / projection area). Range −500 to +500 bars. NOTE: if the slider in Settings still shows 0 as the minimum after updating the script, that's a TradingView input cache — remove the indicator from the chart and re-add it.")
 session_taken_label_pad = input.int(6, "Swept-Level Label Left Pad (bars)", minval=0, maxval=100, group=GRP_SESSIONS, tooltip="For NY AM / Asia / London levels that have been swept: how many bars to the LEFT of the takeout point the text sits. The text reads back to the left of the takeout candle so it never overlaps the wicks/candles that swept the level. Increase for more clearance.")
 session_taken_center_thresh = input.int(25, "Swept-Level Auto-Center Threshold (bars)", minval=0, maxval=500, group=GRP_SESSIONS, tooltip="If a swept level's line is SHORTER than this many bars (i.e. price took it out soon after it formed, leaving too little room for left-padded text), the text is automatically CENTERED on the line instead. Set to 0 to always left-pad and never auto-center.")
 
@@ -1647,6 +1647,9 @@ daily_label_style      = f_labelStyle(daily_label_pos_in)
 // offset is taken as-is: NEGATIVE = backward (left), POSITIVE = forward (right).
 session_label_x_offset = session_label_pos_in == "Left" ? -session_label_padding : session_label_padding
 daily_label_x_offset   = daily_label_pos_in   == "Left" ? -daily_label_padding   : daily_label_padding
+// Right edge of a still-active session line: it runs past the last bar up to the label's
+// x so the line reads into its text instead of stopping short of it.
+session_line_end = bar_index + math.max(session_label_x_offset, 0)
 
 // Resolve the x-anchor + label style for a session H/L label.
 //  - Not swept: label at the right edge using the user's Session Label Position.
@@ -1961,8 +1964,8 @@ if show_ny_am_range and not sessions_hidden_by_tf
             ny_am_low_taken     := true
             ny_am_low_taken_bar := bar_index
     if not na(ny_am_high_line)
-        int ny_am_h_x2 = ny_am_high_taken ? ny_am_high_taken_bar : bar_index
-        int ny_am_l_x2 = ny_am_low_taken  ? ny_am_low_taken_bar  : bar_index
+        int ny_am_h_x2 = ny_am_high_taken ? ny_am_high_taken_bar : session_line_end
+        int ny_am_l_x2 = ny_am_low_taken  ? ny_am_low_taken_bar  : session_line_end
         line.set_xy1(ny_am_high_line, ny_am_high_bar, ny_am_high)
         line.set_xy2(ny_am_high_line, ny_am_h_x2,     ny_am_high)
         line.set_xy1(ny_am_low_line,  ny_am_low_bar,  ny_am_low)
@@ -2026,8 +2029,8 @@ if show_asia_range and not sessions_hidden_by_tf
             asia_low_taken     := true
             asia_low_taken_bar := bar_index
     if not na(asia_high_line)
-        int asia_h_x2 = asia_high_taken ? asia_high_taken_bar : bar_index
-        int asia_l_x2 = asia_low_taken  ? asia_low_taken_bar  : bar_index
+        int asia_h_x2 = asia_high_taken ? asia_high_taken_bar : session_line_end
+        int asia_l_x2 = asia_low_taken  ? asia_low_taken_bar  : session_line_end
         line.set_xy1(asia_high_line, asia_high_bar, asia_high)
         line.set_xy2(asia_high_line, asia_h_x2,     asia_high)
         line.set_xy1(asia_low_line,  asia_low_bar,  asia_low)
@@ -2086,8 +2089,8 @@ if show_london_range and not sessions_hidden_by_tf
             london_low_taken     := true
             london_low_taken_bar := bar_index
     if not na(london_high_line)
-        int london_h_x2 = london_high_taken ? london_high_taken_bar : bar_index
-        int london_l_x2 = london_low_taken  ? london_low_taken_bar  : bar_index
+        int london_h_x2 = london_high_taken ? london_high_taken_bar : session_line_end
+        int london_l_x2 = london_low_taken  ? london_low_taken_bar  : session_line_end
         line.set_xy1(london_high_line, london_high_bar, london_high)
         line.set_xy2(london_high_line, london_h_x2,     london_high)
         line.set_xy1(london_low_line,  london_low_bar,  london_low)
@@ -2117,7 +2120,7 @@ if show_midnight_open
         // Label rebuilt fresh on barstate.islast (right-edge anchor pattern).
     if not na(midnight_open_line)
         line.set_xy1(midnight_open_line, midnight_open_bar, midnight_open_price)
-        line.set_xy2(midnight_open_line, bar_index, midnight_open_price)
+        line.set_xy2(midnight_open_line, session_line_end, midnight_open_price)
     if barstate.islast and not na(midnight_open_line)
         if not na(midnight_open_label)
             label.delete(midnight_open_label)
@@ -2137,7 +2140,7 @@ if show_830_open
         // Label rebuilt fresh on barstate.islast (right-edge anchor pattern).
     if not na(open_830_line)
         line.set_xy1(open_830_line, open_830_bar, open_830_price)
-        line.set_xy2(open_830_line, bar_index, open_830_price)
+        line.set_xy2(open_830_line, session_line_end, open_830_price)
     if barstate.islast and not na(open_830_line)
         if not na(open_830_label)
             label.delete(open_830_label)
@@ -4461,22 +4464,376 @@ tcisd_vibeColor(mood) =>
 tcisd_moodText(mood) =>
     mood == 1 ? "Bullish" : mood == -1 ? "Bearish" : "Loading"
 
+tcisd_tf_names = array.from("1m", "3m", "5m", "15m", "1H", "4H", "1D", "1W")
+tcisd_moods    = array.from(tcisd_r_1m, tcisd_r_3m, tcisd_r_5m, tcisd_r_15m, tcisd_r_1h, tcisd_r_4h, tcisd_r_1d, tcisd_r_1w)
+
 if tcisd_showTable and barstate.islast
     table.cell(tcisd_table, 0, 0, "Timeframe", bgcolor=color.new(color.gray, 80), text_color=color.white, text_size=tcisd_tableFontSize)
     table.cell(tcisd_table, 1, 0, "Trend Status", bgcolor=color.new(color.gray, 80), text_color=color.white, text_size=tcisd_tableFontSize)
-    table.cell(tcisd_table, 0, 1, "1m", bgcolor=color.new(color.black, 50), text_color=color.white, text_size=tcisd_tableFontSize)
-    table.cell(tcisd_table, 1, 1, tcisd_moodText(tcisd_r_1m), bgcolor=tcisd_vibeColor(tcisd_r_1m), text_color=color.white, text_size=tcisd_tableFontSize)
-    table.cell(tcisd_table, 0, 2, "3m", bgcolor=color.new(color.black, 50), text_color=color.white, text_size=tcisd_tableFontSize)
-    table.cell(tcisd_table, 1, 2, tcisd_moodText(tcisd_r_3m), bgcolor=tcisd_vibeColor(tcisd_r_3m), text_color=color.white, text_size=tcisd_tableFontSize)
-    table.cell(tcisd_table, 0, 3, "5m", bgcolor=color.new(color.black, 50), text_color=color.white, text_size=tcisd_tableFontSize)
-    table.cell(tcisd_table, 1, 3, tcisd_moodText(tcisd_r_5m), bgcolor=tcisd_vibeColor(tcisd_r_5m), text_color=color.white, text_size=tcisd_tableFontSize)
-    table.cell(tcisd_table, 0, 4, "15m", bgcolor=color.new(color.black, 50), text_color=color.white, text_size=tcisd_tableFontSize)
-    table.cell(tcisd_table, 1, 4, tcisd_moodText(tcisd_r_15m), bgcolor=tcisd_vibeColor(tcisd_r_15m), text_color=color.white, text_size=tcisd_tableFontSize)
-    table.cell(tcisd_table, 0, 5, "1H", bgcolor=color.new(color.black, 50), text_color=color.white, text_size=tcisd_tableFontSize)
-    table.cell(tcisd_table, 1, 5, tcisd_moodText(tcisd_r_1h), bgcolor=tcisd_vibeColor(tcisd_r_1h), text_color=color.white, text_size=tcisd_tableFontSize)
-    table.cell(tcisd_table, 0, 6, "4H", bgcolor=color.new(color.black, 50), text_color=color.white, text_size=tcisd_tableFontSize)
-    table.cell(tcisd_table, 1, 6, tcisd_moodText(tcisd_r_4h), bgcolor=tcisd_vibeColor(tcisd_r_4h), text_color=color.white, text_size=tcisd_tableFontSize)
-    table.cell(tcisd_table, 0, 7, "1D", bgcolor=color.new(color.black, 50), text_color=color.white, text_size=tcisd_tableFontSize)
-    table.cell(tcisd_table, 1, 7, tcisd_moodText(tcisd_r_1d), bgcolor=tcisd_vibeColor(tcisd_r_1d), text_color=color.white, text_size=tcisd_tableFontSize)
-    table.cell(tcisd_table, 0, 8, "1W", bgcolor=color.new(color.black, 50), text_color=color.white, text_size=tcisd_tableFontSize)
-    table.cell(tcisd_table, 1, 8, tcisd_moodText(tcisd_r_1w), bgcolor=tcisd_vibeColor(tcisd_r_1w), text_color=color.white, text_size=tcisd_tableFontSize)
+    for i = 0 to 7
+        mood = array.get(tcisd_moods, i)
+        table.cell(tcisd_table, 0, i + 1, array.get(tcisd_tf_names, i), bgcolor=color.new(color.black, 50), text_color=color.white, text_size=tcisd_tableFontSize)
+        table.cell(tcisd_table, 1, i + 1, tcisd_moodText(mood), bgcolor=tcisd_vibeColor(mood), text_color=color.white, text_size=tcisd_tableFontSize)
+
+
+//+------------------------------------------------------------------------------------------------------------+//
+//+--- Turtle Soup Model + BSL/SSL Liquidity (ported from the TS-Model source)                               ---+//
+//+--- Sweep line/label, sweep area box, D-Purge, MSS break, FVG/iFVG confluence zone, i-Sweep retest,       ---+//
+//+--- entry marker, and rolling swing-liquidity levels drawn dotted out to the right with right-side text.  ---+//
+//+------------------------------------------------------------------------------------------------------------+//
+string GRP_TS = "Turtle Soup Model"
+ts_on           = input.bool(true,  "Enable Turtle Soup Model", group=GRP_TS)
+ts_max_models   = input.int(2,      "History (Max Setups)", minval=1, maxval=10, group=GRP_TS)
+ts_swing_len    = input.int(15,     "Context Swing Lookback", minval=2, maxval=50, group=GRP_TS)
+ts_require_zone = input.bool(true,  "Require FVG / iFVG Confluence", group=GRP_TS)
+ts_ltf_lookback = input.int(10,     "FVG / iFVG Lookback", minval=3, maxval=50, group=GRP_TS)
+ts_show_sweep   = input.bool(true,  "Sweep Line + Label", group=GRP_TS)
+ts_show_area    = input.bool(true,  "Sweep Area Box", group=GRP_TS)
+ts_show_dpurge  = input.bool(true,  "Double Purge (D-Purge)", group=GRP_TS)
+ts_show_mss     = input.bool(true,  "Show MSS Break", group=GRP_TS)
+ts_show_zone    = input.bool(true,  "Show LTF FVG / iFVG Zone", group=GRP_TS)
+ts_show_isweep  = input.bool(true,  "Show i-Sweep Retest", group=GRP_TS)
+ts_show_entry   = input.bool(true,  "Show Entry Marker", group=GRP_TS)
+ts_bull_col     = input.color(color.new(#2962ff, 0), "Bullish", inline="tscol", group=GRP_TS)
+ts_bear_col     = input.color(color.new(#f23645, 0), "Bearish", inline="tscol", group=GRP_TS)
+ts_area_transp  = input.int(90,     "Sweep Area Opacity", minval=0, maxval=100, group=GRP_TS)
+ts_iswp_col     = input.color(color.new(color.black, 0), "i-Sweep Color", group=GRP_TS)
+ts_mss_left     = input.int(3,      "MSS Pivot Left", minval=1, maxval=20, inline="tsmss", group=GRP_TS)
+ts_mss_right    = input.int(3,      "Right", minval=1, maxval=20, inline="tsmss", group=GRP_TS)
+ts_mss_confirm  = input.string("Close", "MSS Confirmation", options=["Close","Wick"], group=GRP_TS)
+ts_mss_max_bars = input.int(60,     "Max Waiting Bars", minval=5, maxval=500, group=GRP_TS)
+ts_alerts       = input.bool(true,  "Alerts (Sweep / MSS / Entry / Invalidation)", group=GRP_TS)
+
+string GRP_TSLIQ = "Liquidity Levels (BSL / SSL)"
+ts_liq_show     = input.bool(true,  "Show Liquidity Levels", group=GRP_TSLIQ)
+ts_liq_max      = input.int(2,      "Max Levels Per Side", minval=1, maxval=20, group=GRP_TSLIQ)
+ts_bsl_col      = input.color(color.new(#4e5057, 25), "Buy Side (BSL)", inline="tsliq", group=GRP_TSLIQ)
+ts_ssl_col      = input.color(color.new(#4e5057, 25), "Sell Side (SSL)", inline="tsliq", group=GRP_TSLIQ)
+ts_liq_style_in = input.string("dotted", "Line Style", options=["solid","dashed","dotted"], inline="tsliqs", group=GRP_TSLIQ)
+ts_liq_width    = input.int(1,      "Width", minval=1, maxval=4, inline="tsliqs", group=GRP_TSLIQ)
+ts_pad          = input.int(10,     "Extend / Label Offset (bars)", minval=0, maxval=100, group=GRP_TSLIQ, tooltip="How far past the last bar the dotted lines run, and where their right-side text sits.")
+
+ts_liq_style = ts_liq_style_in == "dashed" ? line.style_dashed : ts_liq_style_in == "dotted" ? line.style_dotted : line.style_solid
+
+type TSSwing
+    float price
+    int   bar
+    bool  taken = false
+
+type TSSetup
+    bool   isBull
+    int    sweepBar
+    float  sweepLevel
+    float  sweepExtreme
+    int    swingBar
+    bool   mssConfirmed = false
+    int    mssBar       = na
+    float  mssLevel     = na
+    bool   zoneFound    = false
+    string zoneType     = ""
+    float  zoneTop      = na
+    float  zoneBot      = na
+    int    zoneBar      = na
+    bool   dPurge       = false
+    string status       = "Formation"
+    float  innerTarget  = na
+    bool   entryDone    = false
+    line   sweepLine    = na
+    label  sweepLabel   = na
+    line   mssLine      = na
+    label  mssLabel     = na
+    box    area         = na
+    box    zoneBox      = na
+    line   zoneCe       = na
+    label  dpLabel      = na
+    label  innerLabel   = na
+    line   iLine        = na
+    label  entryLabel   = na
+
+var array<TSSwing> ts_bsl = array.new<TSSwing>()
+var array<TSSwing> ts_ssl = array.new<TSSwing>()
+var array<TSSetup> ts_setups = array.new<TSSetup>()
+var array<float> ts_ph_price = array.new_float()
+var array<int>   ts_ph_bar   = array.new_int()
+var array<float> ts_pl_price = array.new_float()
+var array<int>   ts_pl_bar   = array.new_int()
+var array<line>  ts_liq_lines  = array.new_line()
+var array<label> ts_liq_labels = array.new_label()
+
+// --- FVG / iFVG scan used only as the model's confluence zone (not a second FVG display engine) ---
+ts_find_fvg(bool want_bull, int lb) =>
+    bool  f = false
+    float t = na
+    float b = na
+    int   x = na
+    for k = 0 to lb - 3
+        if want_bull
+            if low[k] > high[k + 2]
+                f := true
+                t := low[k]
+                b := high[k + 2]
+                x := bar_index - k - 2
+        else
+            if high[k] < low[k + 2]
+                f := true
+                t := low[k + 2]
+                b := high[k]
+                x := bar_index - k - 2
+        if f
+            break
+    [f, t, b, x]
+
+ts_find_ifvg(bool want_bull, int lb) =>
+    bool  f = false
+    float t = na
+    float b = na
+    int   x = na
+    for k = 0 to lb - 3
+        if want_bull
+            if high[k] < low[k + 2] and close > low[k + 2]
+                f := true
+                t := low[k + 2]
+                b := high[k]
+                x := bar_index - k - 2
+        else
+            if low[k] > high[k + 2] and close < high[k + 2]
+                f := true
+                t := low[k]
+                b := high[k + 2]
+                x := bar_index - k - 2
+        if f
+            break
+    [f, t, b, x]
+
+ts_scan_zone(bool want_bull, int lb) =>
+    [ff, ft, fb, fx] = ts_find_fvg(want_bull, lb)
+    string zt = "FVG"
+    bool  zf = ff
+    float zt_top = ft
+    float zt_bot = fb
+    int   zt_bar = fx
+    if not ff
+        [iff, it, ib, ix] = ts_find_ifvg(want_bull, lb)
+        zt     := "iFVG"
+        zf     := iff
+        zt_top := it
+        zt_bot := ib
+        zt_bar := ix
+    [zf, zt, zt_top, zt_bot, zt_bar]
+
+ts_delete(TSSetup m) =>
+    if not na(m.sweepLine)
+        line.delete(m.sweepLine)
+    if not na(m.sweepLabel)
+        label.delete(m.sweepLabel)
+    if not na(m.mssLine)
+        line.delete(m.mssLine)
+    if not na(m.mssLabel)
+        label.delete(m.mssLabel)
+    if not na(m.area)
+        box.delete(m.area)
+    if not na(m.zoneBox)
+        box.delete(m.zoneBox)
+    if not na(m.zoneCe)
+        line.delete(m.zoneCe)
+    if not na(m.dpLabel)
+        label.delete(m.dpLabel)
+    if not na(m.iLine)
+        line.delete(m.iLine)
+    if not na(m.innerLabel)
+        label.delete(m.innerLabel)
+    if not na(m.entryLabel)
+        label.delete(m.entryLabel)
+    true
+
+// --- Rolling swing liquidity (context swings that the sweep hunts) ---
+ts_pivot_h = ta.pivothigh(high, ts_swing_len, ts_swing_len)
+ts_pivot_l = ta.pivotlow(low,  ts_swing_len, ts_swing_len)
+
+if ts_on
+    if not na(ts_pivot_h)
+        array.push(ts_bsl, TSSwing.new(ts_pivot_h, bar_index - ts_swing_len))
+    if not na(ts_pivot_l)
+        array.push(ts_ssl, TSSwing.new(ts_pivot_l, bar_index - ts_swing_len))
+    while array.size(ts_bsl) > 60
+        array.shift(ts_bsl)
+    while array.size(ts_ssl) > 60
+        array.shift(ts_ssl)
+
+// --- Local pivots used for the MSS break ---
+ts_mss_ph = ta.pivothigh(high, ts_mss_left, ts_mss_right)
+ts_mss_pl = ta.pivotlow(low,  ts_mss_left, ts_mss_right)
+
+if ts_on
+    if not na(ts_mss_ph)
+        array.push(ts_ph_price, ts_mss_ph)
+        array.push(ts_ph_bar,   bar_index - ts_mss_right)
+    if not na(ts_mss_pl)
+        array.push(ts_pl_price, ts_mss_pl)
+        array.push(ts_pl_bar,   bar_index - ts_mss_right)
+    while array.size(ts_ph_bar) > 80
+        array.shift(ts_ph_bar)
+        array.shift(ts_ph_price)
+    while array.size(ts_pl_bar) > 80
+        array.shift(ts_pl_bar)
+        array.shift(ts_pl_price)
+
+// --- BSL / SSL liquidity levels: dotted, extended right, text at the right end ---
+ts_draw_liq(array<TSSwing> arr, color col, string txt) =>
+    int shown = 0
+    if array.size(arr) > 0
+        for i = array.size(arr) - 1 to 0
+            TSSwing sp = array.get(arr, i)
+            if not sp.taken and shown < ts_liq_max
+                array.push(ts_liq_lines,  line.new(sp.bar, sp.price, bar_index + ts_pad, sp.price, color=col, style=ts_liq_style, width=ts_liq_width))
+                array.push(ts_liq_labels, label.new(bar_index + ts_pad, sp.price, txt, style=label.style_label_left, color=color.new(color.white, 100), textcolor=col, size=session_label_size, text_font_family=font.family_monospace))
+                shown += 1
+    true
+
+if ts_on and ts_liq_show and barstate.islast
+    while array.size(ts_liq_lines) > 0
+        line.delete(array.shift(ts_liq_lines))
+    while array.size(ts_liq_labels) > 0
+        label.delete(array.shift(ts_liq_labels))
+    ts_draw_liq(ts_bsl, ts_bsl_col, "BSL")
+    ts_draw_liq(ts_ssl, ts_ssl_col, "SSL")
+
+// --- Sweep detection: a context swing is taken but price closes back inside (turtle soup) ---
+ts_new_setup(bool is_bull, float sweep_level, float sweep_extreme, int swing_bar) =>
+    TSSetup m = TSSetup.new(is_bull, bar_index, sweep_level, sweep_extreme, swing_bar)
+    array.push(ts_setups, m)
+    while array.size(ts_setups) > ts_max_models
+        ts_delete(array.shift(ts_setups))
+    if ts_alerts
+        alert((is_bull ? "Bullish" : "Bearish") + " Turtle Soup Sweep @ " + str.tostring(sweep_extreme), alert.freq_once_per_bar_close)
+    true
+
+if ts_on and array.size(ts_bsl) > 0
+    for i = array.size(ts_bsl) - 1 to 0
+        TSSwing sp = array.get(ts_bsl, i)
+        if not sp.taken and high > sp.price and bar_index > sp.bar
+            sp.taken := true
+            if close < sp.price
+                ts_new_setup(false, sp.price, high, sp.bar)
+
+if ts_on and array.size(ts_ssl) > 0
+    for i = array.size(ts_ssl) - 1 to 0
+        TSSwing sp = array.get(ts_ssl, i)
+        if not sp.taken and low < sp.price and bar_index > sp.bar
+            sp.taken := true
+            if close > sp.price
+                ts_new_setup(true, sp.price, low, sp.bar)
+
+// --- MSS break with FVG/iFVG confluence ---
+ts_check_mss(TSSetup m) =>
+    bool breach = m.isBull ? low < m.sweepExtreme : high > m.sweepExtreme
+    if breach
+        if ts_show_dpurge and not m.dPurge
+            m.dPurge := true
+            m.sweepExtreme := m.isBull ? low : high
+            m.sweepBar := bar_index
+            m.dpLabel := label.new(bar_index, m.sweepExtreme, "D-Purge", style=m.isBull ? label.style_label_up : label.style_label_down, color=color.new(color.white, 100), textcolor=color.orange, size=size.tiny, text_font_family=font.family_monospace)
+        else
+            m.status := "Invalidation"
+    if m.status != "Invalidation" and not m.mssConfirmed
+        int waited = bar_index - m.sweepBar
+        if waited > ts_mss_max_bars
+            m.status := "Invalidation"
+        else
+            int   tbar = na
+            float tprice = na
+            if m.isBull
+                if array.size(ts_ph_bar) > 0
+                    for k = array.size(ts_ph_bar) - 1 to 0
+                        int hb = array.get(ts_ph_bar, k)
+                        if hb < bar_index and hb >= m.sweepBar - 8
+                            tbar   := hb
+                            tprice := array.get(ts_ph_price, k)
+                            break
+            else
+                if array.size(ts_pl_bar) > 0
+                    for k = array.size(ts_pl_bar) - 1 to 0
+                        int lb = array.get(ts_pl_bar, k)
+                        if lb < bar_index and lb >= m.sweepBar - 8
+                            tbar   := lb
+                            tprice := array.get(ts_pl_price, k)
+                            break
+            if not na(tbar) and bar_index > tbar
+                bool broke = m.isBull ? (ts_mss_confirm == "Close" ? close : high) > tprice : (ts_mss_confirm == "Close" ? close : low) < tprice
+                if broke
+                    [zf, zt, ztop, zbot, zbar] = ts_scan_zone(m.isBull, ts_ltf_lookback)
+                    if not ts_require_zone or zf
+                        m.mssConfirmed := true
+                        m.mssBar       := bar_index
+                        m.mssLevel     := tprice
+                        m.zoneFound    := zf
+                        m.zoneType     := zt
+                        m.zoneTop      := ztop
+                        m.zoneBot      := zbot
+                        m.zoneBar      := zbar
+                        m.innerTarget  := m.isBull ? ztop : zbot
+                        m.status       := zf ? "Awaiting Retest" : "Formation"
+                        color mcol = m.isBull ? ts_bull_col : ts_bear_col
+                        if ts_show_mss
+                            m.mssLine  := line.new(tbar, tprice, bar_index, tprice, color=mcol, width=1, style=line.style_dotted)
+                            m.mssLabel := label.new(bar_index + ts_pad, tprice, "MSS", style=label.style_label_left, color=color.new(color.white, 100), textcolor=mcol, size=session_label_size, text_font_family=font.family_monospace)
+                        if ts_alerts
+                            alert((m.isBull ? "Bullish" : "Bearish") + " MSS Confirmed @ " + str.tostring(close), alert.freq_once_per_bar_close)
+    true
+
+// --- i-Sweep retest of the confluence zone = entry confirmation ---
+ts_check_isweep(TSSetup m) =>
+    if m.status == "Awaiting Retest" and not na(m.innerTarget)
+        bool hit = m.isBull ? low <= m.innerTarget : high >= m.innerTarget
+        if hit
+            if ts_show_isweep
+                m.iLine      := line.new(m.zoneBar, m.innerTarget, bar_index + ts_pad, m.innerTarget, color=ts_iswp_col, width=1, style=line.style_dotted)
+                m.innerLabel := label.new(bar_index + ts_pad, m.innerTarget, "iSweep", style=label.style_label_left, color=color.new(color.white, 100), textcolor=ts_iswp_col, size=size.tiny, text_font_family=font.family_monospace)
+            if ts_show_entry
+                float off = (high - low) * 0.25
+                m.entryLabel := label.new(bar_index, m.isBull ? low - off : high + off, "", style=m.isBull ? label.style_triangleup : label.style_triangledown, color=m.isBull ? ts_bull_col : ts_bear_col, size=size.tiny)
+            m.entryDone := true
+            m.status    := "Entry"
+            if ts_alerts
+                alert((m.isBull ? "Bullish" : "Bearish") + " Turtle Soup Entry Confirmed @ " + str.tostring(close), alert.freq_once_per_bar_close)
+    true
+
+// --- Drawing: sweep line + label, sweep area, confluence zone + CE ---
+ts_draw(TSSetup m) =>
+    color tcol = m.isBull ? ts_bull_col : ts_bear_col
+    float top  = math.max(m.sweepLevel, m.sweepExtreme)
+    float bot  = math.min(m.sweepLevel, m.sweepExtreme)
+    int   xend = na(m.mssBar) ? bar_index : m.mssBar + 4
+    if ts_show_sweep
+        if na(m.sweepLine)
+            m.sweepLine  := line.new(m.swingBar, m.sweepLevel, xend, m.sweepLevel, color=color.new(tcol, 20), style=line.style_dotted, width=1)
+            m.sweepLabel := label.new(m.sweepBar, m.sweepExtreme, "Sweep", style=m.isBull ? label.style_label_up : label.style_label_down, color=color.new(color.white, 100), textcolor=tcol, size=size.tiny, text_font_family=font.family_monospace)
+        else
+            line.set_x1(m.sweepLine, m.swingBar)
+            line.set_x2(m.sweepLine, xend)
+        if ts_show_area
+            if na(m.area)
+                m.area := box.new(m.swingBar, top, xend, bot, border_color=color.new(color.white, 100), bgcolor=color.new(tcol, ts_area_transp))
+            else
+                box.set_left(m.area, m.swingBar)
+                box.set_right(m.area, xend)
+                box.set_top(m.area, top)
+                box.set_bottom(m.area, bot)
+    if ts_show_zone and m.mssConfirmed and m.zoneFound and na(m.zoneBox)
+        float ce = (m.zoneTop + m.zoneBot) / 2
+        m.zoneBox := box.new(m.zoneBar, m.zoneTop, bar_index + ts_pad, m.zoneBot, border_color=color.new(color.white, 100), bgcolor=color.new(tcol, 85), text=m.zoneType, text_size=size.tiny, text_color=tcol, text_halign=text.align_right, text_valign=text.align_center)
+        m.zoneCe  := line.new(m.zoneBar, ce, bar_index + ts_pad, ce, color=color.new(tcol, 40), width=1, style=line.style_dotted)
+    true
+
+if ts_on
+    for m in ts_setups
+        if m.mssConfirmed and m.status != "Invalidation" and not m.entryDone
+            bool gone = m.isBull ? close < m.sweepExtreme : close > m.sweepExtreme
+            if gone
+                m.status := "Invalidation"
+        if m.status != "Invalidation"
+            if not m.mssConfirmed
+                ts_check_mss(m)
+            else if not m.entryDone
+                ts_check_isweep(m)
+            ts_draw(m)
