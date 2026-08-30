@@ -1600,8 +1600,8 @@ ss_line_style             = ss_line_style_s == "dashed" ? line.style_dashed : ss
 
 // Daily & Previous Day Levels
 string GRP_DAILY = "Daily Levels"
-show_daily_high     = input.bool(true,  "Show Daily High",          inline="dhl",  group=GRP_DAILY)
-show_daily_low      = input.bool(true,  "Show Daily Low",           inline="dhl",  group=GRP_DAILY)
+show_daily_high     = input.bool(false, "Show Daily High",          inline="dhl",  group=GRP_DAILY)
+show_daily_low      = input.bool(false, "Show Daily Low",           inline="dhl",  group=GRP_DAILY)
 daily_high_color    = input.color(color.new(color.red, 0), "Daily High Color", inline="dhlc", group=GRP_DAILY)
 daily_low_color     = input.color(color.new(color.red, 0), "Daily Low Color",  inline="dhlc", group=GRP_DAILY)
 show_pdh            = input.bool(true,  "Show Previous Day High",   inline="pdhl", group=GRP_DAILY)
@@ -1654,11 +1654,10 @@ daily_line_end   = bar_index + math.max(daily_label_x_offset, 0)
 
 // Shared look for every right-edge text label: one grey text color (the BSL/SSL grey)
 // and an anti-overlap pass. Each right-edge label is collected into lbl_all as it is
-// drawn; f_spreadLabels() then walks that list once on the last bar and pushes any
-// label that lands on top of an earlier one further right in lbl_step increments.
+// drawn; a final pass walks that list once on the last bar and folds any label that
+// lands on top of an earlier one into that label's text as "FIRST/SECOND".
 lbl_text_col = input.color(color.new(#4e5057, 25), "Right-Edge Text Color", group=GRP_SESSIONS, tooltip="Shared text color for the right-edge labels: session H/L, Midnight, 8:30, Daily High/Low, PDH/PDL, BSL/SSL.")
-lbl_antiov   = input.bool(true, "Prevent Overlapping Right-Edge Text", group=GRP_SESSIONS)
-lbl_step     = input.int(14, "Overlap Push Step (bars)", minval=1, maxval=50, group=GRP_SESSIONS)
+lbl_antiov   = input.bool(true, "Prevent Overlapping Right-Edge Text", group=GRP_SESSIONS, tooltip="Labels landing on the same price are merged into one, e.g. PDL/SSL.")
 lbl_tol_mlt  = input.float(0.15, "Overlap Sensitivity (x ATR)", minval=0.01, maxval=2.0, step=0.01, group=GRP_SESSIONS)
 lbl_tol = nz(ta.atr(14)) * lbl_tol_mlt
 var array<label> lbl_all = array.new_label()
@@ -4218,7 +4217,7 @@ tcisd_display    = input.string("Both", "Triggered CISD Display", options=["Both
 tcisd_limitHist  = input.bool(true, "Limit Displayed Historical Lines", group=tcisd_grpVisual)
 tcisd_maxLines   = input.int(2, "Max Lines to Show", minval=1, maxval=10, group=tcisd_grpVisual)
 tcisd_extend     = input.int(0, "Extend Lines (Bars)", minval=0, group=tcisd_grpVisual, tooltip="0 = Boring normal length. >0 = Stretch that stuff into the future.")
-tcisd_showLabels = input.bool(true, "Show Labels", group=tcisd_grpVisual)
+tcisd_showLabels = input.bool(false, "Show Labels", group=tcisd_grpVisual)
 tcisd_labelPos   = input.string("Center", "Label Position", options=["Left", "Center", "Right"], group=tcisd_grpVisual)
 tcisd_lineWidth  = input.int(2, "Line Width", minval=1, group=tcisd_grpVisual)
 tcisd_labelSize  = input.string(size.small, "Label Size", options=[size.tiny, size.small, size.normal, size.large], group=tcisd_grpVisual)
@@ -4813,16 +4812,15 @@ if ts_on
                 ts_check_isweep(m)
             ts_draw(m)
 
-// --- Right-edge text anti-overlap: nudge colliding labels further right ---
+// --- Right-edge text anti-overlap: merge colliding labels into "PDL/SSL" ---
 if lbl_antiov and barstate.islast and array.size(lbl_all) > 1
     for i = 1 to array.size(lbl_all) - 1
         label li = array.get(lbl_all, i)
-        bool clash = true
-        while clash
-            clash := false
+        string ti = label.get_text(li)
+        if ti != ""
             for j = 0 to i - 1
                 label lj = array.get(lbl_all, j)
-                if not clash and math.abs(label.get_x(lj) - label.get_x(li)) < lbl_step and math.abs(label.get_y(lj) - label.get_y(li)) < lbl_tol
-                    clash := true
-            if clash
-                label.set_x(li, label.get_x(li) + lbl_step)
+                if ti != "" and label.get_text(lj) != "" and math.abs(label.get_y(lj) - label.get_y(li)) < lbl_tol
+                    label.set_text(lj, label.get_text(lj) + "/" + ti)
+                    label.set_text(li, "")
+                    ti := ""
