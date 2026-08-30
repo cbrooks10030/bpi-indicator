@@ -86,11 +86,11 @@ hide_htf_candles = input.bool(false, "Hide?", group=GRP_HTF)
 htf_candles      = input.int(4, "HTF Candles", minval=1, maxval=20, group=GRP_HTF)
 htf_size         = input.string("Small", "Size", options=["Small", "Medium", "Large"], group=GRP_HTF)
 htf_offset       = input.int(10, "Offset", minval=0, maxval=100, group=GRP_HTF)
-htf_spacing      = input.int(2, "Spacing", minval=0, maxval=20, group=GRP_HTF)
+htf_spacing      = input.int(6, "Spacing", minval=0, maxval=20, group=GRP_HTF)
 show_htf_time_labels = input.bool(true, "Time Labels", group=GRP_HTF, inline="strip_time")
 htf_time_label_color = input.color(color.gray, "", group=GRP_HTF, inline="strip_time")
 show_htf_model_labels = input.bool(true, "Projected Model Labels", group=GRP_HTF)
-htf_strip_label_size = input.string(size.tiny, "Strip Label Size", options=[size.tiny, size.small, size.normal, size.large], group=GRP_HTF)
+htf_strip_label_size = input.string(size.large, "Strip Label Size", options=[size.tiny, size.small, size.normal, size.large], group=GRP_HTF)
 htf_eq_extension = input.int(3, "CE Extension", minval=0, maxval=50, group=GRP_HTF)
 htf2_show = input.bool(true, "HTF 2", group=GRP_HTF, inline="htf2")
 htf2_tf = input.timeframe("30", "TF", group=GRP_HTF, inline="htf2")
@@ -100,7 +100,7 @@ htf4_show = input.bool(true, "HTF 4", group=GRP_HTF, inline="htf4")
 htf4_tf = input.timeframe("240", "TF", group=GRP_HTF, inline="htf4")
 htf5_show = input.bool(false, "HTF 5", group=GRP_HTF, inline="htf5")
 htf5_tf = input.timeframe("1D", "TF", group=GRP_HTF, inline="htf5")
-htf_space_between = input.int(10, "Space Between Timeframes", minval=0, maxval=200, group=GRP_HTF)
+htf_space_between = input.int(16, "Space Between Timeframes", minval=0, maxval=200, group=GRP_HTF)
 show_htf_timeframe_labels = input.bool(true, "Timeframe Labels", group=GRP_HTF)
 
 bull_body   = input.color(color.new(#c0f7fe, 0), "Bull Body", group=GRP_HTF, inline="body")
@@ -131,22 +131,23 @@ lh_width = input.int(1, "", minval=1, maxval=5, group=GRP_HTF, inline="lh")
 
 show_model_labels = input.bool(true, "Show Fractal Model Labels", group=GRP_MODEL)
 model_label_size  = input.string(size.small, "Label Size", options=[size.tiny, size.small, size.normal, size.large], group=GRP_MODEL)
-valid_color       = input.color(color.new(color.gray, 0), "Valid", group=GRP_MODEL, inline="state")
-fail_c3_color     = input.color(color.new(color.red, 0), "Fail C3", group=GRP_MODEL, inline="state")
-fail_c4_color     = input.color(color.new(color.orange, 0), "Fail C4", group=GRP_MODEL, inline="state")
+valid_color       = input.color(color.new(color.black, 0), "Valid", group=GRP_MODEL, inline="state")
+model_label_bg    = input.color(color.new(#c0f7fe, 65), "Label Background", group=GRP_MODEL)
+fail_c3_color     = input.color(color.new(color.black, 0), "Fail C3", group=GRP_MODEL, inline="state")
+fail_c4_color     = input.color(color.new(color.black, 0), "Fail C4", group=GRP_MODEL, inline="state")
 
 show_c1_sweep = input.bool(true, "Candle 1 Sweep", group=GRP_MODEL, inline="c1s")
-c1_sweep_color = input.color(color.black, "", group=GRP_MODEL, inline="c1s")
+c1_sweep_color = input.color(color.new(#4e5057, 25), "", group=GRP_MODEL, inline="c1s")
 c1_sweep_style = input.string("Solid", "", options=["Solid", "Dashed", "Dotted"], group=GRP_MODEL, inline="c1s2")
 c1_sweep_width = input.int(1, "", minval=1, maxval=5, group=GRP_MODEL, inline="c1s2")
 
 show_bull_cisd = input.bool(true, "Bullish CISD", group=GRP_MODEL, inline="bcisd")
-bull_cisd_color = input.color(color.blue, "", group=GRP_MODEL, inline="bcisd")
+bull_cisd_color = input.color(color.new(#4e5057, 25), "", group=GRP_MODEL, inline="bcisd")
 bull_cisd_width = input.int(2, "", minval=1, maxval=5, group=GRP_MODEL, inline="bcisd2")
 bull_cisd_style = input.string("Solid", "", options=["Solid", "Dashed", "Dotted"], group=GRP_MODEL, inline="bcisd2")
 
 show_bear_cisd = input.bool(true, "Bearish CISD", group=GRP_MODEL, inline="scisd")
-bear_cisd_color = input.color(color.blue, "", group=GRP_MODEL, inline="scisd")
+bear_cisd_color = input.color(color.new(#4e5057, 25), "", group=GRP_MODEL, inline="scisd")
 bear_cisd_width = input.int(2, "", minval=1, maxval=5, group=GRP_MODEL, inline="scisd2")
 bear_cisd_style = input.string("Solid", "", options=["Solid", "Dashed", "Dotted"], group=GRP_MODEL, inline="scisd2")
 
@@ -154,15 +155,15 @@ cisd_show_count = input.int(4, "CISD Lines to Show", minval=1, maxval=250, group
 cisd_extend_bars = input.int(0, "Extend CISD Right Bars", minval=0, maxval=10, group=GRP_MODEL)
 
 show_eq = input.bool(true, "Candle Equilibrium", group=GRP_MODEL, inline="eq")
-eq_color = input.color(color.black, "", group=GRP_MODEL, inline="eq")
+eq_color = input.color(color.new(#4e5057, 25), "", group=GRP_MODEL, inline="eq")
 eq_wick_min_pct = input.float(25.0, "Min Wick %", minval=0.0, maxval=50.0, step=0.5, group=GRP_MODEL, inline="eq3")
 eq_mode = input.string("Wick + Full Candle", "Mode", options=["Wick Only", "Wick + Full Candle"], group=GRP_MODEL, inline="eq3")
 eq_style = input.string("Dotted", "", options=["Solid", "Dashed", "Dotted"], group=GRP_MODEL, inline="eq2")
 eq_width = input.int(1, "", minval=1, maxval=5, group=GRP_MODEL, inline="eq2")
 
 show_tspot = input.bool(true, "T-Spot", group=GRP_MODEL, inline="tspot")
-tspot_bull_color = input.color(color.new(color.lime, 85), "Bullish", group=GRP_MODEL, inline="tspot")
-tspot_bear_color = input.color(color.new(color.gray, 85), "Bearish", group=GRP_MODEL, inline="tspot")
+tspot_bull_color = input.color(color.new(#c0f7fe, 80), "Bullish", group=GRP_MODEL, inline="tspot")
+tspot_bear_color = input.color(color.new(#c0f7fe, 80), "Bearish", group=GRP_MODEL, inline="tspot")
 tspot_border_width = input.int(1, "T-Spot Border Width", minval=0, maxval=5, group=GRP_MODEL)
 
 show_first_presented_fvg = input.bool(false, "First Presented FVG", group=GRP_MODEL, inline="fpfvg")
@@ -178,7 +179,7 @@ show_projections = input.bool(true, "Show Projections", group=GRP_PROJ)
 projection_levels = input.string("-1,-1.5,-2,-2.5,-3.5,-4", "Levels", group=GRP_PROJ)
 show_projection_labels = input.bool(true, "Labels", group=GRP_PROJ)
 projection_label_size = input.string(size.normal, "Label Size", options=[size.tiny, size.small, size.normal, size.large], group=GRP_PROJ)
-projection_color = input.color(color.new(color.black, 0), "Color", group=GRP_PROJ)
+projection_color = input.color(color.new(#4e5057, 25), "Color", group=GRP_PROJ)
 projection_style = input.string("Dotted", "Style", options=["Solid", "Dashed", "Dotted"], group=GRP_PROJ)
 projection_width = input.int(1, "Width", minval=1, maxval=5, group=GRP_PROJ)
 
@@ -766,7 +767,7 @@ f_draw_projections(bool bearish, int anchor_t, int extreme_t, float c2_extreme, 
 // DRAW HELPERS
 // ============================================================
 f_label(int x, float y, string txt, color txt_col, bool x_time) =>
-    array.push(labels, label.new(x, y, txt, xloc=x_time ? xloc.bar_time : xloc.bar_index, style=label.style_label_center, color=color.new(color.black, 100), textcolor=txt_col, size=model_label_size))
+    array.push(labels, label.new(x, y, txt, xloc=x_time ? xloc.bar_time : xloc.bar_index, style=label.style_label_center, color=model_label_bg, textcolor=txt_col, size=model_label_size, text_formatting=text.format_bold))
 
 f_draw_tspot(bool bearish, int src_t, float src_h, float src_l, float src_c) =>
     if show_tspot and not na(src_t) and not na(src_h) and not na(src_l) and not na(src_c)
@@ -833,7 +834,7 @@ f_draw_extra_strip(string strip_tf, int strip_count, int strip_base_x, int strip
             f_draw_strip_candle(strip_x, strip_half, strip_o, strip_h, strip_l, strip_c)
             float strip_label_gap = math.max(syminfo.mintick * 10, (strip_h - strip_l) * 0.05)
             if show_htf_time_labels
-                array.push(labels, label.new(strip_x, strip_l - strip_label_gap, f_htf_strip_time_label(strip_t, strip_tf_ms), xloc=xloc.bar_index, style=label.style_label_up, color=color.new(color.black, 100), textcolor=htf_time_label_color, size=strip_label_size, text_font_family=font.family_monospace))
+                array.push(labels, label.new(strip_x, strip_l - strip_label_gap * (strip_i % 2 == 0 ? 1 : 4), f_htf_strip_time_label(strip_t, strip_tf_ms), xloc=xloc.bar_index, style=label.style_label_up, color=color.new(color.black, 100), textcolor=htf_time_label_color, size=strip_label_size, text_font_family=font.family_monospace))
             if show_eq
                 float strip_eq_price = f_htf_candle_eq_price(strip_o, strip_h, strip_l, strip_c)
                 if not na(strip_eq_price)
@@ -1278,7 +1279,7 @@ if barstate.islast
 
                 if show_htf_time_labels
                     float label_gap = math.max(syminfo.mintick * 10, (h - l) * 0.05)
-                    array.push(labels, label.new(x, l - label_gap * 2, f_htf_strip_time_label(t, htf_ms), xloc=xloc.bar_index, style=label.style_label_up, color=color.new(color.black, 100), textcolor=htf_time_label_color, size=strip_label_size, text_font_family=font.family_monospace))
+                    array.push(labels, label.new(x, l - label_gap * (i % 2 == 0 ? 2 : 5), f_htf_strip_time_label(t, htf_ms), xloc=xloc.bar_index, style=label.style_label_up, color=color.new(color.black, 100), textcolor=htf_time_label_color, size=strip_label_size, text_font_family=font.family_monospace))
 
             if show_oc_time
                 array.push(lines, line.new(t, l, t, h, xloc=xloc.bar_time, extend=extend.both, color=oc_color, style=f_style(oc_style), width=oc_width))
@@ -1393,7 +1394,7 @@ if barstate.islast
                 if not hide_htf_candles and show_htf_model_labels and not na(c2l)
                     float c2_label_gap = math.max(syminfo.mintick * 10, math.abs(c2h - c2l) * 0.05)
                     int c2_x = base_x + (num - 1 - c2_idx) * step
-                    array.push(labels, label.new(c2_x, c2l - c2_label_gap, "C2", xloc=xloc.bar_index, style=label.style_label_up, color=color.new(color.black, 100), textcolor=state_col, size=strip_label_size, text_font_family=font.family_monospace))
+                    array.push(labels, label.new(c2_x, c2l - c2_label_gap, "C2", xloc=xloc.bar_index, style=label.style_label_up, color=model_label_bg, textcolor=state_col, size=strip_label_size, text_font_family=font.family_monospace, text_formatting=text.format_bold))
             if show_follow_through and show_c3 and c3_idx >= 0
                 int c3t = array.get(arr_t, c3_idx)
                 float c3h = array.get(arr_h, c3_idx)
@@ -1402,7 +1403,7 @@ if barstate.islast
                 if not hide_htf_candles and show_htf_model_labels and not na(c3l)
                     float c3_label_gap = math.max(syminfo.mintick * 10, math.abs(c3h - c3l) * 0.05)
                     int c3_x = base_x + (num - 1 - c3_idx) * step
-                    array.push(labels, label.new(c3_x, c3l - c3_label_gap, "C3", xloc=xloc.bar_index, style=label.style_label_up, color=color.new(color.black, 100), textcolor=state_col, size=strip_label_size, text_font_family=font.family_monospace))
+                    array.push(labels, label.new(c3_x, c3l - c3_label_gap, "C3", xloc=xloc.bar_index, style=label.style_label_up, color=model_label_bg, textcolor=state_col, size=strip_label_size, text_font_family=font.family_monospace, text_formatting=text.format_bold))
             if show_follow_through and show_c4 and c4_idx >= 0
                 int c4t = array.get(arr_t, c4_idx)
                 float c4h = array.get(arr_h, c4_idx)
@@ -1411,7 +1412,7 @@ if barstate.islast
                 if not hide_htf_candles and show_htf_model_labels and not na(c4l)
                     float c4_label_gap = math.max(syminfo.mintick * 10, math.abs(c4h - c4l) * 0.05)
                     int c4_x = base_x + (num - 1 - c4_idx) * step
-                    array.push(labels, label.new(c4_x, c4l - c4_label_gap, "C4", xloc=xloc.bar_index, style=label.style_label_up, color=color.new(color.black, 100), textcolor=state_col, size=strip_label_size, text_font_family=font.family_monospace))
+                    array.push(labels, label.new(c4_x, c4l - c4_label_gap, "C4", xloc=xloc.bar_index, style=label.style_label_up, color=model_label_bg, textcolor=state_col, size=strip_label_size, text_font_family=font.family_monospace, text_formatting=text.format_bold))
 
         setups_drawn += 1
 
@@ -1534,29 +1535,29 @@ plotchar(isLL and MQmarkers, "LL", "", location.belowbar, color.gray, offset=-ri
 // Session Levels Settings (NY AM Range, Asia, London, Midnight & 8:30 Opens)
 string GRP_SESSIONS = "Session Levels"
 show_ny_am_range  = input.bool(true, "Show NY AM Range (07:00-09:30 ET) BSL/SSL", group=GRP_SESSIONS)
-ny_am_bsl_color   = input.color(color.new(color.red, 0), "NY AM High (BSL)", inline="nyam", group=GRP_SESSIONS)
-ny_am_ssl_color   = input.color(color.new(color.green, 0), "NY AM Low (SSL)", inline="nyam", group=GRP_SESSIONS)
+ny_am_bsl_color   = input.color(color.new(#4e5057, 25), "NY AM High (BSL)", inline="nyam", group=GRP_SESSIONS)
+ny_am_ssl_color   = input.color(color.new(#4e5057, 25), "NY AM Low (SSL)", inline="nyam", group=GRP_SESSIONS)
 ny_am_bsl_label_text = input.string("NY AM BSL", "NY AM High Label", inline="nyamtxt", group=GRP_SESSIONS, tooltip="Text on the NY AM BSL line. Leave blank to hide just this label.")
 ny_am_ssl_label_text = input.string("NY AM SSL", "NY AM Low Label",  inline="nyamtxt", group=GRP_SESSIONS)
 
 show_asia_range   = input.bool(true, "Show Asia High/Low", group=GRP_SESSIONS)
 asia_session_in   = input.session("2000-0000", "Asia Session (ET)", group=GRP_SESSIONS)
-asia_color        = input.color(color.new(color.orange, 0), "Asia Color", group=GRP_SESSIONS)
+asia_color        = input.color(color.new(#4e5057, 25), "Asia Color", group=GRP_SESSIONS)
 asia_high_label_text = input.string("A.High", "Asia High Label", inline="asiatxt", group=GRP_SESSIONS, tooltip="Text on the Asia High/Low lines. Shorten to e.g. 'A.High' / 'A.Low' if you want compact labels.")
 asia_low_label_text  = input.string("A.Low",  "Asia Low Label",  inline="asiatxt", group=GRP_SESSIONS)
 
 show_london_range = input.bool(true, "Show London High/Low", group=GRP_SESSIONS)
 london_session_in = input.session("0200-0500", "London Session (ET)", group=GRP_SESSIONS)
-london_color      = input.color(color.new(color.blue, 0), "London Color", group=GRP_SESSIONS)
+london_color      = input.color(color.new(#4e5057, 25), "London Color", group=GRP_SESSIONS)
 london_high_label_text = input.string("L.High", "London High Label", inline="ldntxt", group=GRP_SESSIONS, tooltip="Text on the London High/Low lines. Shorten to e.g. 'L.High' / 'L.Low' if you want compact labels.")
 london_low_label_text  = input.string("L.Low",  "London Low Label",  inline="ldntxt", group=GRP_SESSIONS)
 
 show_midnight_open = input.bool(true, "Show Midnight Open (00:00 ET)", group=GRP_SESSIONS)
-midnight_color     = input.color(color.new(color.purple, 0), "Midnight Open Color", group=GRP_SESSIONS)
+midnight_color     = input.color(color.new(#4e5057, 25), "Midnight Open Color", group=GRP_SESSIONS)
 midnight_label_text = input.string("Midnight", "Midnight Open Label", group=GRP_SESSIONS)
 
 show_830_open    = input.bool(true, "Show 8:30 AM Open (ET)", group=GRP_SESSIONS)
-open_830_color   = input.color(color.new(color.fuchsia, 0), "8:30 Open Color", group=GRP_SESSIONS)
+open_830_color   = input.color(color.new(#4e5057, 25), "8:30 Open Color", group=GRP_SESSIONS)
 open_830_label_text = input.string("8:30", "8:30 Open Label", group=GRP_SESSIONS)
 
 show_session_labels = input.bool(true, "Show Session Text Labels", group=GRP_SESSIONS, tooltip="If off, lines still show but text labels are hidden.")
@@ -1588,8 +1589,8 @@ ss_per_side               = input.int(2, "Swings per side (per TF)", minval=1, m
 ss_pivot_len              = input.int(1, "Pivot length", minval=1, maxval=10, group=GRP_SWINGS, tooltip="Bars on each side of the pivot. 1 = middle candle has lower high on both sides for a swing high (ICT/BPI style).")
 ss_h1_prefix              = input.string("1hr", "1h label prefix",  inline="pfx", group=GRP_SWINGS)
 ss_m15_prefix             = input.string("15m", "15m label prefix", inline="pfx", group=GRP_SWINGS)
-ss_line_color             = input.color(color.new(color.white, 0), "Line color", inline="col", group=GRP_SWINGS)
-ss_text_color             = input.color(color.new(color.white, 0), "Text color", inline="col", group=GRP_SWINGS)
+ss_line_color             = input.color(color.new(#4e5057, 25), "Line color", inline="col", group=GRP_SWINGS)
+ss_text_color             = input.color(color.new(#4e5057, 25), "Text color", inline="col", group=GRP_SWINGS)
 ss_line_width             = input.int(1, "Line width", minval=1, maxval=4, inline="ln", group=GRP_SWINGS)
 ss_line_style_s           = input.string("solid", "Line style", options=["solid","dashed","dotted"], inline="ln", group=GRP_SWINGS)
 ss_show_text              = input.bool(true,  "Show labels", group=GRP_SWINGS)
@@ -1602,12 +1603,12 @@ ss_line_style             = ss_line_style_s == "dashed" ? line.style_dashed : ss
 string GRP_DAILY = "Daily Levels"
 show_daily_high     = input.bool(false, "Show Daily High",          inline="dhl",  group=GRP_DAILY)
 show_daily_low      = input.bool(false, "Show Daily Low",           inline="dhl",  group=GRP_DAILY)
-daily_high_color    = input.color(color.new(color.red, 0), "Daily High Color", inline="dhlc", group=GRP_DAILY)
-daily_low_color     = input.color(color.new(color.red, 0), "Daily Low Color",  inline="dhlc", group=GRP_DAILY)
+daily_high_color    = input.color(color.new(#4e5057, 25), "Daily High Color", inline="dhlc", group=GRP_DAILY)
+daily_low_color     = input.color(color.new(#4e5057, 25), "Daily Low Color",  inline="dhlc", group=GRP_DAILY)
 show_pdh            = input.bool(true,  "Show Previous Day High",   inline="pdhl", group=GRP_DAILY)
 show_pdl            = input.bool(true,  "Show Previous Day Low",    inline="pdhl", group=GRP_DAILY)
-pdh_color           = input.color(color.new(color.red, 0), "PDH Color", inline="pdhlc", group=GRP_DAILY)
-pdl_color           = input.color(color.new(color.red, 0), "PDL Color", inline="pdhlc", group=GRP_DAILY)
+pdh_color           = input.color(color.new(#4e5057, 25), "PDH Color", inline="pdhlc", group=GRP_DAILY)
+pdl_color           = input.color(color.new(#4e5057, 25), "PDL Color", inline="pdhlc", group=GRP_DAILY)
 show_daily_labels   = input.bool(true, "Show Daily Text Labels", group=GRP_DAILY, tooltip="If off, lines still show but text labels are hidden.")
 daily_line_width    = input.int(1, "Daily Line Width", minval=1, maxval=4, group=GRP_DAILY)
 daily_line_style_in = input.string("dotted", "Daily Line Style", options=["solid","dashed","dotted"], group=GRP_DAILY)
@@ -3388,16 +3389,16 @@ brk_rlBars      = input.int(2, 'Swing Bars', 1, inline = 'piv', group = BRK_STRU
 brk_showBos     = input.bool(true, 'Continuation (BOS)', group = BRK_STRU)
 var brk_bosStyle = brk_Fline(input.string('Dotted', 'Style', ['Solid', 'Dashed', 'Dotted'], inline = 'bos', group = BRK_STRU))
 brk_bosWidth    = input.int(2, '', 1, 5, inline = 'bos', group = BRK_STRU)
-brk_bosBullCol  = input.color(color.teal, '', inline = 'bos', group = BRK_STRU)
-brk_bosBearCol  = input.color(color.red, '', 'Define the style and width shared by both Bullish and Bearish Continuation (BOS) lines. You can assign a different color for each direction.', inline = 'bos', group = BRK_STRU)
+brk_bosBullCol  = input.color(color.new(#4e5057, 25), '', inline = 'bos', group = BRK_STRU)
+brk_bosBearCol  = input.color(color.new(#4e5057, 25), '', 'Define the style and width shared by both Bullish and Bearish Continuation (BOS) lines. You can assign a different color for each direction.', inline = 'bos', group = BRK_STRU)
 
 // Breaker (MSS) display settings
 brk_showMss     = input.bool(true, 'Breaker (MSS)', inline = 'breaker', group = BRK_STRU)
 brk_mssMode     = input.string('Body Only', '- Type', ['Body Only', 'Body / Wick'], 'Define how a level is considered broken for MSS Break: "Body Only" requires a candle close beyond the level, while "Body or Wick" allows wick breaches too.', 'breaker', group = BRK_STRU)
 var brk_mssStyle = brk_Fline(input.string('Solid', 'Style', ['Solid', 'Dashed', 'Dotted'], inline = 'mss', group = BRK_STRU))
 brk_mssWidth    = input.int(2, '', 1, 5, inline = 'mss', group = BRK_STRU)
-brk_mssBullCol  = input.color(color.teal, '', inline = 'mss', group = BRK_STRU)
-brk_mssBearCol  = input.color(color.red, '', 'Define the style and width shared by both Bullish and Bearish Breaker (MSS) lines. You can assign a different color for each direction.', inline = 'mss', group = BRK_STRU)
+brk_mssBullCol  = input.color(color.new(#4e5057, 25), '', inline = 'mss', group = BRK_STRU)
+brk_mssBearCol  = input.color(color.new(#4e5057, 25), '', 'Define the style and width shared by both Bullish and Bearish Breaker (MSS) lines. You can assign a different color for each direction.', inline = 'mss', group = BRK_STRU)
 
 // Alert Settings
 var BRK_ALERT   = 'Any alert() function call'
@@ -4226,8 +4227,8 @@ tcisd_lineStyle  = input.string("Solid", "Triggered Line Style", options=["Solid
 tcisd_bullText   = input.string("+CISD", "Bullish CISD Label Text", group=tcisd_grpVisual)
 tcisd_bearText   = input.string("-CISD", "Bearish CISD Label Text", group=tcisd_grpVisual)
 
-tcisd_bullColor  = input.color(color.new(color.green, 0), "Bullish CISD", group=tcisd_grpColors)
-tcisd_bearColor  = input.color(color.new(color.red, 0), "Bearish CISD", group=tcisd_grpColors)
+tcisd_bullColor  = input.color(color.new(#4e5057, 25), "Bullish CISD", group=tcisd_grpColors)
+tcisd_bearColor  = input.color(color.new(#4e5057, 25), "Bearish CISD", group=tcisd_grpColors)
 
 tcisd_debug      = input.bool(false, "Debug: Show Extreme Tracking", group=tcisd_grpDebug)
 
@@ -4468,7 +4469,7 @@ ts_show_isweep  = input.bool(true,  "Show i-Sweep Retest", group=GRP_TS)
 ts_bull_col     = input.color(color.new(#2962ff, 0), "Bullish", inline="tscol", group=GRP_TS)
 ts_bear_col     = input.color(color.new(#f23645, 0), "Bearish", inline="tscol", group=GRP_TS)
 ts_area_transp  = input.int(90,     "Sweep Area Opacity", minval=0, maxval=100, group=GRP_TS)
-ts_iswp_col     = input.color(color.new(color.black, 0), "i-Sweep Color", group=GRP_TS)
+ts_iswp_col     = input.color(color.new(#4e5057, 25), "i-Sweep Color", group=GRP_TS)
 ts_mss_left     = input.int(3,      "MSS Pivot Left", minval=1, maxval=20, inline="tsmss", group=GRP_TS)
 ts_mss_right    = input.int(3,      "Right", minval=1, maxval=20, inline="tsmss", group=GRP_TS)
 ts_mss_confirm  = input.string("Close", "MSS Confirmation", options=["Close","Wick"], group=GRP_TS)
@@ -4702,7 +4703,7 @@ ts_check_mss(TSSetup m) =>
             m.dPurge := true
             m.sweepExtreme := m.isBull ? low : high
             m.sweepBar := bar_index
-            m.dpLabel := label.new(bar_index, m.sweepExtreme, "D-Purge", style=m.isBull ? label.style_label_up : label.style_label_down, color=color.new(color.white, 100), textcolor=color.orange, size=size.tiny, text_font_family=font.family_monospace)
+            m.dpLabel := label.new(bar_index, m.sweepExtreme, "D-Purge", style=m.isBull ? label.style_label_up : label.style_label_down, color=color.new(color.white, 100), textcolor=lbl_text_col, size=size.tiny, text_font_family=font.family_monospace)
         else
             m.status := "Invalidation"
     if m.status != "Invalidation" and not m.mssConfirmed
@@ -4743,7 +4744,7 @@ ts_check_mss(TSSetup m) =>
                         m.zoneBar      := zbar
                         m.innerTarget  := m.isBull ? ztop : zbot
                         m.status       := zf ? "Awaiting Retest" : "Formation"
-                        color mcol = m.isBull ? ts_bull_col : ts_bear_col
+                        color mcol = lbl_text_col
                         if ts_show_mss
                             m.mssLine  := line.new(tbar, tprice, bar_index, tprice, color=mcol, width=1, style=line.style_dotted)
                             m.mssLabel := label.new(bar_index + ts_pad, tprice, "MSS", style=label.style_label_left, color=color.new(color.white, 100), textcolor=lbl_text_col, size=session_label_size, text_font_family=font.family_monospace)
@@ -4773,8 +4774,8 @@ ts_draw(TSSetup m) =>
     int   xend = na(m.mssBar) ? bar_index : m.mssBar + 4
     if ts_show_sweep
         if na(m.sweepLine)
-            m.sweepLine  := line.new(m.swingBar, m.sweepLevel, xend, m.sweepLevel, color=color.new(tcol, 20), style=line.style_dotted, width=1)
-            m.sweepLabel := label.new(m.sweepBar, m.sweepExtreme, "Sweep", style=m.isBull ? label.style_label_up : label.style_label_down, color=color.new(color.white, 100), textcolor=tcol, size=size.tiny, text_font_family=font.family_monospace)
+            m.sweepLine  := line.new(m.swingBar, m.sweepLevel, xend, m.sweepLevel, color=lbl_text_col, style=line.style_dotted, width=1)
+            m.sweepLabel := label.new(m.sweepBar, m.sweepExtreme, "Sweep", style=m.isBull ? label.style_label_up : label.style_label_down, color=color.new(color.white, 100), textcolor=lbl_text_col, size=size.tiny, text_font_family=font.family_monospace)
         else
             line.set_x1(m.sweepLine, m.swingBar)
             line.set_x2(m.sweepLine, xend)
@@ -4788,8 +4789,8 @@ ts_draw(TSSetup m) =>
                 box.set_bottom(m.area, bot)
     if ts_show_zone and m.mssConfirmed and m.zoneFound and na(m.zoneBox)
         float ce = (m.zoneTop + m.zoneBot) / 2
-        m.zoneBox := box.new(m.zoneBar, m.zoneTop, bar_index + ts_pad, m.zoneBot, border_color=color.new(color.white, 100), bgcolor=color.new(tcol, 85), text=m.zoneType, text_size=size.tiny, text_color=tcol, text_halign=text.align_right, text_valign=text.align_center)
-        m.zoneCe  := line.new(m.zoneBar, ce, bar_index + ts_pad, ce, color=color.new(tcol, 40), width=1, style=line.style_dotted)
+        m.zoneBox := box.new(m.zoneBar, m.zoneTop, bar_index + ts_pad, m.zoneBot, border_color=color.new(color.white, 100), bgcolor=color.new(tcol, 85), text=m.zoneType, text_size=size.tiny, text_color=lbl_text_col, text_halign=text.align_right, text_valign=text.align_center)
+        m.zoneCe  := line.new(m.zoneBar, ce, bar_index + ts_pad, ce, color=lbl_text_col, width=1, style=line.style_dotted)
     true
 
 if ts_on
