@@ -1652,6 +1652,18 @@ daily_label_x_offset   = daily_label_pos_in   == "Left" ? -daily_label_padding  
 session_line_end = bar_index + math.max(session_label_x_offset, 0)
 daily_line_end   = bar_index + math.max(daily_label_x_offset, 0)
 
+// Shared look for every right-edge text label: one grey text color (the BSL/SSL grey)
+// and an anti-overlap pass. Each right-edge label is collected into lbl_all as it is
+// drawn; f_spreadLabels() then walks that list once on the last bar and pushes any
+// label that lands on top of an earlier one further right in lbl_step increments.
+lbl_text_col = input.color(color.new(#4e5057, 25), "Right-Edge Text Color", group=GRP_SESSIONS, tooltip="Shared text color for the right-edge labels: session H/L, Midnight, 8:30, Daily High/Low, PDH/PDL, BSL/SSL.")
+lbl_antiov   = input.bool(true, "Prevent Overlapping Right-Edge Text", group=GRP_SESSIONS)
+lbl_step     = input.int(14, "Overlap Push Step (bars)", minval=1, maxval=50, group=GRP_SESSIONS)
+lbl_tol_mlt  = input.float(0.15, "Overlap Sensitivity (x ATR)", minval=0.01, maxval=2.0, step=0.01, group=GRP_SESSIONS)
+lbl_tol = nz(ta.atr(14)) * lbl_tol_mlt
+var array<label> lbl_all = array.new_label()
+array.clear(lbl_all)
+
 // Resolve the x-anchor + label style for a session H/L label.
 //  - Not swept: label at the right edge using the user's Session Label Position.
 //  - Swept + enough room on the line: text reads to the LEFT of the takeout point
@@ -1984,8 +1996,12 @@ if show_ny_am_range and not sessions_hidden_by_tf
             label.delete(ny_am_low_label)
         [ny_h_lbl_x, ny_h_lbl_stl] = f_sessionLabelPos(ny_am_high_taken, ny_am_high_bar, ny_am_high_taken_bar)
         [ny_l_lbl_x, ny_l_lbl_stl] = f_sessionLabelPos(ny_am_low_taken,  ny_am_low_bar,  ny_am_low_taken_bar)
-        ny_am_high_label := label.new(ny_h_lbl_x, ny_am_high, text_session_visible ? ny_am_bsl_label_text : "", color=color.new(color.white, 100), textcolor=ny_am_bsl_color, style=ny_h_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
-        ny_am_low_label  := label.new(ny_l_lbl_x, ny_am_low,  text_session_visible ? ny_am_ssl_label_text : "", color=color.new(color.white, 100), textcolor=ny_am_ssl_color, style=ny_l_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
+        ny_am_high_label := label.new(ny_h_lbl_x, ny_am_high, text_session_visible ? ny_am_bsl_label_text : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=ny_h_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
+        ny_am_low_label  := label.new(ny_l_lbl_x, ny_am_low,  text_session_visible ? ny_am_ssl_label_text : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=ny_l_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
+        if not ny_am_high_taken
+            array.push(lbl_all, ny_am_high_label)
+        if not ny_am_low_taken
+            array.push(lbl_all, ny_am_low_label)
 
 // --- Asia High/Low ---
 if show_asia_range and not sessions_hidden_by_tf
@@ -2044,8 +2060,12 @@ if show_asia_range and not sessions_hidden_by_tf
             label.delete(asia_low_label)
         [asia_h_lbl_x, asia_h_lbl_stl] = f_sessionLabelPos(asia_high_taken, asia_high_bar, asia_high_taken_bar)
         [asia_l_lbl_x, asia_l_lbl_stl] = f_sessionLabelPos(asia_low_taken,  asia_low_bar,  asia_low_taken_bar)
-        asia_high_label := label.new(asia_h_lbl_x, asia_high, text_session_visible ? asia_high_label_text : "", color=color.new(color.white, 100), textcolor=asia_color, style=asia_h_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
-        asia_low_label  := label.new(asia_l_lbl_x, asia_low,  text_session_visible ? asia_low_label_text  : "", color=color.new(color.white, 100), textcolor=asia_color, style=asia_l_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
+        asia_high_label := label.new(asia_h_lbl_x, asia_high, text_session_visible ? asia_high_label_text : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=asia_h_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
+        asia_low_label  := label.new(asia_l_lbl_x, asia_low,  text_session_visible ? asia_low_label_text  : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=asia_l_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
+        if not asia_high_taken
+            array.push(lbl_all, asia_high_label)
+        if not asia_low_taken
+            array.push(lbl_all, asia_low_label)
 
 // --- London High/Low ---
 if show_london_range and not sessions_hidden_by_tf
@@ -2104,8 +2124,12 @@ if show_london_range and not sessions_hidden_by_tf
             label.delete(london_low_label)
         [london_h_lbl_x, london_h_lbl_stl] = f_sessionLabelPos(london_high_taken, london_high_bar, london_high_taken_bar)
         [london_l_lbl_x, london_l_lbl_stl] = f_sessionLabelPos(london_low_taken,  london_low_bar,  london_low_taken_bar)
-        london_high_label := label.new(london_h_lbl_x, london_high, text_session_visible ? london_high_label_text : "", color=color.new(color.white, 100), textcolor=london_color, style=london_h_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
-        london_low_label  := label.new(london_l_lbl_x, london_low,  text_session_visible ? london_low_label_text  : "", color=color.new(color.white, 100), textcolor=london_color, style=london_l_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
+        london_high_label := label.new(london_h_lbl_x, london_high, text_session_visible ? london_high_label_text : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=london_h_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
+        london_low_label  := label.new(london_l_lbl_x, london_low,  text_session_visible ? london_low_label_text  : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=london_l_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
+        if not london_high_taken
+            array.push(lbl_all, london_high_label)
+        if not london_low_taken
+            array.push(lbl_all, london_low_label)
 
 // --- Midnight Open (00:00 ET) ---
 if show_midnight_open
@@ -2125,7 +2149,8 @@ if show_midnight_open
     if barstate.islast and not na(midnight_open_line)
         if not na(midnight_open_label)
             label.delete(midnight_open_label)
-        midnight_open_label := label.new(bar_index + session_label_x_offset, midnight_open_price, text_session_visible ? midnight_label_text : "", color=color.new(color.white, 100), textcolor=midnight_color, style=session_label_style, size=session_label_size, text_font_family=font.family_monospace)
+        midnight_open_label := label.new(bar_index + session_label_x_offset, midnight_open_price, text_session_visible ? midnight_label_text : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=session_label_style, size=session_label_size, text_font_family=font.family_monospace)
+        array.push(lbl_all, midnight_open_label)
 
 // --- 8:30 AM Open (ET) ---
 if show_830_open
@@ -2145,7 +2170,8 @@ if show_830_open
     if barstate.islast and not na(open_830_line)
         if not na(open_830_label)
             label.delete(open_830_label)
-        open_830_label := label.new(bar_index + session_label_x_offset, open_830_price, text_session_visible ? open_830_label_text : "", color=color.new(color.white, 100), textcolor=open_830_color, style=session_label_style, size=session_label_size, text_font_family=font.family_monospace)
+        open_830_label := label.new(bar_index + session_label_x_offset, open_830_price, text_session_visible ? open_830_label_text : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=session_label_style, size=session_label_size, text_font_family=font.family_monospace)
+        array.push(lbl_all, open_830_label)
 
 
 //+------------------------------------------------------------------------------------------------------------+//
@@ -2409,37 +2435,45 @@ else
 
 // Draw / update current-day high
 if show_daily_high and not na(cur_day_high)
+    int dh_x = bar_index + daily_label_x_offset
     if na(dh_line)
         dh_line  := line.new(cur_day_start_bar, cur_day_high, bar_index, cur_day_high, color=daily_high_color, width=daily_line_width, style=daily_line_style)
-        dh_label := label.new(bar_index + daily_label_x_offset, cur_day_high, text_daily_visible ? "Daily High" : "", color=color.new(color.white, 100), textcolor=daily_high_color, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
+        dh_label := label.new(dh_x, cur_day_high, text_daily_visible ? "Daily High" : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
     line.set_xy1(dh_line, cur_day_start_bar, cur_day_high)
     line.set_xy2(dh_line, daily_line_end, cur_day_high)
-    label.set_xy(dh_label, bar_index + daily_label_x_offset, cur_day_high)
+    label.set_xy(dh_label, dh_x, cur_day_high)
+    array.push(lbl_all, dh_label)
 
 // Draw / update current-day low
 if show_daily_low and not na(cur_day_low)
+    int dl_x = bar_index + daily_label_x_offset
     if na(dl_line)
         dl_line  := line.new(cur_day_start_bar, cur_day_low, bar_index, cur_day_low, color=daily_low_color, width=daily_line_width, style=daily_line_style)
-        dl_label := label.new(bar_index + daily_label_x_offset, cur_day_low, text_daily_visible ? "Daily Low" : "", color=color.new(color.white, 100), textcolor=daily_low_color, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
+        dl_label := label.new(dl_x, cur_day_low, text_daily_visible ? "Daily Low" : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
     line.set_xy1(dl_line, cur_day_start_bar, cur_day_low)
     line.set_xy2(dl_line, daily_line_end, cur_day_low)
-    label.set_xy(dl_label, bar_index + daily_label_x_offset, cur_day_low)
+    label.set_xy(dl_label, dl_x, cur_day_low)
+    array.push(lbl_all, dl_label)
 
 // Draw / update previous-day high (horizontal, extends to current bar)
 if show_pdh and not na(prev_day_high)
+    int pdh_x = bar_index + daily_label_x_offset
     if na(pdh_line)
         pdh_line  := line.new(prev_day_start_bar, prev_day_high, bar_index, prev_day_high, color=pdh_color, width=daily_line_width, style=daily_line_style)
-        pdh_label := label.new(bar_index + daily_label_x_offset, prev_day_high, text_daily_visible ? "PDH" : "", color=color.new(color.white, 100), textcolor=pdh_color, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
+        pdh_label := label.new(pdh_x, prev_day_high, text_daily_visible ? "PDH" : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
     line.set_xy2(pdh_line, daily_line_end, prev_day_high)
-    label.set_xy(pdh_label, bar_index + daily_label_x_offset, prev_day_high)
+    label.set_xy(pdh_label, pdh_x, prev_day_high)
+    array.push(lbl_all, pdh_label)
 
 // Draw / update previous-day low
 if show_pdl and not na(prev_day_low)
+    int pdl_x = bar_index + daily_label_x_offset
     if na(pdl_line)
         pdl_line  := line.new(prev_day_start_bar, prev_day_low, bar_index, prev_day_low, color=pdl_color, width=daily_line_width, style=daily_line_style)
-        pdl_label := label.new(bar_index + daily_label_x_offset, prev_day_low, text_daily_visible ? "PDL" : "", color=color.new(color.white, 100), textcolor=pdl_color, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
+        pdl_label := label.new(pdl_x, prev_day_low, text_daily_visible ? "PDL" : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
     line.set_xy2(pdl_line, daily_line_end, prev_day_low)
-    label.set_xy(pdl_label, bar_index + daily_label_x_offset, prev_day_low)
+    label.set_xy(pdl_label, pdl_x, prev_day_low)
+    array.push(lbl_all, pdl_label)
 
 
 //+------------------------------------------------------------------------------------------------------------+//
@@ -3311,74 +3345,12 @@ f_uniPoi(float px, bool bull) =>
             lbl := bull ? "SSL" : "BSL"
     lbl
 
-// ---- Monitor 3m / 5m / 15m / 30m via request.security (info-box only) ----
-[u3_bull,  u3_bear,  u3_px]  = request.security(syminfo.tickerid, "3",  uni_detect(), lookahead=barmerge.lookahead_off)
-[u5_bull,  u5_bear,  u5_px]  = request.security(syminfo.tickerid, "5",  uni_detect(), lookahead=barmerge.lookahead_off)
-[u15_bull, u15_bear, u15_px] = request.security(syminfo.tickerid, "15", uni_detect(), lookahead=barmerge.lookahead_off)
-[u30_bull, u30_bear, u30_px] = request.security(syminfo.tickerid, "30", uni_detect(), lookahead=barmerge.lookahead_off)
-
-// Latched per-TF state for the info box (dir: 0 none / 2 bull / 3 bear).
-var int    ud3 = 0
-var string up3 = ""
-var int    ub3 = na
-var int    ud5 = 0
-var string up5 = ""
-var int    ub5 = na
-var int    ud15 = 0
-var string up15 = ""
-var int    ub15 = na
-var int    ud30 = 0
-var string up30 = ""
-var int    ub30 = na
-
-if show_model_unicorn5
-    if u3_bull
-        ud3 := 2
-        up3 := f_uniPoi(u3_px, true)
-        ub3 := bar_index
-    else if u3_bear
-        ud3 := 3
-        up3 := f_uniPoi(u3_px, false)
-        ub3 := bar_index
-    if u5_bull
-        ud5 := 2
-        up5 := f_uniPoi(u5_px, true)
-        ub5 := bar_index
-    else if u5_bear
-        ud5 := 3
-        up5 := f_uniPoi(u5_px, false)
-        ub5 := bar_index
-    if u15_bull
-        ud15 := 2
-        up15 := f_uniPoi(u15_px, true)
-        ub15 := bar_index
-    else if u15_bear
-        ud15 := 3
-        up15 := f_uniPoi(u15_px, false)
-        ub15 := bar_index
-    if u30_bull
-        ud30 := 2
-        up30 := f_uniPoi(u30_px, true)
-        ub30 := bar_index
-    else if u30_bear
-        ud30 := 3
-        up30 := f_uniPoi(u30_px, false)
-        ub30 := bar_index
-
-// Decay each TF back to inactive after watch persistence.
-if not na(ub3)  and ud3  != 0 and (bar_index - ub3)  > model_watch_bars
-    ud3 := 0
-if not na(ub5)  and ud5  != 0 and (bar_index - ub5)  > model_watch_bars
-    ud5 := 0
-if not na(ub15) and ud15 != 0 and (bar_index - ub15) > model_watch_bars
-    ud15 := 0
-if not na(ub30) and ud30 != 0 and (bar_index - ub30) > model_watch_bars
-    ud30 := 0
-
-bool uni_anyBull = u3_bull or u5_bull or u15_bull or u30_bull
-bool uni_anyBear = u3_bear or u5_bear or u15_bear or u30_bear
-alertcondition(uni_anyBull, title="Unicorn Bullish", message="Bullish Unicorn model activated (3m/5m/15m/30m)")
-alertcondition(uni_anyBear, title="Unicorn Bearish", message="Bearish Unicorn model activated (3m/5m/15m/30m)")
+// ---- Unicorn detection on the chart timeframe ----
+// The latched per-timeframe state was dropped together with the top-right info
+// box, so the detections are only consumed by the two alerts below.
+[uni_anyBull, uni_anyBear, uni_px] = uni_detect()
+alertcondition(uni_anyBull, title="Unicorn Bullish", message="Bullish Unicorn model activated (chart timeframe)")
+alertcondition(uni_anyBear, title="Unicorn Bearish", message="Bearish Unicorn model activated (chart timeframe)")
 
 
 
@@ -4687,7 +4659,9 @@ ts_draw_liq(array<TSSwing> arr, color col, string txt) =>
             TSSwing sp = array.get(arr, i)
             if not sp.taken and shown < ts_liq_max
                 array.push(ts_liq_lines,  line.new(sp.bar, sp.price, bar_index + ts_pad, sp.price, color=col, style=ts_liq_style, width=ts_liq_width))
-                array.push(ts_liq_labels, label.new(bar_index + ts_pad, sp.price, txt, style=label.style_label_left, color=color.new(color.white, 100), textcolor=col, size=session_label_size, text_font_family=font.family_monospace))
+                label lb = label.new(bar_index + ts_pad, sp.price, txt, style=label.style_label_left, color=color.new(color.white, 100), textcolor=lbl_text_col, size=session_label_size, text_font_family=font.family_monospace)
+                array.push(ts_liq_labels, lb)
+                array.push(lbl_all, lb)
                 shown += 1
     true
 
@@ -4777,7 +4751,7 @@ ts_check_mss(TSSetup m) =>
                         color mcol = m.isBull ? ts_bull_col : ts_bear_col
                         if ts_show_mss
                             m.mssLine  := line.new(tbar, tprice, bar_index, tprice, color=mcol, width=1, style=line.style_dotted)
-                            m.mssLabel := label.new(bar_index + ts_pad, tprice, "MSS", style=label.style_label_left, color=color.new(color.white, 100), textcolor=mcol, size=session_label_size, text_font_family=font.family_monospace)
+                            m.mssLabel := label.new(bar_index + ts_pad, tprice, "MSS", style=label.style_label_left, color=color.new(color.white, 100), textcolor=lbl_text_col, size=session_label_size, text_font_family=font.family_monospace)
                         if ts_alerts
                             alert((m.isBull ? "Bullish" : "Bearish") + " MSS Confirmed @ " + str.tostring(close), alert.freq_once_per_bar_close)
     true
@@ -4789,7 +4763,7 @@ ts_check_isweep(TSSetup m) =>
         if hit
             if ts_show_isweep
                 m.iLine      := line.new(m.zoneBar, m.innerTarget, bar_index + ts_pad, m.innerTarget, color=ts_iswp_col, width=1, style=line.style_dotted)
-                m.innerLabel := label.new(bar_index + ts_pad, m.innerTarget, "iSweep", style=label.style_label_left, color=color.new(color.white, 100), textcolor=ts_iswp_col, size=size.tiny, text_font_family=font.family_monospace)
+                m.innerLabel := label.new(bar_index + ts_pad, m.innerTarget, "iSweep", style=label.style_label_left, color=color.new(color.white, 100), textcolor=lbl_text_col, size=size.tiny, text_font_family=font.family_monospace)
             if ts_show_entry
                 float off = (high - low) * 0.25
                 m.entryLabel := label.new(bar_index, m.isBull ? low - off : high + off, "", style=m.isBull ? label.style_triangleup : label.style_triangledown, color=m.isBull ? ts_bull_col : ts_bear_col, size=size.tiny)
@@ -4838,3 +4812,17 @@ if ts_on
             else if not m.entryDone
                 ts_check_isweep(m)
             ts_draw(m)
+
+// --- Right-edge text anti-overlap: nudge colliding labels further right ---
+if lbl_antiov and barstate.islast and array.size(lbl_all) > 1
+    for i = 1 to array.size(lbl_all) - 1
+        label li = array.get(lbl_all, i)
+        bool clash = true
+        while clash
+            clash := false
+            for j = 0 to i - 1
+                label lj = array.get(lbl_all, j)
+                if not clash and math.abs(label.get_x(lj) - label.get_x(li)) < lbl_step and math.abs(label.get_y(lj) - label.get_y(li)) < lbl_tol
+                    clash := true
+            if clash
+                label.set_x(li, label.get_x(li) + lbl_step)
