@@ -109,11 +109,6 @@ bull_border = input.color(color.new(color.black, 0), "Bull Border", group=GRP_HT
 bear_border = input.color(color.new(color.black, 0), "Bear Border", group=GRP_HTF, inline="border")
 bull_wick   = input.color(color.new(color.black, 0), "Bull Wick", group=GRP_HTF, inline="wick")
 bear_wick   = input.color(color.new(color.black, 0), "Bear Wick", group=GRP_HTF, inline="wick")
-mirror_main_candles = input.bool(false, "Mirror Colors On Main Candles", group=GRP_HTF, tooltip="Repaints the chart's own candles with the HTF strip colors above so the live candles and the HTF strips always match.")
-
-bool mirror_up = close >= open
-plotcandle(mirror_main_candles ? open : na, mirror_main_candles ? high : na, mirror_main_candles ? low : na, mirror_main_candles ? close : na, title="Chart Candles (mirrored)", color=mirror_up ? bull_body : bear_body, wickcolor=mirror_up ? bull_wick : bear_wick, bordercolor=mirror_up ? bull_border : bear_border)
-
 show_htf_open = input.bool(true, "HTF Open", group=GRP_HTF, inline="open")
 htf_open_color = input.color(color.gray, "", group=GRP_HTF, inline="open")
 htf_open_style = input.string("Solid", "", options=["Solid", "Dashed", "Dotted"], group=GRP_HTF, inline="open")
@@ -232,8 +227,7 @@ f_style(string s) =>
 
 f_tf_label(string tf) =>
     int sec = timeframe.in_seconds(tf)
-    sec < 3600 ? str.tostring(math.round(sec / 60)) + "m" :
-     sec < 86400 and sec % 3600 != 0 ? str.tostring(math.round(sec / 60)) + "m" :
+    sec < 3600 or (sec < 86400 and sec % 3600 != 0) ? str.tostring(math.round(sec / 60)) + "m" :
      sec < 86400 ? str.tostring(math.round(sec / 3600)) + "H" :
      sec == 86400 ? "1D" : sec == 604800 ? "1W" : tf
 
@@ -434,9 +428,9 @@ f_draw_strip_candle(int strip_x, int strip_half, float strip_o, float strip_h, f
     float strip_body_bot = math.min(strip_o, strip_c)
     if strip_body_top == strip_body_bot
         strip_body_top += syminfo.mintick
-    array.push(boxes, box.new(strip_x - strip_half, strip_body_top, strip_x + strip_half, strip_body_bot, xloc=xloc.bar_index, bgcolor=strip_bull ? bull_body : bear_body, border_color=strip_bull ? bull_border : bear_border, border_width=1))
-    array.push(lines, line.new(strip_x, strip_h, strip_x, strip_body_top, xloc=xloc.bar_index, color=strip_bull ? bull_wick : bear_wick, width=1))
-    array.push(lines, line.new(strip_x, strip_body_bot, strip_x, strip_l, xloc=xloc.bar_index, color=strip_bull ? bull_wick : bear_wick, width=1))
+    array.push(boxes, box.new(strip_x - strip_half, strip_body_top, strip_x + strip_half, strip_body_bot, bgcolor=strip_bull ? bull_body : bear_body, border_color=strip_bull ? bull_border : bear_border, border_width=1))
+    array.push(lines, line.new(strip_x, strip_h, strip_x, strip_body_top, color=strip_bull ? bull_wick : bear_wick, width=1))
+    array.push(lines, line.new(strip_x, strip_body_bot, strip_x, strip_l, color=strip_bull ? bull_wick : bear_wick, width=1))
     1
 
 // ============================================================
@@ -634,73 +628,10 @@ f_has_cisd(bool bearish, int start_t, int end_t) =>
                 break
     found
 
-f_cisd_level(bool bearish, int start_t, int end_t) =>
-    float lvl = na
-    int wanted_dir = bearish ? -1 : 1
-    int sz = array.size(cisd_event_dir)
-    if sz > 0
-        for n = 0 to sz - 1
-            int j = sz - 1 - n
-            int dir = array.get(cisd_event_dir, j)
-            int t = array.get(cisd_event_time, j)
-            if dir == wanted_dir and t >= start_t and t < end_t
-                lvl := array.get(cisd_event_level, j)
-                break
-    lvl
 
-f_cisd_origin_time(bool bearish, int start_t, int end_t) =>
-    int origin_t = na
-    int wanted_dir = bearish ? -1 : 1
-    int sz = array.size(cisd_event_dir)
-    if sz > 0
-        for n = 0 to sz - 1
-            int j = sz - 1 - n
-            int dir = array.get(cisd_event_dir, j)
-            int t = array.get(cisd_event_time, j)
-            if dir == wanted_dir and t >= start_t and t < end_t
-                origin_t := array.get(cisd_event_origin_t, j)
-                break
-    origin_t
 
-f_cisd_trigger_time(bool bearish, int start_t, int end_t) =>
-    int trigger_t = na
-    int wanted_dir = bearish ? -1 : 1
-    int sz = array.size(cisd_event_dir)
-    if sz > 0
-        for n = 0 to sz - 1
-            int j = sz - 1 - n
-            int dir = array.get(cisd_event_dir, j)
-            int t = array.get(cisd_event_time, j)
-            if dir == wanted_dir and t >= start_t and t < end_t
-                trigger_t := t
-                break
-    trigger_t
 
-f_price_low_at_time(int target_t) =>
-    float v = na
-    for k = 0 to 5000
-        int kt = time[k]
-        if na(kt)
-            break
-        if kt == target_t
-            v := low[k]
-            break
-        if kt < target_t
-            break
-    v
 
-f_price_high_at_time(int target_t) =>
-    float v = na
-    for k = 0 to 5000
-        int kt = time[k]
-        if na(kt)
-            break
-        if kt == target_t
-            v := high[k]
-            break
-        if kt < target_t
-            break
-    v
 
 f_draw_projection_label(int x, float y, string txt) =>
     if show_projection_labels
@@ -817,6 +748,35 @@ f_htf_candle_eq_price(float o, float h, float l, float c) =>
                         eq := (math.min(o, c) + l) / 2.0
     eq
 
+f_strip_labels(int cnt_, int bx_, int st_, int tfms_, array<float> hs_, array<float> ls_, array<float> cs_, array<int> ts_, string sz_) =>
+    array<bool> mf = array.new<bool>(cnt_, false)
+    if show_model_labels and show_htf_model_labels
+        for m = 1 to cnt_ - 2
+            float ph = array.get(hs_, m + 1)
+            float pl = array.get(ls_, m + 1)
+            float ch = array.get(hs_, m)
+            float cl = array.get(ls_, m)
+            float cc = array.get(cs_, m)
+            bool br = ch > ph and cc <= ph
+            bool bl = cl < pl and cc >= pl
+            if (br or bl) and (bias == "Neutral" or (bias == "Bearish") == br)
+                for d = 0 to 2
+                    int i_ = m - d
+                    if i_ >= 0 and (d == 0 ? show_c2 : d == 1 ? show_c3 : show_c4)
+                        float hi_ = array.get(hs_, i_)
+                        float lo_ = array.get(ls_, i_)
+                        if not na(hi_) and not na(lo_)
+                            array.push(labels, label.new(bx_ + (cnt_ - 1 - i_) * st_, lo_ - (hi_ - lo_) * 0.05 - syminfo.mintick * 4, d == 0 ? "C2" : d == 1 ? "C3" : "C4", style=label.style_label_up, color=model_label_bg, textcolor=valid_color, size=sz_, text_formatting=text.format_bold))
+                            array.set(mf, i_, true)
+    if show_htf_time_labels
+        for tl = 0 to cnt_ - 1
+            float tlh = array.get(hs_, tl)
+            float tll = array.get(ls_, tl)
+            int tlt = array.get(ts_, tl)
+            if not na(tlh) and not na(tlt)
+                array.push(labels, label.new(bx_ + (cnt_ - 1 - tl) * st_, tll - ((tlh - tll) * 0.05 + syminfo.mintick * 4) * (array.get(mf, tl) ? 3.2 : 1.2), f_htf_strip_time_label(tlt, tfms_), style=label.style_label_up, color=color.new(color.black, 100), textcolor=htf_time_label_color, size=sz_))
+    true
+
 f_draw_extra_strip(string strip_tf, int strip_count, int strip_base_x, int strip_step, int strip_half, array<float> strip_os, array<float> strip_hs, array<float> strip_ls, array<float> strip_cs, array<int> strip_ts, string strip_label_size) =>
     int strip_drawn = 0
     float strip_highest = na
@@ -832,19 +792,18 @@ f_draw_extra_strip(string strip_tf, int strip_count, int strip_base_x, int strip
                 continue
             int strip_x = strip_base_x + (strip_count - 1 - strip_i) * strip_step
             f_draw_strip_candle(strip_x, strip_half, strip_o, strip_h, strip_l, strip_c)
-            float strip_label_gap = math.max(syminfo.mintick * 10, (strip_h - strip_l) * 0.05)
-            if show_htf_time_labels
-                array.push(labels, label.new(strip_x, strip_l - strip_label_gap * (strip_i % 2 == 0 ? 1 : 4), f_htf_strip_time_label(strip_t, strip_tf_ms), xloc=xloc.bar_index, style=label.style_label_up, color=color.new(color.black, 100), textcolor=htf_time_label_color, size=strip_label_size, text_font_family=font.family_monospace))
             if show_eq
                 float strip_eq_price = f_htf_candle_eq_price(strip_o, strip_h, strip_l, strip_c)
                 if not na(strip_eq_price)
-                    array.push(htfEqLines, line.new(strip_x + strip_half + 1, strip_eq_price, strip_x + strip_half + 1 + strip_half * 2 + htf_eq_extension, strip_eq_price, xloc=xloc.bar_index, color=eq_color, width=eq_width, style=f_style(eq_style)))
+                    array.push(htfEqLines, line.new(strip_x + strip_half + 1, strip_eq_price, strip_x + strip_half + 1 + strip_half * 2 + htf_eq_extension, strip_eq_price, color=eq_color, width=eq_width, style=f_style(eq_style)))
             strip_highest := na(strip_highest) ? strip_h : math.max(strip_highest, strip_h)
             strip_drawn += 1
+        if strip_drawn > 0
+            f_strip_labels(strip_count, strip_base_x, strip_step, strip_tf_ms, strip_hs, strip_ls, strip_cs, strip_ts, strip_label_size)
         if show_htf_timeframe_labels and strip_drawn > 0
             int strip_label_x = strip_base_x + int(math.round((strip_count - 1) * strip_step / 2.0))
             float strip_label_gap = syminfo.mintick * 20
-            array.push(labels, label.new(strip_label_x, strip_highest + strip_label_gap, f_tf_label(strip_tf), xloc=xloc.bar_index, style=label.style_label_down, color=color.new(color.black, 100), textcolor=htf_time_label_color, size=strip_label_size, text_font_family=font.family_monospace))
+            array.push(labels, label.new(strip_label_x, strip_highest + strip_label_gap, f_tf_label(strip_tf), style=label.style_label_down, color=color.new(color.black, 100), textcolor=htf_time_label_color, size=strip_label_size, text_font_family=font.family_monospace))
     strip_drawn
 
 f_wick_eq_price(bool bearish, float o, float h, float l, float c) =>
@@ -852,13 +811,6 @@ f_wick_eq_price(bool bearish, float o, float h, float l, float c) =>
     // The actual HTF Candle Equilibrium is drawn independently on every projected HTF candle.
     f_htf_candle_eq_price(o, h, l, c)
 
-f_draw_eq_projected(bool bearish, int htf_idx, float o, float h, float l, float c, int base_x_, int num_, int step_, int half_) =>
-    float eq = f_wick_eq_price(bearish, o, h, l, c)
-    if not hide_htf_candles and show_eq and not na(eq)
-        int x_mid = base_x_ + (num_ - 1 - htf_idx) * step_
-        int x_left = x_mid + half_ + 1
-        int x_right = x_left + half_ * 2 + htf_eq_extension
-        array.push(lines, line.new(x_left, eq, x_right, eq, xloc=xloc.bar_index, color=eq_color, width=eq_width, style=f_style(eq_style)))
 
 f_opposite_model_at_index(bool current_bearish, int idx) =>
     bool found = false
@@ -1272,14 +1224,11 @@ if barstate.islast
 
                 if show_htf_open and i == 0
                     array.push(lines, line.new(t, o, time, o, xloc=xloc.bar_time, color=htf_open_color, style=f_style(htf_open_style), width=htf_open_width))
-                    array.push(lines, line.new(bar_index, o, x + half, o, xloc=xloc.bar_index, color=htf_open_color, style=f_style(htf_open_style), width=htf_open_width))
+                    array.push(lines, line.new(bar_index, o, x + half, o, color=htf_open_color, style=f_style(htf_open_style), width=htf_open_width))
                 if show_lh_lines
                     array.push(lines, line.new(t, h, t + htf_ms, h, xloc=xloc.bar_time, color=lh_color, style=f_style(lh_style), width=lh_width))
                     array.push(lines, line.new(t, l, t + htf_ms, l, xloc=xloc.bar_time, color=lh_color, style=f_style(lh_style), width=lh_width))
 
-                if show_htf_time_labels
-                    float label_gap = math.max(syminfo.mintick * 10, (h - l) * 0.05)
-                    array.push(labels, label.new(x, l - label_gap * (i % 2 == 0 ? 2 : 5), f_htf_strip_time_label(t, htf_ms), xloc=xloc.bar_index, style=label.style_label_up, color=color.new(color.black, 100), textcolor=htf_time_label_color, size=strip_label_size, text_font_family=font.family_monospace))
 
             if show_oc_time
                 array.push(lines, line.new(t, l, t, h, xloc=xloc.bar_time, extend=extend.both, color=oc_color, style=f_style(oc_style), width=oc_width))
@@ -1293,7 +1242,7 @@ if barstate.islast
                 htf1_highest := na(htf1_highest) ? htf1_h : math.max(htf1_highest, htf1_h)
         if not na(htf1_highest)
             int htf1_label_x = base_x + int(math.round((num - 1) * step / 2.0))
-            array.push(labels, label.new(htf1_label_x, htf1_highest + syminfo.mintick * 20, f_tf_label(htf), xloc=xloc.bar_index, style=label.style_label_down, color=color.new(color.black, 100), textcolor=htf_time_label_color, size=strip_label_size, text_font_family=font.family_monospace))
+            array.push(labels, label.new(htf1_label_x, htf1_highest + syminfo.mintick * 20, f_tf_label(htf), style=label.style_label_down, color=color.new(color.black, 100), textcolor=htf_time_label_color, size=strip_label_size, text_font_family=font.family_monospace))
 
     // First Presented FVG for each active HTF candle
     if show_first_presented_fvg
@@ -1372,7 +1321,7 @@ if barstate.islast
             array.push(lines, line.new(liq_t, sweep_price, c2_end, sweep_price, xloc=xloc.bar_time, color=c1_sweep_color, width=c1_sweep_width, style=f_style(c1_sweep_style)))
             int c1x = base_x + (num - 1 - c1_idx) * step
             int c2x = base_x + (num - 1 - c2_idx) * step
-            array.push(lines, line.new(c1x, sweep_price, c2x + step, sweep_price, xloc=xloc.bar_index, color=c1_sweep_color, width=c1_sweep_width, style=f_style(c1_sweep_style)))
+            array.push(lines, line.new(c1x, sweep_price, c2x + step, sweep_price, color=c1_sweep_color, width=c1_sweep_width, style=f_style(c1_sweep_style)))
 
         // HTF Candle Equilibrium is now handled independently inside the HTF candle loop.
         // This avoids model-only EQ marks and applies the same logic to every projected HTF candle.
@@ -1391,30 +1340,21 @@ if barstate.islast
         if show_model_labels
             if show_c2
                 f_label(f_mid_time(c2t, htf_ms), bearish ? c2h : c2l, "C2", state_col, true)
-                if not hide_htf_candles and show_htf_model_labels and not na(c2l)
-                    float c2_label_gap = math.max(syminfo.mintick * 10, math.abs(c2h - c2l) * 0.05)
-                    int c2_x = base_x + (num - 1 - c2_idx) * step
-                    array.push(labels, label.new(c2_x, c2l - c2_label_gap, "C2", xloc=xloc.bar_index, style=label.style_label_up, color=model_label_bg, textcolor=state_col, size=strip_label_size, text_font_family=font.family_monospace, text_formatting=text.format_bold))
             if show_follow_through and show_c3 and c3_idx >= 0
                 int c3t = array.get(arr_t, c3_idx)
                 float c3h = array.get(arr_h, c3_idx)
                 float c3l = array.get(arr_l, c3_idx)
                 f_label(f_mid_time(c3t, htf_ms), bearish ? c3h : c3l, "C3", state_col, true)
-                if not hide_htf_candles and show_htf_model_labels and not na(c3l)
-                    float c3_label_gap = math.max(syminfo.mintick * 10, math.abs(c3h - c3l) * 0.05)
-                    int c3_x = base_x + (num - 1 - c3_idx) * step
-                    array.push(labels, label.new(c3_x, c3l - c3_label_gap, "C3", xloc=xloc.bar_index, style=label.style_label_up, color=model_label_bg, textcolor=state_col, size=strip_label_size, text_font_family=font.family_monospace, text_formatting=text.format_bold))
             if show_follow_through and show_c4 and c4_idx >= 0
                 int c4t = array.get(arr_t, c4_idx)
                 float c4h = array.get(arr_h, c4_idx)
                 float c4l = array.get(arr_l, c4_idx)
                 f_label(f_mid_time(c4t, htf_ms), bearish ? c4h : c4l, "C4", state_col, true)
-                if not hide_htf_candles and show_htf_model_labels and not na(c4l)
-                    float c4_label_gap = math.max(syminfo.mintick * 10, math.abs(c4h - c4l) * 0.05)
-                    int c4_x = base_x + (num - 1 - c4_idx) * step
-                    array.push(labels, label.new(c4_x, c4l - c4_label_gap, "C4", xloc=xloc.bar_index, style=label.style_label_up, color=model_label_bg, textcolor=state_col, size=strip_label_size, text_font_family=font.family_monospace, text_formatting=text.format_bold))
 
         setups_drawn += 1
+
+    if not hide_htf_candles
+        f_strip_labels(num, base_x, step, htf_ms, arr_h, arr_l, arr_c, arr_t, strip_label_size)
 
     // Independent HTF Candle Equilibrium layer
     // Drawn after projected HTF candles and model objects so it cannot be hidden by the candle renderer.
@@ -1433,23 +1373,22 @@ if barstate.islast
                 float eq_price = f_htf_candle_eq_price(eq_o, eq_h, eq_l, eq_c)
 
                 if not na(eq_price)
-                    array.push(htfEqLines, line.new(eq_x_left, eq_price, eq_x_right, eq_price, xloc=xloc.bar_index, color=eq_color, width=eq_width, style=f_style(eq_style)))
+                    array.push(htfEqLines, line.new(eq_x_left, eq_price, eq_x_right, eq_price, color=eq_color, width=eq_width, style=f_style(eq_style)))
 
     // Additional visualization-only HTF strips. They never feed the model engines.
     int extra_num = math.min(htf_candles, 8)
     int extra_base_x = base_x + num * step + htf_space_between
-    int extra_drawn = 0
     if htf2_show
-        extra_drawn := f_draw_extra_strip(htf2_tf, extra_num, extra_base_x, step, half, htf2_o, htf2_h, htf2_l, htf2_c, htf2_t, strip_label_size)
+        f_draw_extra_strip(htf2_tf, extra_num, extra_base_x, step, half, htf2_o, htf2_h, htf2_l, htf2_c, htf2_t, strip_label_size)
         extra_base_x += extra_num * step + htf_space_between
     if htf3_show
-        extra_drawn := f_draw_extra_strip(htf3_tf, extra_num, extra_base_x, step, half, htf3_o, htf3_h, htf3_l, htf3_c, htf3_t, strip_label_size)
+        f_draw_extra_strip(htf3_tf, extra_num, extra_base_x, step, half, htf3_o, htf3_h, htf3_l, htf3_c, htf3_t, strip_label_size)
         extra_base_x += extra_num * step + htf_space_between
     if htf4_show
-        extra_drawn := f_draw_extra_strip(htf4_tf, extra_num, extra_base_x, step, half, htf4_o, htf4_h, htf4_l, htf4_c, htf4_t, strip_label_size)
+        f_draw_extra_strip(htf4_tf, extra_num, extra_base_x, step, half, htf4_o, htf4_h, htf4_l, htf4_c, htf4_t, strip_label_size)
         extra_base_x += extra_num * step + htf_space_between
     if htf5_show
-        extra_drawn := f_draw_extra_strip(htf5_tf, extra_num, extra_base_x, step, half, htf5_o, htf5_h, htf5_l, htf5_c, htf5_t, strip_label_size)
+        f_draw_extra_strip(htf5_tf, extra_num, extra_base_x, step, half, htf5_o, htf5_h, htf5_l, htf5_c, htf5_t, strip_label_size)
         extra_base_x += extra_num * step + htf_space_between
 
     // Global CISD lines
@@ -1822,23 +1761,6 @@ gk_htf2_bull_border = color.new(gk_htf2_bull_border_raw, gk_htf2_bd_transparency
 gk_htf2_bear_border = color.new(gk_htf2_bear_border_raw, gk_htf2_bd_transparency)
 
 // Friendly-name → Pine timeframe code. Mirrors v5 source options.
-f_gkTF(simple string _htf) =>
-    switch _htf
-        "3 Mins"   => "3"
-        "5 Mins"   => "5"
-        "15 Mins"  => "15"
-        "30 Mins"  => "30"
-        "1 Hour"   => "60"
-        "2 Hour"   => "120"
-        "3 Hour"   => "180"
-        "4 Hour"   => "240"
-        "1 Day"    => "D"
-        "1 Week"   => "W"
-        "1 Month"  => "M"
-        "3 Month"  => "3M"
-        "6 Month"  => "6M"
-        "1 Year"   => "12M"
-        => "60"
 
 // +---------------------------------------------------------------+
 // | Global Text & Color Control                                   |
@@ -2300,8 +2222,8 @@ ss_armSrc(array<line> ln, array<label> lb, array<float> px, array<bool> dn, arra
                 float p = array.get(srcSH, i)
                 int   b = array.get(srcSHb, i)
                 string txt = ss_show_text ? (prefix + " SH" + str.tostring(i + 1)) : ""
-                line  l   = line.new(b, p, xR, p, xloc=xloc.bar_index, color=ss_line_color, width=ss_line_width, style=ss_line_style)
-                label la  = label.new(xR + ss_text_pad, p, txt, xloc=xloc.bar_index, color=color.new(color.white, 100), textcolor=ss_text_color, style=f_labelStyleX(ss_text_pos), size=ss_label_size_resolved, text_font_family=font.family_monospace)
+                line  l   = line.new(b, p, xR, p, color=ss_line_color, width=ss_line_width, style=ss_line_style)
+                label la  = label.new(xR + ss_text_pad, p, txt, color=color.new(color.white, 100), textcolor=ss_text_color, style=f_labelStyleX(ss_text_pos), size=ss_label_size_resolved, text_font_family=font.family_monospace)
                 array.push(ln, l)
                 array.push(lb, la)
                 array.push(px, p)
@@ -2313,8 +2235,8 @@ ss_armSrc(array<line> ln, array<label> lb, array<float> px, array<bool> dn, arra
                 float p = array.get(srcSL, i)
                 int   b = array.get(srcSLb, i)
                 string txt = ss_show_text ? (prefix + " SL" + str.tostring(i + 1)) : ""
-                line  l   = line.new(b, p, xR, p, xloc=xloc.bar_index, color=ss_line_color, width=ss_line_width, style=ss_line_style)
-                label la  = label.new(xR + ss_text_pad, p, txt, xloc=xloc.bar_index, color=color.new(color.white, 100), textcolor=ss_text_color, style=f_labelStyleX(ss_text_pos), size=ss_label_size_resolved, text_font_family=font.family_monospace)
+                line  l   = line.new(b, p, xR, p, color=ss_line_color, width=ss_line_width, style=ss_line_style)
+                label la  = label.new(xR + ss_text_pad, p, txt, color=color.new(color.white, 100), textcolor=ss_text_color, style=f_labelStyleX(ss_text_pos), size=ss_label_size_resolved, text_font_family=font.family_monospace)
                 array.push(ln, l)
                 array.push(lb, la)
                 array.push(px, p)
@@ -2500,8 +2422,8 @@ if show_fvg_main and fvg_max_display > 0 and barstate.isconfirmed and bar_index 
         int   x1     = bar_index - 2
         int   x2     = bar_index + fvg_length
         MainFVG nfvg = MainFVG.new()
-        nfvg.b  := box.new(x1, top, x2, bottom, bgcolor=fvg_bull_color, border_color=fvg_bull_border, xloc=xloc.bar_index)
-        nfvg.ce := fvg_show_ce ? line.new(x1, ce_y, x2, ce_y, color=fvg_ce_color, style=fvg_ce_style, width=fvg_ce_width, xloc=xloc.bar_index) : na
+        nfvg.b  := box.new(x1, top, x2, bottom, bgcolor=fvg_bull_color, border_color=fvg_bull_border)
+        nfvg.ce := fvg_show_ce ? line.new(x1, ce_y, x2, ce_y, color=fvg_ce_color, style=fvg_ce_style, width=fvg_ce_width) : na
         array.unshift(main_fvgs, nfvg)
         while array.size(main_fvgs) > fvg_max_display
             MainFVG oldf = array.pop(main_fvgs)
@@ -2516,8 +2438,8 @@ if show_fvg_main and fvg_max_display > 0 and barstate.isconfirmed and bar_index 
         int   x1     = bar_index - 2
         int   x2     = bar_index + fvg_length
         MainFVG nfvg = MainFVG.new()
-        nfvg.b  := box.new(x1, top, x2, bottom, bgcolor=fvg_bear_color, border_color=fvg_bear_border, xloc=xloc.bar_index)
-        nfvg.ce := fvg_show_ce ? line.new(x1, ce_y, x2, ce_y, color=fvg_ce_color, style=fvg_ce_style, width=fvg_ce_width, xloc=xloc.bar_index) : na
+        nfvg.b  := box.new(x1, top, x2, bottom, bgcolor=fvg_bear_color, border_color=fvg_bear_border)
+        nfvg.ce := fvg_show_ce ? line.new(x1, ce_y, x2, ce_y, color=fvg_ce_color, style=fvg_ce_style, width=fvg_ce_width) : na
         array.unshift(main_fvgs, nfvg)
         while array.size(main_fvgs) > fvg_max_display
             MainFVG oldf = array.pop(main_fvgs)
@@ -2583,14 +2505,14 @@ if gk_show_fvg and gk_bull_fvg_raw and barstate.isconfirmed
     bx = box.new(bar_index - 2, high[2], bar_index, low, bgcolor=gk_fvg_bull_color, border_color=gk_fvg_bull_border, extend=gk_ext, text=gk_simple ? "" : "Bullish FVG", text_color=gk_ob_text, text_size=gk_text_size, text_halign=text.align_right, text_valign=text.align_center)
     array.unshift(gk_bull_fvg_boxes, bx)
     ce_y = (high[2] + low) / 2.0
-    line ce_ln = gk_fvg_show_ce ? line.new(bar_index - 2, ce_y, bar_index, ce_y, xloc=xloc.bar_index, extend=gk_ext, color=gk_fvg_ce_color, style=gk_fvg_ce_style, width=gk_fvg_ce_width) : na
+    line ce_ln = gk_fvg_show_ce ? line.new(bar_index - 2, ce_y, bar_index, ce_y, extend=gk_ext, color=gk_fvg_ce_color, style=gk_fvg_ce_style, width=gk_fvg_ce_width) : na
     array.unshift(gk_bull_fvg_ces, ce_ln)
 
 if gk_show_fvg and gk_bear_fvg_raw and barstate.isconfirmed
     bx = box.new(bar_index - 2, high, bar_index, low[2], bgcolor=gk_fvg_bear_color, border_color=gk_fvg_bear_border, extend=gk_ext, text=gk_simple ? "" : "Bearish FVG", text_color=gk_ob_text, text_size=gk_text_size, text_halign=text.align_right, text_valign=text.align_center)
     array.unshift(gk_bear_fvg_boxes, bx)
     ce_y = (high + low[2]) / 2.0
-    line ce_ln = gk_fvg_show_ce ? line.new(bar_index - 2, ce_y, bar_index, ce_y, xloc=xloc.bar_index, extend=gk_ext, color=gk_fvg_ce_color, style=gk_fvg_ce_style, width=gk_fvg_ce_width) : na
+    line ce_ln = gk_fvg_show_ce ? line.new(bar_index - 2, ce_y, bar_index, ce_y, extend=gk_ext, color=gk_fvg_ce_color, style=gk_fvg_ce_style, width=gk_fvg_ce_width) : na
     array.unshift(gk_bear_fvg_ces, ce_ln)
 
 // --- LTF OB: create boxes on new detection
@@ -3063,33 +2985,10 @@ bool tf_is_5m  = tf_secs == 300
 bool tf_is_15m = tf_secs == 900
 
 // ---- Helpers ----
-f_near(float px, float target, float tolPct) =>
-    na(target) or na(px) ? false : math.abs(px - target) <= math.abs(target) * tolPct * 0.01
 
 // Returns true if price touched or crossed any swing in the array this bar.
-f_touchedAnyLevel(array<float> arr, float lo, float hi) =>
-    bool hit = false
-    if not na(arr) and array.size(arr) > 0
-        for i = 0 to array.size(arr) - 1
-            lv = array.get(arr, i)
-            if not na(lv) and hi >= lv and lo <= lv
-                hit := true
-                break
-    hit
 
 // Returns true if price touched any FVG box in the array (hi/lo must intersect box range).
-f_touchedAnyBox(array<box> arr, float lo, float hi) =>
-    bool hit = false
-    if not na(arr) and array.size(arr) > 0
-        for i = 0 to array.size(arr) - 1
-            bx = array.get(arr, i)
-            if not na(bx)
-                bt = box.get_top(bx)
-                bb = box.get_bottom(bx)
-                if not na(bt) and not na(bb) and hi >= bb and lo <= bt
-                    hit := true
-                    break
-    hit
 
 // Returns true if price swept a named level (reached past it intrabar).
 f_sweptHigh(float lvl, float h) => na(lvl) or na(h) ? false : h > lvl
@@ -3303,48 +3202,8 @@ uni_detect() =>
     [bull, bear, px]
 
 // Nearest absolute distance from px to any element of arr (na if empty).
-f_nearArr(array<float> arr, float px) =>
-    float best = na
-    if not na(arr) and array.size(arr) > 0
-        for i = 0 to array.size(arr) - 1
-            float lv = array.get(arr, i)
-            if not na(lv)
-                float d = math.abs(lv - px)
-                best := na(best) or d < best ? d : best
-    best
 
 // Classify a swept price into a named POI using chart-timeframe levels.
-f_uniPoi(float px, bool bull) =>
-    string lbl = bull ? "SSL" : "BSL"
-    float bestD = na
-    if not na(px)
-        float lv1 = bull ? prev_day_low : prev_day_high
-        if not na(lv1) and (na(bestD) or math.abs(lv1 - px) < bestD)
-            bestD := math.abs(lv1 - px)
-            lbl := bull ? "PDL" : "PDH"
-        float lv2 = bull ? ny_am_low : ny_am_high
-        if not na(lv2) and (na(bestD) or math.abs(lv2 - px) < bestD)
-            bestD := math.abs(lv2 - px)
-            lbl := bull ? "NY AM SSL" : "NY AM BSL"
-        float d1 = f_nearArr(bull ? h1_sl_prices : h1_sh_prices, px)
-        if not na(d1) and (na(bestD) or d1 < bestD)
-            bestD := d1
-            lbl := "1H swing"
-        float d2 = f_nearArr(bull ? m15_sl_prices : m15_sh_prices, px)
-        if not na(d2) and (na(bestD) or d2 < bestD)
-            bestD := d2
-            lbl := "15m swing"
-        float d3 = f_nearArr(bull ? h4_sl_prices : h4_sh_prices, px)
-        if not na(d3) and (na(bestD) or d3 < bestD)
-            bestD := d3
-            lbl := "4H swing"
-        float d4 = f_nearArr(bull ? htfFVG_bot : htfFVG_top, px)
-        if not na(d4) and (na(bestD) or d4 < bestD)
-            bestD := d4
-            lbl := "HTF FVG"
-        if not na(bestD) and bestD > math.abs(px) * uni_poiTol * 0.01
-            lbl := bull ? "SSL" : "BSL"
-    lbl
 
 // ---- Unicorn detection on the chart timeframe ----
 // The latched per-timeframe state was dropped together with the top-right info
@@ -3720,11 +3579,11 @@ if bb_show and (bb_bullFire or bb_bearFire) and not na(bb_zTop) and not na(bb_zB
     string zTxt = ""
     if bb_showLabel
         zTxt := bb_uni ? "Unicorn" : bb_bullFire ? "Bull BB" : "Bear BB"
-    box nbx = box.new(bb_zLeft, bb_zTop, bar_index, bb_zBot, border_color = bordCol, bgcolor = fillCol, xloc = xloc.bar_index, text = zTxt, text_color = bordCol, text_size = bb_textSize, text_halign = text.align_left, text_valign = bb_bullFire ? text.align_top : text.align_bottom)
+    box nbx = box.new(bb_zLeft, bb_zTop, bar_index, bb_zBot, border_color = bordCol, bgcolor = fillCol, text = zTxt, text_color = bordCol, text_size = bb_textSize, text_halign = text.align_left, text_valign = bb_bullFire ? text.align_top : text.align_bottom)
     line nml = na
     if bb_show50
         float midY = (bb_zTop + bb_zBot) / 2
-        nml := line.new(bb_zLeft, midY, bar_index, midY, color = bordCol, style = line.style_dashed, xloc = xloc.bar_index)
+        nml := line.new(bb_zLeft, midY, bar_index, midY, color = bordCol, style = line.style_dashed)
     array.push(bb_list, bb_Block.new(nbx, nml, bb_bullFire, bb_zTop, bb_zBot, true))
 
 // --- Per-bar maintenance: extend active zones, invalidate on opposite close ---
