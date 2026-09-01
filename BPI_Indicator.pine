@@ -90,7 +90,7 @@ htf_spacing      = input.int(3, "Spacing", minval=0, maxval=20, group=GRP_HTF)
 show_htf_time_labels = input.bool(true, "Time Labels", group=GRP_HTF, inline="strip_time")
 htf_time_label_color = input.color(color.gray, "", group=GRP_HTF, inline="strip_time")
 show_htf_model_labels = input.bool(true, "Projected Model Labels", group=GRP_HTF)
-htf_strip_label_size = input.string(size.small, "Strip Label Size", options=[size.tiny, size.small, size.normal, size.large], group=GRP_HTF)
+htf_strip_label_size = input.string(size.small, "Strip Label Size", options=[size.tiny, size.small, size.normal, size.large, size.huge], group=GRP_HTF)
 htf_eq_extension = input.int(3, "CE Extension", minval=0, maxval=50, group=GRP_HTF)
 htf2_show = input.bool(true, "HTF 2", group=GRP_HTF, inline="htf2")
 htf2_tf = input.timeframe("30", "TF", group=GRP_HTF, inline="htf2")
@@ -130,7 +130,7 @@ lh_style = input.string("Dotted", "", options=["Solid", "Dashed", "Dotted"], gro
 lh_width = input.int(1, "", minval=1, maxval=5, group=GRP_HTF, inline="lh")
 
 show_model_labels = input.bool(true, "Show Fractal Model Labels", group=GRP_MODEL)
-model_label_size  = input.string(size.small, "Label Size", options=[size.tiny, size.small, size.normal, size.large], group=GRP_MODEL)
+model_label_size  = input.string(size.small, "Label Size", options=[size.tiny, size.small, size.normal, size.large, size.huge], group=GRP_MODEL)
 valid_color       = input.color(color.new(color.black, 0), "Valid", group=GRP_MODEL, inline="state")
 model_label_bg    = input.color(color.new(#c0f7fe, 65), "Label Background", group=GRP_MODEL)
 fail_c3_color     = input.color(color.new(color.black, 0), "Fail C3", group=GRP_MODEL, inline="state")
@@ -178,14 +178,14 @@ first_fvg_border_width = input.int(1, "Border Width", minval=0, maxval=5, group=
 show_projections = input.bool(true, "Show Projections", group=GRP_PROJ)
 projection_levels = input.string("-1,-1.5,-2,-2.5,-3.5,-4", "Levels", group=GRP_PROJ)
 show_projection_labels = input.bool(true, "Labels", group=GRP_PROJ)
-projection_label_size = input.string(size.normal, "Label Size", options=[size.tiny, size.small, size.normal, size.large], group=GRP_PROJ)
+projection_label_size = input.string(size.normal, "Label Size", options=[size.tiny, size.small, size.normal, size.large, size.huge], group=GRP_PROJ)
 projection_color = input.color(color.new(#4e5057, 25), "Color", group=GRP_PROJ)
 projection_style = input.string("Dotted", "Style", options=["Solid", "Dashed", "Dotted"], group=GRP_PROJ)
 projection_width = input.int(1, "Width", minval=1, maxval=5, group=GRP_PROJ)
 
 show_info_table = input.bool(true, "Show Info?", group=GRP_TABLE)
 table_pos = input.string("Bottom Right", "Location", options=["Top Right", "Bottom Right", "Top Left", "Bottom Left", "Top Center", "Bottom Center"], group=GRP_TABLE)
-table_size = input.string(size.normal, "Text Size", options=[size.tiny, size.small, size.normal, size.large], group=GRP_TABLE)
+table_size = input.string(size.normal, "Text Size", options=[size.tiny, size.small, size.normal, size.large, size.huge], group=GRP_TABLE)
 table_text_color = input.color(color.black, "Text Color", group=GRP_TABLE)
 table_bg_color = input.color(color.new(color.white, 100), "Background", group=GRP_TABLE)
 
@@ -1747,6 +1747,7 @@ gk_ob_bear_color  = color.new(gk_ob_bear_color_raw,  gk_ob_bg_transparency)
 gk_ob_bull_border = color.new(gk_ob_bull_border_raw, gk_ob_bd_transparency)
 gk_ob_bear_border = color.new(gk_ob_bear_border_raw, gk_ob_bd_transparency)
 gk_ob_text           = input.color(color.new(color.white, 0),  "OB Text Color",    group=GRP_GK)
+gk_text_size         = input.string(size.tiny, "OB / FVG Text Size", options=[size.tiny, size.small, size.normal, size.large, size.huge], group=GRP_GK)
 gk_ob_barcolor       = input.bool(false, "Color OB Bars", group=GRP_GK, inline="gk_obbar")
 gk_ob_bull_bar       = input.color(color.new(color.green, 0), "Bull Bar",         inline="gk_obbar", group=GRP_GK)
 gk_ob_bear_bar       = input.color(color.new(color.red,   0), "Bear Bar",         inline="gk_obbar", group=GRP_GK)
@@ -2579,14 +2580,14 @@ gk_ext = gk_simple ? extend.none : extend.right
 
 // --- LTF FVG: create boxes (and CE midlines) on new detection
 if gk_show_fvg and gk_bull_fvg_raw and barstate.isconfirmed
-    bx = box.new(bar_index - 2, high[2], bar_index, low, bgcolor=gk_fvg_bull_color, border_color=gk_fvg_bull_border, extend=gk_ext, text=gk_simple ? "" : "Bullish FVG", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
+    bx = box.new(bar_index - 2, high[2], bar_index, low, bgcolor=gk_fvg_bull_color, border_color=gk_fvg_bull_border, extend=gk_ext, text=gk_simple ? "" : "Bullish FVG", text_color=gk_ob_text, text_size=gk_text_size, text_halign=text.align_right, text_valign=text.align_center)
     array.unshift(gk_bull_fvg_boxes, bx)
     ce_y = (high[2] + low) / 2.0
     line ce_ln = gk_fvg_show_ce ? line.new(bar_index - 2, ce_y, bar_index, ce_y, xloc=xloc.bar_index, extend=gk_ext, color=gk_fvg_ce_color, style=gk_fvg_ce_style, width=gk_fvg_ce_width) : na
     array.unshift(gk_bull_fvg_ces, ce_ln)
 
 if gk_show_fvg and gk_bear_fvg_raw and barstate.isconfirmed
-    bx = box.new(bar_index - 2, high, bar_index, low[2], bgcolor=gk_fvg_bear_color, border_color=gk_fvg_bear_border, extend=gk_ext, text=gk_simple ? "" : "Bearish FVG", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
+    bx = box.new(bar_index - 2, high, bar_index, low[2], bgcolor=gk_fvg_bear_color, border_color=gk_fvg_bear_border, extend=gk_ext, text=gk_simple ? "" : "Bearish FVG", text_color=gk_ob_text, text_size=gk_text_size, text_halign=text.align_right, text_valign=text.align_center)
     array.unshift(gk_bear_fvg_boxes, bx)
     ce_y = (high + low[2]) / 2.0
     line ce_ln = gk_fvg_show_ce ? line.new(bar_index - 2, ce_y, bar_index, ce_y, xloc=xloc.bar_index, extend=gk_ext, color=gk_fvg_ce_color, style=gk_fvg_ce_style, width=gk_fvg_ce_width) : na
@@ -2598,15 +2599,15 @@ if gk_show_ob and barstate.isconfirmed
     if gk_ob_show_bull
         // 2-bar Naked Bullish OB — origin bar is index-2
         if gk_ob_bull_2
-            bx = box.new(bar_index - 2, high[2], bar_index, low[2], bgcolor=gk_ob_bull_color, border_color=gk_ob_bull_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
+            bx = box.new(bar_index - 2, high[2], bar_index, low[2], bgcolor=gk_ob_bull_color, border_color=gk_ob_bull_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=gk_text_size, text_halign=text.align_right, text_valign=text.align_center)
             array.unshift(gk_bull_ob_boxes, bx)
         // 3-bar Covered Bullish OB — origin bar is index-3
         if gk_ob_bull_3 and gk_ob_bull_3_ok
-            bx = box.new(bar_index - 3, high[3], bar_index, low[3], bgcolor=gk_ob_bull_color, border_color=gk_ob_bull_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
+            bx = box.new(bar_index - 3, high[3], bar_index, low[3], bgcolor=gk_ob_bull_color, border_color=gk_ob_bull_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=gk_text_size, text_halign=text.align_right, text_valign=text.align_center)
             array.unshift(gk_bull_ob_boxes, bx)
         // 4-bar Covered Bullish OB — origin bar is index-4
         if gk_ob_bull_4 and gk_ob_bull_4_ok
-            bx = box.new(bar_index - 4, high[4], bar_index, low[4], bgcolor=gk_ob_bull_color, border_color=gk_ob_bull_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
+            bx = box.new(bar_index - 4, high[4], bar_index, low[4], bgcolor=gk_ob_bull_color, border_color=gk_ob_bull_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=gk_text_size, text_halign=text.align_right, text_valign=text.align_center)
             array.unshift(gk_bull_ob_boxes, bx)
         // Trim to max count — drop oldest (tail) so the freshest N survive
         while array.size(gk_bull_ob_boxes) > gk_ob_max_bull
@@ -2615,13 +2616,13 @@ if gk_show_ob and barstate.isconfirmed
     // ---- Sell-side (Bearish) OBs ----
     if gk_ob_show_bear
         if gk_ob_bear_2
-            bx = box.new(bar_index - 2, high[2], bar_index, low[2], bgcolor=gk_ob_bear_color, border_color=gk_ob_bear_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
+            bx = box.new(bar_index - 2, high[2], bar_index, low[2], bgcolor=gk_ob_bear_color, border_color=gk_ob_bear_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=gk_text_size, text_halign=text.align_right, text_valign=text.align_center)
             array.unshift(gk_bear_ob_boxes, bx)
         if gk_ob_bear_3 and gk_ob_bear_3_ok
-            bx = box.new(bar_index - 3, high[3], bar_index, low[3], bgcolor=gk_ob_bear_color, border_color=gk_ob_bear_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
+            bx = box.new(bar_index - 3, high[3], bar_index, low[3], bgcolor=gk_ob_bear_color, border_color=gk_ob_bear_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=gk_text_size, text_halign=text.align_right, text_valign=text.align_center)
             array.unshift(gk_bear_ob_boxes, bx)
         if gk_ob_bear_4 and gk_ob_bear_4_ok
-            bx = box.new(bar_index - 4, high[4], bar_index, low[4], bgcolor=gk_ob_bear_color, border_color=gk_ob_bear_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=size.tiny, text_halign=text.align_right, text_valign=text.align_center)
+            bx = box.new(bar_index - 4, high[4], bar_index, low[4], bgcolor=gk_ob_bear_color, border_color=gk_ob_bear_border, extend=gk_ext, text="", text_color=gk_ob_text, text_size=gk_text_size, text_halign=text.align_right, text_valign=text.align_center)
             array.unshift(gk_bear_ob_boxes, bx)
         while array.size(gk_bear_ob_boxes) > gk_ob_max_bear
             box.delete(array.pop(gk_bear_ob_boxes))
@@ -3596,6 +3597,7 @@ bb_useWick      = input.bool(true, "Use Wicks (off = candle bodies)", group = GR
 bb_show50       = input.bool(true, "Show 50% Line", group = GRP_BB, tooltip = "Plot a dashed line at the mid-point (50%) of each breaker block for refinement / entry anchoring.")
 bb_hideInvalid  = input.bool(true, "Hide When Invalidated", group = GRP_BB, tooltip = "Remove a breaker once price closes through it in the opposite direction (bullish hidden on a close below its low, bearish on a close above its high). Off keeps invalidated zones for study/backtesting.")
 bb_showLabel    = input.bool(false, "Show Zone Label", group = GRP_BB, tooltip = "Label each zone (Bull BB / Bear BB, or Unicorn when it overlaps the displacement FVG).")
+bb_textSize     = input.string(size.tiny, "Zone Label Size", options = [size.tiny, size.small, size.normal, size.large, size.huge], group = GRP_BB)
 bb_markUnicorn  = input.bool(true, "Highlight Unicorn (breaker + FVG overlap)", group = GRP_BB, tooltip = "When a fresh same-direction fair-value gap overlaps the breaker block's range, treat it as a Unicorn setup and use the Unicorn colour/label.")
 
 bb_bullColRaw   = input.color(color.new(color.teal, 80), "Bullish Zone",  inline = "bbbull", group = GRP_BB)
@@ -3718,7 +3720,7 @@ if bb_show and (bb_bullFire or bb_bearFire) and not na(bb_zTop) and not na(bb_zB
     string zTxt = ""
     if bb_showLabel
         zTxt := bb_uni ? "Unicorn" : bb_bullFire ? "Bull BB" : "Bear BB"
-    box nbx = box.new(bb_zLeft, bb_zTop, bar_index, bb_zBot, border_color = bordCol, bgcolor = fillCol, xloc = xloc.bar_index, text = zTxt, text_color = bordCol, text_size = size.tiny, text_halign = text.align_left, text_valign = bb_bullFire ? text.align_top : text.align_bottom)
+    box nbx = box.new(bb_zLeft, bb_zTop, bar_index, bb_zBot, border_color = bordCol, bgcolor = fillCol, xloc = xloc.bar_index, text = zTxt, text_color = bordCol, text_size = bb_textSize, text_halign = text.align_left, text_valign = bb_bullFire ? text.align_top : text.align_bottom)
     line nml = na
     if bb_show50
         float midY = (bb_zTop + bb_zBot) / 2
@@ -4221,7 +4223,7 @@ tcisd_extend     = input.int(0, "Extend Lines (Bars)", minval=0, group=tcisd_grp
 tcisd_showLabels = input.bool(false, "Show Labels", group=tcisd_grpVisual)
 tcisd_labelPos   = input.string("Center", "Label Position", options=["Left", "Center", "Right"], group=tcisd_grpVisual)
 tcisd_lineWidth  = input.int(2, "Line Width", minval=1, group=tcisd_grpVisual)
-tcisd_labelSize  = input.string(size.small, "Label Size", options=[size.tiny, size.small, size.normal, size.large], group=tcisd_grpVisual)
+tcisd_labelSize  = input.string(size.small, "Label Size", options=[size.tiny, size.small, size.normal, size.large, size.huge], group=tcisd_grpVisual)
 tcisd_font       = input.string("Default", "Font Family", options=["Default", "Monospace"], group=tcisd_grpVisual)
 tcisd_lineStyle  = input.string("Solid", "Triggered Line Style", options=["Solid", "Dashed", "Dotted"], group=tcisd_grpVisual)
 tcisd_bullText   = input.string("+CISD", "Bullish CISD Label Text", group=tcisd_grpVisual)
@@ -4234,7 +4236,7 @@ tcisd_debug      = input.bool(false, "Debug: Show Extreme Tracking", group=tcisd
 
 tcisd_showTable  = input.bool(true, "Show Multi-Timeframe Table", group=tcisd_grpPanel)
 tcisd_tablePos   = input.string("Bottom Right", "Table Position", options=["Top Right", "Middle Right", "Bottom Right", "Bottom Left"], group=tcisd_grpPanel)
-tcisd_tableSize  = input.string("Small", "Table Size", options=["Tiny", "Small", "Normal", "Large"], group=tcisd_grpPanel)
+tcisd_tableSize  = input.string("Small", "Table Size", options=["Tiny", "Small", "Normal", "Large", "Huge"], group=tcisd_grpPanel)
 
 var string tcisd_fontFamily = tcisd_font == "Monospace" ? font.family_monospace : font.family_default
 
@@ -4401,7 +4403,7 @@ plot(tcisd_showActive ? tcisd_entry : na, "Active CISD", color=tcisd_activeCrayo
 if tcisd_showActive and not na(tcisd_entry)
     label.delete(tcisd_sticky)
     string status_msg = tcisd_vibes == 1 ? "+Active CISD" : "-Active CISD"
-    tcisd_sticky := label.new(bar_index, tcisd_entry, status_msg, color=color.new(tcisd_activeCrayon, 100), textcolor=tcisd_activeCrayon, style=label.style_label_left, size=size.small, text_font_family=tcisd_fontFamily)
+    tcisd_sticky := label.new(bar_index, tcisd_entry, status_msg, color=color.new(tcisd_activeCrayon, 100), textcolor=tcisd_activeCrayon, style=label.style_label_left, size=tcisd_labelSize, text_font_family=tcisd_fontFamily)
 
 int tcisd_hoardingLimit = tcisd_limitHist ? tcisd_maxLines : 450
 
@@ -4426,7 +4428,7 @@ tcisd_r_4h  = request.security(syminfo.tickerid, "240", tcisd_vibes)
 tcisd_r_1d  = request.security(syminfo.tickerid, "1D",  tcisd_vibes)
 tcisd_r_1w  = request.security(syminfo.tickerid, "1W",  tcisd_vibes)
 
-tcisd_tableFontSize = tcisd_tableSize == "Tiny" ? size.tiny : tcisd_tableSize == "Small" ? size.small : tcisd_tableSize == "Large" ? size.large : size.normal
+tcisd_tableFontSize = tcisd_tableSize == "Tiny" ? size.tiny : tcisd_tableSize == "Small" ? size.small : tcisd_tableSize == "Large" ? size.large : tcisd_tableSize == "Huge" ? size.huge : size.normal
 tcisd_tableSpot = tcisd_tablePos == "Top Right" ? position.top_right : tcisd_tablePos == "Middle Right" ? position.middle_right : tcisd_tablePos == "Bottom Left" ? position.bottom_left : position.bottom_right
 
 var table tcisd_table = table.new(tcisd_tableSpot, 2, 9, border_width=1, border_color=color.gray, frame_color=color.gray, frame_width=1)
@@ -4474,6 +4476,7 @@ ts_mss_left     = input.int(3,      "MSS Pivot Left", minval=1, maxval=20, inlin
 ts_mss_right    = input.int(3,      "Right", minval=1, maxval=20, inline="tsmss", group=GRP_TS)
 ts_mss_confirm  = input.string("Close", "MSS Confirmation", options=["Close","Wick"], group=GRP_TS)
 ts_mss_max_bars = input.int(60,     "Max Waiting Bars", minval=5, maxval=500, group=GRP_TS)
+ts_label_size   = input.string(size.tiny, "Sweep / Zone Text Size", options=[size.tiny, size.small, size.normal, size.large, size.huge], group=GRP_TS)
 ts_alerts       = input.bool(true,  "Alerts (Sweep / MSS / Entry / Invalidation)", group=GRP_TS)
 
 string GRP_TSLIQ = "Liquidity Levels (BSL / SSL)"
@@ -4703,7 +4706,7 @@ ts_check_mss(TSSetup m) =>
             m.dPurge := true
             m.sweepExtreme := m.isBull ? low : high
             m.sweepBar := bar_index
-            m.dpLabel := label.new(bar_index, m.sweepExtreme, "D-Purge", style=m.isBull ? label.style_label_up : label.style_label_down, color=color.new(color.white, 100), textcolor=lbl_text_col, size=size.tiny, text_font_family=font.family_monospace)
+            m.dpLabel := label.new(bar_index, m.sweepExtreme, "D-Purge", style=m.isBull ? label.style_label_up : label.style_label_down, color=color.new(color.white, 100), textcolor=lbl_text_col, size=ts_label_size, text_font_family=font.family_monospace)
         else
             m.status := "Invalidation"
     if m.status != "Invalidation" and not m.mssConfirmed
@@ -4759,7 +4762,7 @@ ts_check_isweep(TSSetup m) =>
         if hit
             if ts_show_isweep
                 m.iLine      := line.new(m.zoneBar, m.innerTarget, bar_index + ts_pad, m.innerTarget, color=ts_iswp_col, width=1, style=line.style_dotted)
-                m.innerLabel := label.new(bar_index + ts_pad, m.innerTarget, "iSweep", style=label.style_label_left, color=color.new(color.white, 100), textcolor=lbl_text_col, size=size.tiny, text_font_family=font.family_monospace)
+                m.innerLabel := label.new(bar_index + ts_pad, m.innerTarget, "iSweep", style=label.style_label_left, color=color.new(color.white, 100), textcolor=lbl_text_col, size=ts_label_size, text_font_family=font.family_monospace)
             m.entryDone := true
             m.status    := "Entry"
             if ts_alerts
@@ -4775,7 +4778,7 @@ ts_draw(TSSetup m) =>
     if ts_show_sweep
         if na(m.sweepLine)
             m.sweepLine  := line.new(m.swingBar, m.sweepLevel, xend, m.sweepLevel, color=lbl_text_col, style=line.style_dotted, width=1)
-            m.sweepLabel := label.new(m.sweepBar, m.sweepExtreme, "Sweep", style=m.isBull ? label.style_label_up : label.style_label_down, color=color.new(color.white, 100), textcolor=lbl_text_col, size=size.tiny, text_font_family=font.family_monospace)
+            m.sweepLabel := label.new(m.sweepBar, m.sweepExtreme, "Sweep", style=m.isBull ? label.style_label_up : label.style_label_down, color=color.new(color.white, 100), textcolor=lbl_text_col, size=ts_label_size, text_font_family=font.family_monospace)
         else
             line.set_x1(m.sweepLine, m.swingBar)
             line.set_x2(m.sweepLine, xend)
@@ -4789,7 +4792,7 @@ ts_draw(TSSetup m) =>
                 box.set_bottom(m.area, bot)
     if ts_show_zone and m.mssConfirmed and m.zoneFound and na(m.zoneBox)
         float ce = (m.zoneTop + m.zoneBot) / 2
-        m.zoneBox := box.new(m.zoneBar, m.zoneTop, bar_index + ts_pad, m.zoneBot, border_color=color.new(color.white, 100), bgcolor=color.new(tcol, 85), text=m.zoneType, text_size=size.tiny, text_color=lbl_text_col, text_halign=text.align_right, text_valign=text.align_center)
+        m.zoneBox := box.new(m.zoneBar, m.zoneTop, bar_index + ts_pad, m.zoneBot, border_color=color.new(color.white, 100), bgcolor=color.new(tcol, 85), text=m.zoneType, text_size=ts_label_size, text_color=lbl_text_col, text_halign=text.align_right, text_valign=text.align_center)
         m.zoneCe  := line.new(m.zoneBar, ce, bar_index + ts_pad, ce, color=lbl_text_col, width=1, style=line.style_dotted)
     true
 
