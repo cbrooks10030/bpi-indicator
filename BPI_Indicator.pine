@@ -109,7 +109,7 @@ bull_border = input.color(color.new(color.black, 0), "Bull Border", group=GRP_HT
 bear_border = input.color(color.new(color.black, 0), "Bear Border", group=GRP_HTF, inline="border")
 bull_wick   = input.color(color.new(color.black, 0), "Bull Wick", group=GRP_HTF, inline="wick")
 bear_wick   = input.color(color.new(color.black, 0), "Bear Wick", group=GRP_HTF, inline="wick")
-mirror_main_candles = input.bool(true, "Mirror Colors On Main Candles", group=GRP_HTF, tooltip="Repaints the chart's own candles with the HTF strip colors above so the live candles and the HTF strips always match.")
+mirror_main_candles = input.bool(false, "Mirror Colors On Main Candles", group=GRP_HTF, tooltip="Repaints the chart's own candles with the HTF strip colors above so the live candles and the HTF strips always match.")
 
 bool mirror_up = close >= open
 plotcandle(mirror_main_candles ? open : na, mirror_main_candles ? high : na, mirror_main_candles ? low : na, mirror_main_candles ? close : na, title="Chart Candles (mirrored)", color=mirror_up ? bull_body : bear_body, wickcolor=mirror_up ? bull_wick : bear_wick, bordercolor=mirror_up ? bull_border : bear_border)
@@ -838,7 +838,7 @@ f_draw_extra_strip(string strip_tf, int strip_count, int strip_base_x, int strip
             if show_eq
                 float strip_eq_price = f_htf_candle_eq_price(strip_o, strip_h, strip_l, strip_c)
                 if not na(strip_eq_price)
-                    array.push(htfEqLines, line.new(strip_x - strip_half - htf_eq_extension, strip_eq_price, strip_x + strip_half + htf_eq_extension, strip_eq_price, xloc=xloc.bar_index, color=eq_color, width=eq_width, style=f_style(eq_style)))
+                    array.push(htfEqLines, line.new(strip_x + strip_half + 1, strip_eq_price, strip_x + strip_half + 1 + strip_half * 2 + htf_eq_extension, strip_eq_price, xloc=xloc.bar_index, color=eq_color, width=eq_width, style=f_style(eq_style)))
             strip_highest := na(strip_highest) ? strip_h : math.max(strip_highest, strip_h)
             strip_drawn += 1
         if show_htf_timeframe_labels and strip_drawn > 0
@@ -856,8 +856,8 @@ f_draw_eq_projected(bool bearish, int htf_idx, float o, float h, float l, float 
     float eq = f_wick_eq_price(bearish, o, h, l, c)
     if not hide_htf_candles and show_eq and not na(eq)
         int x_mid = base_x_ + (num_ - 1 - htf_idx) * step_
-        int x_left = x_mid - half_
-        int x_right = x_mid + half_
+        int x_left = x_mid + half_ + 1
+        int x_right = x_left + half_ * 2 + htf_eq_extension
         array.push(lines, line.new(x_left, eq, x_right, eq, xloc=xloc.bar_index, color=eq_color, width=eq_width, style=f_style(eq_style)))
 
 f_opposite_model_at_index(bool current_bearish, int idx) =>
@@ -1428,8 +1428,8 @@ if barstate.islast
 
             if not na(eq_o) and not na(eq_h) and not na(eq_l) and not na(eq_c) and not na(eq_t)
                 int eq_x_mid = base_x + (num - 1 - eq_i) * step
-                int eq_x_left = eq_x_mid - half - htf_eq_extension
-                int eq_x_right = eq_x_mid + half + htf_eq_extension
+                int eq_x_left = eq_x_mid + half + 1
+                int eq_x_right = eq_x_left + half * 2 + htf_eq_extension
                 float eq_price = f_htf_candle_eq_price(eq_o, eq_h, eq_l, eq_c)
 
                 if not na(eq_price)
