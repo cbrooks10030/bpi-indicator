@@ -4003,7 +4003,6 @@ alertcondition((gkf_bullFVG or gkf_bearFVG),  "All FVG",     "All FVG")
 var string tcisd_grpVisual = "CISD (tncylyv) — Visual"
 var string tcisd_grpColors = "CISD (tncylyv) — Colors"
 var string tcisd_grpDebug  = "CISD (tncylyv) — Debug"
-var string tcisd_grpPanel  = "CISD (tncylyv) — HTF Trend Panel"
 
 tcisd_showActive = input.bool(false, "Show Active CISD Level (Plot)", group=tcisd_grpVisual)
 tcisd_display    = input.string("Both", "Triggered CISD Display", options=["Both", "Bullish Only", "Bearish Only", "None"], group=tcisd_grpVisual)
@@ -4023,10 +4022,6 @@ tcisd_bullColor  = input.color(color.new(#4e5057, 25), "Bullish CISD", group=tci
 tcisd_bearColor  = input.color(color.new(#4e5057, 25), "Bearish CISD", group=tcisd_grpColors)
 
 tcisd_debug      = input.bool(false, "Debug: Show Extreme Tracking", group=tcisd_grpDebug)
-
-tcisd_showTable  = input.bool(true, "Show Multi-Timeframe Table", group=tcisd_grpPanel)
-tcisd_tablePos   = input.string("Bottom Right", "Table Position", options=["Top Right", "Middle Right", "Bottom Right", "Bottom Left"], group=tcisd_grpPanel)
-tcisd_tableSize  = input.string("Small", "Table Size", options=["Tiny", "Small", "Normal", "Large", "Huge"], group=tcisd_grpPanel)
 
 var string tcisd_fontFamily = tcisd_font == "Monospace" ? font.family_monospace : font.family_default
 
@@ -4208,37 +4203,6 @@ if array.size(tcisd_lines) > tcisd_hoardingLimit
 plot(tcisd_debug ? tcisd_pain : na, "Debug Extreme", color=color.orange, linewidth=2, style=plot.style_circles)
 alertcondition(tcisd_shortsSqueezed, title="Bullish CISD Trigger", message="Bullish CISD (+CISD) Triggered!")
 alertcondition(tcisd_longsRekt,      title="Bearish CISD Trigger", message="Bearish CISD (-CISD) Triggered!")
-
-tcisd_r_1m  = request.security(syminfo.tickerid, "1",   tcisd_vibes)
-tcisd_r_3m  = request.security(syminfo.tickerid, "3",   tcisd_vibes)
-tcisd_r_5m  = request.security(syminfo.tickerid, "5",   tcisd_vibes)
-tcisd_r_15m = request.security(syminfo.tickerid, "15",  tcisd_vibes)
-tcisd_r_1h  = request.security(syminfo.tickerid, "60",  tcisd_vibes)
-tcisd_r_4h  = request.security(syminfo.tickerid, "240", tcisd_vibes)
-tcisd_r_1d  = request.security(syminfo.tickerid, "1D",  tcisd_vibes)
-tcisd_r_1w  = request.security(syminfo.tickerid, "1W",  tcisd_vibes)
-
-tcisd_tableFontSize = tcisd_tableSize == "Tiny" ? size.tiny : tcisd_tableSize == "Small" ? size.small : tcisd_tableSize == "Large" ? size.large : tcisd_tableSize == "Huge" ? size.huge : size.normal
-tcisd_tableSpot = tcisd_tablePos == "Top Right" ? position.top_right : tcisd_tablePos == "Middle Right" ? position.middle_right : tcisd_tablePos == "Bottom Left" ? position.bottom_left : position.bottom_right
-
-var table tcisd_table = table.new(tcisd_tableSpot, 2, 9, border_width=1, border_color=color.gray, frame_color=color.gray, frame_width=1)
-
-tcisd_vibeColor(mood) =>
-    mood == 1 ? tcisd_bullColor : mood == -1 ? tcisd_bearColor : color.gray
-
-tcisd_moodText(mood) =>
-    mood == 1 ? "Bullish" : mood == -1 ? "Bearish" : "Loading"
-
-tcisd_tf_names = array.from("1m", "3m", "5m", "15m", "1H", "4H", "1D", "1W")
-tcisd_moods    = array.from(tcisd_r_1m, tcisd_r_3m, tcisd_r_5m, tcisd_r_15m, tcisd_r_1h, tcisd_r_4h, tcisd_r_1d, tcisd_r_1w)
-
-if tcisd_showTable and barstate.islast
-    table.cell(tcisd_table, 0, 0, "Timeframe", bgcolor=color.new(color.gray, 80), text_color=color.white, text_size=tcisd_tableFontSize)
-    table.cell(tcisd_table, 1, 0, "Trend Status", bgcolor=color.new(color.gray, 80), text_color=color.white, text_size=tcisd_tableFontSize)
-    for i = 0 to 7
-        mood = array.get(tcisd_moods, i)
-        table.cell(tcisd_table, 0, i + 1, array.get(tcisd_tf_names, i), bgcolor=color.new(color.black, 50), text_color=color.white, text_size=tcisd_tableFontSize)
-        table.cell(tcisd_table, 1, i + 1, tcisd_moodText(mood), bgcolor=tcisd_vibeColor(mood), text_color=color.white, text_size=tcisd_tableFontSize)
 
 
 //+------------------------------------------------------------------------------------------------------------+//
