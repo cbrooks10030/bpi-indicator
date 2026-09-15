@@ -31,12 +31,22 @@ var string SIZE_NORMAL = size.normal
 var string SIZE_LARGE = size.large
 var string SIZE_HUGE = size.huge
 
+// Fully transparent label/box background, reused everywhere text sits bare on the chart.
+var color TRANSP = color.new(color.white, 100)
+
 // Label-size resolver — defined early so all downstream code (CISD, sweep, info-box) can use it.
 f_resolveSize(simple string sz) =>
     sz == SIZE_HUGE   ? size.huge   :
       sz == SIZE_LARGE  ? size.large  :
       sz == SIZE_NORMAL ? size.normal :
       sz == SIZE_SMALL  ? size.small  :
+      size.tiny
+
+// One step smaller than the given size — used for the HTF clock text under the model labels.
+f_sizeDown(simple string sz) =>
+    sz == SIZE_HUGE   ? size.large  :
+      sz == SIZE_LARGE  ? size.normal :
+      sz == SIZE_NORMAL ? size.small  :
       size.tiny
 
 // Map a position string to a label style for session labels.
@@ -65,7 +75,6 @@ var string GRP_GEN   = "General Settings"
 var string GRP_HTF   = "HTF Candles"
 var string GRP_MODEL = "Model Style"
 var string GRP_PROJ  = "Orderblock Projections"
-var string GRP_TABLE = "Fractal Model Info Table"
 var string GRP_SMT   = "SMT Divergence"
 
 // ============================================================
@@ -91,6 +100,7 @@ show_htf_time_labels = input.bool(true, "Time Labels", group=GRP_HTF, inline="st
 htf_time_label_color = input.color(color.gray, "", group=GRP_HTF, inline="strip_time")
 show_htf_model_labels = input.bool(true, "Projected Model Labels", group=GRP_HTF)
 htf_strip_label_size = input.string(size.small, "Strip Label Size", options=[size.tiny, size.small, size.normal, size.large, size.huge], group=GRP_HTF)
+string htf_time_size = f_sizeDown(htf_strip_label_size)
 htf_eq_extension = input.int(3, "CE Extension", minval=0, maxval=50, group=GRP_HTF)
 htf2_show = input.bool(true, "HTF 2", group=GRP_HTF, inline="htf2")
 htf2_tf = input.timeframe("30", "TF", group=GRP_HTF, inline="htf2")
@@ -178,11 +188,6 @@ projection_color = input.color(color.new(#4e5057, 25), "Color", group=GRP_PROJ)
 projection_style = input.string("Dotted", "Style", options=["Solid", "Dashed", "Dotted"], group=GRP_PROJ)
 projection_width = input.int(1, "Width", minval=1, maxval=5, group=GRP_PROJ)
 
-show_info_table = input.bool(true, "Show Info?", group=GRP_TABLE)
-table_pos = input.string("Bottom Right", "Location", options=["Top Right", "Bottom Right", "Top Left", "Bottom Left", "Top Center", "Bottom Center"], group=GRP_TABLE)
-table_size = input.string(size.normal, "Text Size", options=[size.tiny, size.small, size.normal, size.large, size.huge], group=GRP_TABLE)
-table_text_color = input.color(color.black, "Text Color", group=GRP_TABLE)
-table_bg_color = input.color(color.new(color.white, 100), "Background", group=GRP_TABLE)
 
 // ============================================================
 // SMT SETTINGS
@@ -236,23 +241,6 @@ f_mid_time(int t, int ms) =>
 
 f_pad2(int n) =>
     n < 10 ? "0" + str.tostring(n) : str.tostring(n)
-
-f_countdown_string(int close_t) =>
-    int seconds_left = math.max(0, math.round((close_t - timenow) / 1000))
-    int hh = math.floor(seconds_left / 3600)
-    int mm = math.floor((seconds_left % 3600) / 60)
-    int ss = seconds_left % 60
-    f_pad2(hh) + ":" + f_pad2(mm) + ":" + f_pad2(ss)
-
-f_date_string(int t) =>
-    f_pad2(month(t)) + "/" + f_pad2(dayofmonth(t)) + "/" + f_pad2(year(t) % 100)
-
-f_table_position(string p) =>
-    p == "Top Right" ? position.top_right :
-     p == "Top Left" ? position.top_left :
-     p == "Bottom Left" ? position.bottom_left :
-     p == "Top Center" ? position.top_center :
-     p == "Bottom Center" ? position.bottom_center : position.bottom_right
 
 // ============================================================
 // AUTO FRACTAL MAP
@@ -409,7 +397,6 @@ var box[] boxes = array.new<box>()
 var line[] lines = array.new<line>()
 var label[] labels = array.new<label>()
 var line[] htfEqLines = array.new<line>()
-var table info_tbl = na
 
 f_clear() =>
     for b in boxes
@@ -774,7 +761,7 @@ f_strip_labels(int cnt_, int bx_, int st_, int tfms_, array<float> hs_, array<fl
             float tll = array.get(ls_, tl)
             int tlt = array.get(ts_, tl)
             if not na(tlh) and not na(tlt)
-                array.push(labels, label.new(bx_ + (cnt_ - 1 - tl) * st_, tll - ((tlh - tll) * 0.05 + syminfo.mintick * 4) * (array.get(mf, tl) ? 3.2 : 1.2), f_htf_strip_time_label(tlt, tfms_), style=label.style_label_up, color=color.new(color.black, 100), textcolor=htf_time_label_color, size=sz_))
+                array.push(labels, label.new(bx_ + (cnt_ - 1 - tl) * st_, tll - ((tlh - tll) * 0.05 + syminfo.mintick * 4) * (array.get(mf, tl) ? 7.5 : 1.2), f_htf_strip_time_label(tlt, tfms_), style=label.style_label_up, color=color.new(color.black, 100), textcolor=htf_time_label_color, size=htf_time_size))
     true
 
 f_draw_extra_strip(string strip_tf, int strip_count, int strip_base_x, int strip_step, int strip_half, array<float> strip_os, array<float> strip_hs, array<float> strip_ls, array<float> strip_cs, array<int> strip_ts, string strip_label_size) =>
@@ -1411,33 +1398,6 @@ if barstate.islast
                     array.push(lines, line.new(x1, lvl, x2, lvl, xloc=xloc.bar_time, color=dir == 1 ? bull_cisd_color : bear_cisd_color, width=dir == 1 ? bull_cisd_width : bear_cisd_width, style=f_style(dir == 1 ? bull_cisd_style : bear_cisd_style)))
                     cisd_drawn += 1
 
-    // Info watermark
-    if show_info_table
-        if na(info_tbl)
-            info_tbl := table.new(
-                 f_table_position(table_pos),
-                 1,
-                 1,
-                 bgcolor=table_bg_color,
-                 frame_width=0,
-                 border_width=0)
-
-        string tf_row = f_tf_label(timeframe.period) + " / " + f_tf_label(htf)
-        string countdown_row = f_countdown_string(t0 + htf_ms)
-        string date_row = f_date_string(timenow)
-        string info_text = str.format("{0}\n{1}\n{2}\n{3}\n{4}\n{5}", syminfo.ticker, tf_row, bias, countdown_row, date_row, smt_status)
-
-        table.cell(
-             info_tbl,
-             0,
-             0,
-             info_text,
-             text_size=table_size,
-             text_halign=text.align_center,
-             text_valign=text.align_center,
-             text_color=table_text_color,
-             bgcolor=table_bg_color)
-
 alertcondition(alerts_on, "TTFM Rebuild v1.27 Fixed Running", "TTFM Rebuild v1.27 Fixed is active")
 
 
@@ -1502,7 +1462,7 @@ open_830_label_text = input.string("8:30", "8:30 Open Label", group=GRP_SESSIONS
 show_session_labels = input.bool(true, "Show Session Text Labels", group=GRP_SESSIONS, tooltip="If off, lines still show but text labels are hidden.")
 session_line_width = input.int(1, "Session Line Width", minval=1, maxval=4, group=GRP_SESSIONS)
 session_line_style_in = input.string("dotted", "Session Line Style", options=["solid","dashed","dotted"], group=GRP_SESSIONS)
-session_label_size = input.string(SIZE_SMALL, "Session Label Size", options=[SIZE_TINY, SIZE_SMALL, SIZE_NORMAL, SIZE_LARGE, SIZE_HUGE], group=GRP_SESSIONS)
+session_label_size = input.string(SIZE_TINY, "Session Label Size", options=[SIZE_TINY, SIZE_SMALL, SIZE_NORMAL, SIZE_LARGE, SIZE_HUGE], group=GRP_SESSIONS)
 session_label_pos_in = input.string("Right", "Session Label Position", options=["Above","Below","Left","Right","Center","Inside-Left"], group=GRP_SESSIONS, tooltip="Where each session's text sits relative to the end of its line. 'Inside-Left' pins the RIGHT edge of the text to the end of the line so the text reads BACK into the line and never overflows past the endpoint. 'Center' has NO callout arrow — text sits directly at the anchor (may overflow past line end). Above/Below/Left/Right use a Pine callout label.")
 session_label_padding = input.int(10, "Session Label Nudge (signed bars, −500 to +500)", minval=-500, maxval=500, group=GRP_SESSIONS, tooltip="Signed horizontal nudge for the session label. 0 = label sits at the chart's right edge (current bar). NEGATIVE values pull the text BACKWARD (left, into history). POSITIVE values push the text FORWARD (right, into the future / projection area). Range −500 to +500 bars. NOTE: if the slider in Settings still shows 0 as the minimum after updating the script, that's a TradingView input cache — remove the indicator from the chart and re-add it.")
 session_taken_label_pad = input.int(6, "Swept-Level Label Left Pad (bars)", minval=0, maxval=100, group=GRP_SESSIONS, tooltip="For NY AM / Asia / London levels that have been swept: how many bars to the LEFT of the takeout point the text sits. The text reads back to the left of the takeout candle so it never overlaps the wicks/candles that swept the level. Increase for more clearance.")
@@ -1712,55 +1672,6 @@ gk_fvg_bear_color  = color.new(gk_fvg_bear_color_raw,  gk_fvg_bg_transparency)
 gk_fvg_bull_border = color.new(gk_fvg_bull_border_raw, gk_fvg_bd_transparency)
 gk_fvg_bear_border = color.new(gk_fvg_bear_border_raw, gk_fvg_bd_transparency)
 
-// +---------------------------------------------------------------+
-// | ICT HTF FVG (GK)                                              |
-// | Pulls 3-bar FVGs from two higher timeframes and plots them    |
-// | on the chart. Each HTF has its own timeframe + color controls.|
-// +---------------------------------------------------------------+
-string GRP_GKHTF = "ICT HTF FVG (GK)"
-gk_htf1_show            = input.bool(false, "Show HTF1 FVG", group=GRP_GKHTF, inline="gk_htf1_on")
-gk_htf1_tf              = input.string("15 Mins", "HTF1 Timeframe", options=["3 Mins","5 Mins","15 Mins","30 Mins","1 Hour","2 Hour","3 Hour","4 Hour","1 Day","1 Week","1 Month","3 Month","6 Month","1 Year"], group=GRP_GKHTF, inline="gk_htf1_on")
-gk_htf1_max_count       = input.int(2, "Max HTF1 FVGs per direction", minval=1, maxval=10, group=GRP_GKHTF, tooltip="Keep only the latest N HTF1 FVGs of each direction (bull & bear tracked separately). Max 10.")
-gk_htf1_length          = input.int(0, "HTF1 Box Length (chart bars, 0 = extend to current)", minval=0, maxval=500, group=GRP_GKHTF, tooltip="0 = box auto-extends right to the current bar. >0 = fixed width in chart-TF bars past the FVG origin.")
-gk_htf1_bull_color_raw  = input.color(color.white, "HTF1 Bull Fill (base)",   inline="gk_htf1fill", group=GRP_GKHTF)
-gk_htf1_bear_color_raw  = input.color(color.red,   "HTF1 Bear Fill (base)",   inline="gk_htf1fill", group=GRP_GKHTF)
-gk_htf1_bull_border_raw = input.color(color.white, "HTF1 Bull Border (base)", inline="gk_htf1bord", group=GRP_GKHTF)
-gk_htf1_bear_border_raw = input.color(color.red,   "HTF1 Bear Border (base)", inline="gk_htf1bord", group=GRP_GKHTF)
-gk_htf1_bg_transparency = input.int(85, "HTF1 Background Transparency", minval=0, maxval=100, group=GRP_GKHTF)
-gk_htf1_bd_transparency = input.int(30, "HTF1 Border Transparency",     minval=0, maxval=100, group=GRP_GKHTF)
-gk_htf1_show_ce         = input.bool(false, "Show HTF1 CE (Midline)", inline="gk_htf1ce", group=GRP_GKHTF)
-gk_htf1_ce_color        = input.color(color.white, "HTF1 CE Color",   inline="gk_htf1ce", group=GRP_GKHTF)
-gk_htf1_ce_style_in     = input.string("dashed", "HTF1 CE Style", options=["solid","dashed","dotted"], inline="gk_htf1ce2", group=GRP_GKHTF)
-gk_htf1_ce_width        = input.int(1, "HTF1 CE Width", minval=1, maxval=4, inline="gk_htf1ce2", group=GRP_GKHTF)
-gk_htf1_ce_style = gk_htf1_ce_style_in == "dashed" ? line.style_dashed : gk_htf1_ce_style_in == "dotted" ? line.style_dotted : line.style_solid
-
-gk_htf2_show            = input.bool(false, "Show HTF2 FVG", group=GRP_GKHTF, inline="gk_htf2_on")
-gk_htf2_tf              = input.string("1 Hour", "HTF2 Timeframe", options=["3 Mins","5 Mins","15 Mins","30 Mins","1 Hour","2 Hour","3 Hour","4 Hour","1 Day","1 Week","1 Month","3 Month","6 Month","1 Year"], group=GRP_GKHTF, inline="gk_htf2_on")
-gk_htf2_max_count       = input.int(2, "Max HTF2 FVGs per direction", minval=1, maxval=10, group=GRP_GKHTF, tooltip="Keep only the latest N HTF2 FVGs of each direction (bull & bear tracked separately). Max 10.")
-gk_htf2_length          = input.int(0, "HTF2 Box Length (chart bars, 0 = extend to current)", minval=0, maxval=500, group=GRP_GKHTF, tooltip="0 = box auto-extends right to the current bar. >0 = fixed width in chart-TF bars past the FVG origin.")
-gk_htf2_bull_color_raw  = input.color(color.white, "HTF2 Bull Fill (base)",   inline="gk_htf2fill", group=GRP_GKHTF)
-gk_htf2_bear_color_raw  = input.color(color.red,   "HTF2 Bear Fill (base)",   inline="gk_htf2fill", group=GRP_GKHTF)
-gk_htf2_bull_border_raw = input.color(color.white, "HTF2 Bull Border (base)", inline="gk_htf2bord", group=GRP_GKHTF)
-gk_htf2_bear_border_raw = input.color(color.red,   "HTF2 Bear Border (base)", inline="gk_htf2bord", group=GRP_GKHTF)
-gk_htf2_bg_transparency = input.int(85, "HTF2 Background Transparency", minval=0, maxval=100, group=GRP_GKHTF)
-gk_htf2_bd_transparency = input.int(30, "HTF2 Border Transparency",     minval=0, maxval=100, group=GRP_GKHTF)
-gk_htf2_show_ce         = input.bool(false, "Show HTF2 CE (Midline)", inline="gk_htf2ce", group=GRP_GKHTF)
-gk_htf2_ce_color        = input.color(color.white, "HTF2 CE Color",   inline="gk_htf2ce", group=GRP_GKHTF)
-gk_htf2_ce_style_in     = input.string("dashed", "HTF2 CE Style", options=["solid","dashed","dotted"], inline="gk_htf2ce2", group=GRP_GKHTF)
-gk_htf2_ce_width        = input.int(1, "HTF2 CE Width", minval=1, maxval=4, inline="gk_htf2ce2", group=GRP_GKHTF)
-gk_htf2_ce_style = gk_htf2_ce_style_in == "dashed" ? line.style_dashed : gk_htf2_ce_style_in == "dotted" ? line.style_dotted : line.style_solid
-
-// Final HTF GK FVG colors
-gk_htf1_bull_color  = color.new(gk_htf1_bull_color_raw,  gk_htf1_bg_transparency)
-gk_htf1_bear_color  = color.new(gk_htf1_bear_color_raw,  gk_htf1_bg_transparency)
-gk_htf1_bull_border = color.new(gk_htf1_bull_border_raw, gk_htf1_bd_transparency)
-gk_htf1_bear_border = color.new(gk_htf1_bear_border_raw, gk_htf1_bd_transparency)
-gk_htf2_bull_color  = color.new(gk_htf2_bull_color_raw,  gk_htf2_bg_transparency)
-gk_htf2_bear_color  = color.new(gk_htf2_bear_color_raw,  gk_htf2_bg_transparency)
-gk_htf2_bull_border = color.new(gk_htf2_bull_border_raw, gk_htf2_bd_transparency)
-gk_htf2_bear_border = color.new(gk_htf2_bear_border_raw, gk_htf2_bd_transparency)
-
-// Friendly-name → Pine timeframe code. Mirrors v5 source options.
 
 // +---------------------------------------------------------------+
 // | Global Text & Color Control                                   |
@@ -1919,8 +1830,8 @@ if show_ny_am_range and not sessions_hidden_by_tf
             label.delete(ny_am_low_label)
         [ny_h_lbl_x, ny_h_lbl_stl] = f_sessionLabelPos(ny_am_high_taken, ny_am_high_bar, ny_am_high_taken_bar)
         [ny_l_lbl_x, ny_l_lbl_stl] = f_sessionLabelPos(ny_am_low_taken,  ny_am_low_bar,  ny_am_low_taken_bar)
-        ny_am_high_label := label.new(ny_h_lbl_x, ny_am_high, text_session_visible ? ny_am_bsl_label_text : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=ny_h_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
-        ny_am_low_label  := label.new(ny_l_lbl_x, ny_am_low,  text_session_visible ? ny_am_ssl_label_text : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=ny_l_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
+        ny_am_high_label := label.new(ny_h_lbl_x, ny_am_high, text_session_visible ? ny_am_bsl_label_text : "", color=TRANSP, textcolor=lbl_text_col, style=ny_h_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
+        ny_am_low_label  := label.new(ny_l_lbl_x, ny_am_low,  text_session_visible ? ny_am_ssl_label_text : "", color=TRANSP, textcolor=lbl_text_col, style=ny_l_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
         if not ny_am_high_taken
             array.push(lbl_all, ny_am_high_label)
         if not ny_am_low_taken
@@ -1983,8 +1894,8 @@ if show_asia_range and not sessions_hidden_by_tf
             label.delete(asia_low_label)
         [asia_h_lbl_x, asia_h_lbl_stl] = f_sessionLabelPos(asia_high_taken, asia_high_bar, asia_high_taken_bar)
         [asia_l_lbl_x, asia_l_lbl_stl] = f_sessionLabelPos(asia_low_taken,  asia_low_bar,  asia_low_taken_bar)
-        asia_high_label := label.new(asia_h_lbl_x, asia_high, text_session_visible ? asia_high_label_text : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=asia_h_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
-        asia_low_label  := label.new(asia_l_lbl_x, asia_low,  text_session_visible ? asia_low_label_text  : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=asia_l_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
+        asia_high_label := label.new(asia_h_lbl_x, asia_high, text_session_visible ? asia_high_label_text : "", color=TRANSP, textcolor=lbl_text_col, style=asia_h_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
+        asia_low_label  := label.new(asia_l_lbl_x, asia_low,  text_session_visible ? asia_low_label_text  : "", color=TRANSP, textcolor=lbl_text_col, style=asia_l_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
         if not asia_high_taken
             array.push(lbl_all, asia_high_label)
         if not asia_low_taken
@@ -2047,8 +1958,8 @@ if show_london_range and not sessions_hidden_by_tf
             label.delete(london_low_label)
         [london_h_lbl_x, london_h_lbl_stl] = f_sessionLabelPos(london_high_taken, london_high_bar, london_high_taken_bar)
         [london_l_lbl_x, london_l_lbl_stl] = f_sessionLabelPos(london_low_taken,  london_low_bar,  london_low_taken_bar)
-        london_high_label := label.new(london_h_lbl_x, london_high, text_session_visible ? london_high_label_text : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=london_h_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
-        london_low_label  := label.new(london_l_lbl_x, london_low,  text_session_visible ? london_low_label_text  : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=london_l_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
+        london_high_label := label.new(london_h_lbl_x, london_high, text_session_visible ? london_high_label_text : "", color=TRANSP, textcolor=lbl_text_col, style=london_h_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
+        london_low_label  := label.new(london_l_lbl_x, london_low,  text_session_visible ? london_low_label_text  : "", color=TRANSP, textcolor=lbl_text_col, style=london_l_lbl_stl, size=session_label_size, text_font_family=font.family_monospace)
         if not london_high_taken
             array.push(lbl_all, london_high_label)
         if not london_low_taken
@@ -2072,7 +1983,7 @@ if show_midnight_open
     if barstate.islast and not na(midnight_open_line)
         if not na(midnight_open_label)
             label.delete(midnight_open_label)
-        midnight_open_label := label.new(bar_index + session_label_x_offset, midnight_open_price, text_session_visible ? midnight_label_text : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=session_label_style, size=session_label_size, text_font_family=font.family_monospace)
+        midnight_open_label := label.new(bar_index + session_label_x_offset, midnight_open_price, text_session_visible ? midnight_label_text : "", color=TRANSP, textcolor=lbl_text_col, style=session_label_style, size=session_label_size, text_font_family=font.family_monospace)
         array.push(lbl_all, midnight_open_label)
 
 // --- 8:30 AM Open (ET) ---
@@ -2093,7 +2004,7 @@ if show_830_open
     if barstate.islast and not na(open_830_line)
         if not na(open_830_label)
             label.delete(open_830_label)
-        open_830_label := label.new(bar_index + session_label_x_offset, open_830_price, text_session_visible ? open_830_label_text : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=session_label_style, size=session_label_size, text_font_family=font.family_monospace)
+        open_830_label := label.new(bar_index + session_label_x_offset, open_830_price, text_session_visible ? open_830_label_text : "", color=TRANSP, textcolor=lbl_text_col, style=session_label_style, size=session_label_size, text_font_family=font.family_monospace)
         array.push(lbl_all, open_830_label)
 
 
@@ -2223,7 +2134,7 @@ ss_armSrc(array<line> ln, array<label> lb, array<float> px, array<bool> dn, arra
                 int   b = array.get(srcSHb, i)
                 string txt = ss_show_text ? (prefix + " SH" + str.tostring(i + 1)) : ""
                 line  l   = line.new(b, p, xR, p, color=ss_line_color, width=ss_line_width, style=ss_line_style)
-                label la  = label.new(xR + ss_text_pad, p, txt, color=color.new(color.white, 100), textcolor=ss_text_color, style=f_labelStyleX(ss_text_pos), size=ss_label_size_resolved, text_font_family=font.family_monospace)
+                label la  = label.new(xR + ss_text_pad, p, txt, color=TRANSP, textcolor=ss_text_color, style=f_labelStyleX(ss_text_pos), size=ss_label_size_resolved, text_font_family=font.family_monospace)
                 array.push(ln, l)
                 array.push(lb, la)
                 array.push(px, p)
@@ -2236,7 +2147,7 @@ ss_armSrc(array<line> ln, array<label> lb, array<float> px, array<bool> dn, arra
                 int   b = array.get(srcSLb, i)
                 string txt = ss_show_text ? (prefix + " SL" + str.tostring(i + 1)) : ""
                 line  l   = line.new(b, p, xR, p, color=ss_line_color, width=ss_line_width, style=ss_line_style)
-                label la  = label.new(xR + ss_text_pad, p, txt, color=color.new(color.white, 100), textcolor=ss_text_color, style=f_labelStyleX(ss_text_pos), size=ss_label_size_resolved, text_font_family=font.family_monospace)
+                label la  = label.new(xR + ss_text_pad, p, txt, color=TRANSP, textcolor=ss_text_color, style=f_labelStyleX(ss_text_pos), size=ss_label_size_resolved, text_font_family=font.family_monospace)
                 array.push(ln, l)
                 array.push(lb, la)
                 array.push(px, p)
@@ -2361,7 +2272,7 @@ if show_daily_high and not na(cur_day_high)
     int dh_x = bar_index + daily_label_x_offset
     if na(dh_line)
         dh_line  := line.new(cur_day_start_bar, cur_day_high, bar_index, cur_day_high, color=daily_high_color, width=daily_line_width, style=daily_line_style)
-        dh_label := label.new(dh_x, cur_day_high, text_daily_visible ? "Daily High" : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
+        dh_label := label.new(dh_x, cur_day_high, text_daily_visible ? "Daily High" : "", color=TRANSP, textcolor=lbl_text_col, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
     line.set_xy1(dh_line, cur_day_start_bar, cur_day_high)
     line.set_xy2(dh_line, daily_line_end, cur_day_high)
     label.set_xy(dh_label, dh_x, cur_day_high)
@@ -2372,7 +2283,7 @@ if show_daily_low and not na(cur_day_low)
     int dl_x = bar_index + daily_label_x_offset
     if na(dl_line)
         dl_line  := line.new(cur_day_start_bar, cur_day_low, bar_index, cur_day_low, color=daily_low_color, width=daily_line_width, style=daily_line_style)
-        dl_label := label.new(dl_x, cur_day_low, text_daily_visible ? "Daily Low" : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
+        dl_label := label.new(dl_x, cur_day_low, text_daily_visible ? "Daily Low" : "", color=TRANSP, textcolor=lbl_text_col, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
     line.set_xy1(dl_line, cur_day_start_bar, cur_day_low)
     line.set_xy2(dl_line, daily_line_end, cur_day_low)
     label.set_xy(dl_label, dl_x, cur_day_low)
@@ -2383,7 +2294,7 @@ if show_pdh and not na(prev_day_high)
     int pdh_x = bar_index + daily_label_x_offset
     if na(pdh_line)
         pdh_line  := line.new(prev_day_start_bar, prev_day_high, bar_index, prev_day_high, color=pdh_color, width=daily_line_width, style=daily_line_style)
-        pdh_label := label.new(pdh_x, prev_day_high, text_daily_visible ? "PDH" : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
+        pdh_label := label.new(pdh_x, prev_day_high, text_daily_visible ? "PDH" : "", color=TRANSP, textcolor=lbl_text_col, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
     line.set_xy2(pdh_line, daily_line_end, prev_day_high)
     label.set_xy(pdh_label, pdh_x, prev_day_high)
     array.push(lbl_all, pdh_label)
@@ -2393,7 +2304,7 @@ if show_pdl and not na(prev_day_low)
     int pdl_x = bar_index + daily_label_x_offset
     if na(pdl_line)
         pdl_line  := line.new(prev_day_start_bar, prev_day_low, bar_index, prev_day_low, color=pdl_color, width=daily_line_width, style=daily_line_style)
-        pdl_label := label.new(pdl_x, prev_day_low, text_daily_visible ? "PDL" : "", color=color.new(color.white, 100), textcolor=lbl_text_col, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
+        pdl_label := label.new(pdl_x, prev_day_low, text_daily_visible ? "PDL" : "", color=TRANSP, textcolor=lbl_text_col, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
     line.set_xy2(pdl_line, daily_line_end, prev_day_low)
     label.set_xy(pdl_label, pdl_x, prev_day_low)
     array.push(lbl_all, pdl_label)
@@ -4349,6 +4260,9 @@ ts_pad          = input.int(10,     "Extend / Label Offset (bars)", minval=0, ma
 
 ts_liq_style = ts_liq_style_in == "dashed" ? line.style_dashed : ts_liq_style_in == "dotted" ? line.style_dotted : line.style_solid
 
+// Vertical clearance so the sweep text never lands on a C2/C3/C4 label sitting at the same extreme.
+float ts_lbl_gap = math.max(nz(ta.atr(14)) * 0.6, syminfo.mintick * 20)
+
 type TSSwing
     float price
     int   bar
@@ -4517,7 +4431,7 @@ ts_draw_liq(array<TSSwing> arr, color col, string txt) =>
             TSSwing sp = array.get(arr, i)
             if not sp.taken and shown < ts_liq_max
                 array.push(ts_liq_lines,  line.new(sp.bar, sp.price, bar_index + ts_pad, sp.price, color=col, style=ts_liq_style, width=ts_liq_width))
-                label lb = label.new(bar_index + ts_pad, sp.price, txt, style=label.style_label_left, color=color.new(color.white, 100), textcolor=lbl_text_col, size=session_label_size, text_font_family=font.family_monospace)
+                label lb = label.new(bar_index + ts_pad, sp.price, txt, style=label.style_label_left, color=TRANSP, textcolor=lbl_text_col, size=session_label_size, text_font_family=font.family_monospace)
                 array.push(ts_liq_labels, lb)
                 array.push(lbl_all, lb)
                 shown += 1
@@ -4565,7 +4479,7 @@ ts_check_mss(TSSetup m) =>
             m.dPurge := true
             m.sweepExtreme := m.isBull ? low : high
             m.sweepBar := bar_index
-            m.dpLabel := label.new(bar_index, m.sweepExtreme, "D-Purge", style=m.isBull ? label.style_label_up : label.style_label_down, color=color.new(color.white, 100), textcolor=lbl_text_col, size=ts_label_size, text_font_family=font.family_monospace)
+            m.dpLabel := label.new(bar_index, m.sweepExtreme, "D-Purge", style=m.isBull ? label.style_label_up : label.style_label_down, color=TRANSP, textcolor=lbl_text_col, size=ts_label_size, text_font_family=font.family_monospace)
         else
             m.status := "Invalidation"
     if m.status != "Invalidation" and not m.mssConfirmed
@@ -4609,7 +4523,7 @@ ts_check_mss(TSSetup m) =>
                         color mcol = lbl_text_col
                         if ts_show_mss
                             m.mssLine  := line.new(tbar, tprice, bar_index, tprice, color=mcol, width=1, style=line.style_dotted)
-                            m.mssLabel := label.new(bar_index + ts_pad, tprice, "MSS", style=label.style_label_left, color=color.new(color.white, 100), textcolor=lbl_text_col, size=session_label_size, text_font_family=font.family_monospace)
+                            m.mssLabel := label.new(bar_index + ts_pad, tprice, "MSS", style=label.style_label_left, color=TRANSP, textcolor=lbl_text_col, size=session_label_size, text_font_family=font.family_monospace)
                         if ts_alerts
                             alert((m.isBull ? "Bullish" : "Bearish") + " MSS Confirmed @ " + str.tostring(close), alert.freq_once_per_bar_close)
     true
@@ -4621,7 +4535,7 @@ ts_check_isweep(TSSetup m) =>
         if hit
             if ts_show_isweep
                 m.iLine      := line.new(m.zoneBar, m.innerTarget, bar_index + ts_pad, m.innerTarget, color=ts_iswp_col, width=1, style=line.style_dotted)
-                m.innerLabel := label.new(bar_index + ts_pad, m.innerTarget, "iSweep", style=label.style_label_left, color=color.new(color.white, 100), textcolor=lbl_text_col, size=ts_label_size, text_font_family=font.family_monospace)
+                m.innerLabel := label.new(bar_index + ts_pad, m.innerTarget, "iSweep", style=label.style_label_left, color=TRANSP, textcolor=lbl_text_col, size=ts_label_size, text_font_family=font.family_monospace)
             m.entryDone := true
             m.status    := "Entry"
             if ts_alerts
@@ -4637,13 +4551,13 @@ ts_draw(TSSetup m) =>
     if ts_show_sweep
         if na(m.sweepLine)
             m.sweepLine  := line.new(m.swingBar, m.sweepLevel, xend, m.sweepLevel, color=lbl_text_col, style=line.style_dotted, width=1)
-            m.sweepLabel := label.new(m.sweepBar, m.sweepExtreme, "Sweep", style=m.isBull ? label.style_label_up : label.style_label_down, color=color.new(color.white, 100), textcolor=lbl_text_col, size=ts_label_size, text_font_family=font.family_monospace)
+            m.sweepLabel := label.new(m.sweepBar, m.sweepExtreme + (m.isBull ? -ts_lbl_gap : ts_lbl_gap), "Sweep", style=m.isBull ? label.style_label_up : label.style_label_down, color=TRANSP, textcolor=lbl_text_col, size=ts_label_size, text_font_family=font.family_monospace)
         else
             line.set_x1(m.sweepLine, m.swingBar)
             line.set_x2(m.sweepLine, xend)
         if ts_show_area
             if na(m.area)
-                m.area := box.new(m.swingBar, top, xend, bot, border_color=color.new(color.white, 100), bgcolor=color.new(tcol, ts_area_transp))
+                m.area := box.new(m.swingBar, top, xend, bot, border_color=TRANSP, bgcolor=color.new(tcol, ts_area_transp))
             else
                 box.set_left(m.area, m.swingBar)
                 box.set_right(m.area, xend)
@@ -4651,7 +4565,7 @@ ts_draw(TSSetup m) =>
                 box.set_bottom(m.area, bot)
     if ts_show_zone and m.mssConfirmed and m.zoneFound and na(m.zoneBox)
         float ce = (m.zoneTop + m.zoneBot) / 2
-        m.zoneBox := box.new(m.zoneBar, m.zoneTop, bar_index + ts_pad, m.zoneBot, border_color=color.new(color.white, 100), bgcolor=color.new(tcol, 85), text=m.zoneType, text_size=ts_label_size, text_color=lbl_text_col, text_halign=text.align_right, text_valign=text.align_center)
+        m.zoneBox := box.new(m.zoneBar, m.zoneTop, bar_index + ts_pad, m.zoneBot, border_color=TRANSP, bgcolor=color.new(tcol, 85), text=m.zoneType, text_size=ts_label_size, text_color=lbl_text_col, text_halign=text.align_right, text_valign=text.align_center)
         m.zoneCe  := line.new(m.zoneBar, ce, bar_index + ts_pad, ce, color=lbl_text_col, width=1, style=line.style_dotted)
     true
 
