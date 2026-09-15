@@ -212,7 +212,7 @@ smt_lineColor = input.color(color.gray, "Color", group=GRP_SMT, inline="smtline"
 smt_lineWidth = input.int(1, "Width", minval=1, maxval=5, group=GRP_SMT, inline="smtline")
 smt_lineStyle = input.string("Solid", "Type", options=["Solid", "Dashed", "Dotted"], group=GRP_SMT, inline="smtline")
 
-smt_showLabels = input.bool(true, "Label", group=GRP_SMT, inline="smtlabel")
+smt_showLabels = input.bool(false, "Label", group=GRP_SMT, inline="smtlabel")
 smt_labelBg    = input.color(color.new(color.white, 100), "BG", group=GRP_SMT, inline="smtlabel")
 smt_labelText  = input.color(color.black, "Text", group=GRP_SMT, inline="smtlabel")
 smt_labelSize  = input.string("Small", "Size", options=["Tiny", "Small", "Normal", "Large", "Huge"], group=GRP_SMT, inline="smtlabel")
