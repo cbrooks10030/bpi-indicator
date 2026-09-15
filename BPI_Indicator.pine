@@ -273,7 +273,7 @@ f_htf_strip_time_label(int t, int tf_ms) =>
         int hour_12 = hour_24 % 12
         hour_12 := hour_12 == 0 ? 12 : hour_12
         string suffix = hour_24 >= 12 ? "PM" : "AM"
-        str.tostring(hour_12) + ":" + f_pad2(minute(t, syminfo.timezone)) + " " + suffix
+        str.tostring(hour_12) + ":" + f_pad2(minute(t, syminfo.timezone)) + "\n" + suffix
 
 // ============================================================
 // HTF DATA — TWO SEPARATE SECURITY CALLS TO PREVENT FLASH
@@ -742,7 +742,7 @@ f_strip_labels(int cnt_, int bx_, int st_, int tfms_, array<float> hs_, array<fl
     if show_model_labels and show_htf_model_labels
         int found = 0
         for m = 1 to cnt_ - 2
-            if found > history
+            if found > 0
                 break
             float ph = array.get(hs_, m + 1)
             float pl = array.get(ls_, m + 1)
@@ -780,7 +780,7 @@ f_strip_labels(int cnt_, int bx_, int st_, int tfms_, array<float> hs_, array<fl
             float tll = array.get(ls_, tl)
             int tlt = array.get(ts_, tl)
             if not na(tlh) and not na(tlt)
-                array.push(labels, label.new(bx_ + (cnt_ - 1 - tl) * st_, tll - ((tlh - tll) * 0.05 + syminfo.mintick * 4) * (array.get(mf, tl) ? 7.5 : 1.2), f_htf_strip_time_label(tlt, tfms_), style=label.style_label_up, color=color.new(color.black, 100), textcolor=htf_time_label_color, size=htf_time_size))
+                array.push(labels, label.new(bx_ + (cnt_ - 1 - tl) * st_, tll - ((tlh - tll) * 0.05 + syminfo.mintick * 4) * (array.get(mf, tl) ? 5.0 : 1.2), f_htf_strip_time_label(tlt, tfms_), style=label.style_label_up, color=color.new(color.black, 100), textcolor=htf_time_label_color, size=htf_time_size, text_font_family=font.family_monospace))
     true
 
 f_draw_extra_strip(string strip_tf, int strip_count, int strip_base_x, int strip_step, int strip_half, array<float> strip_os, array<float> strip_hs, array<float> strip_ls, array<float> strip_cs, array<int> strip_ts, string strip_label_size) =>
@@ -1343,7 +1343,8 @@ if barstate.islast
         if show_follow_through and c4_idx >= 1
             f_draw_tspot(bearish, array.get(arr_t, c4_idx), array.get(arr_h, c4_idx), array.get(arr_l, c4_idx), array.get(arr_c, c4_idx))
 
-        if show_model_labels
+        // Only the most recent setup carries C2/C3/C4 text; older models keep their drawings.
+        if show_model_labels and setups_drawn == 0
             if show_c2
                 f_label(f_mid_time(c2t, htf_ms), bearish ? c2h : c2l, "C2", state_col, bearish)
             if show_follow_through and show_c3 and c3_idx >= 0
@@ -4251,9 +4252,9 @@ ts_max_models   = input.int(2,      "History (Max Setups)", minval=1, maxval=10,
 ts_swing_len    = input.int(15,     "Context Swing Lookback", minval=2, maxval=50, group=GRP_TS)
 ts_require_zone = input.bool(true,  "Require FVG / iFVG Confluence", group=GRP_TS)
 ts_ltf_lookback = input.int(10,     "FVG / iFVG Lookback", minval=3, maxval=50, group=GRP_TS)
-ts_show_sweep   = input.bool(true,  "Sweep Line + Label", group=GRP_TS)
-ts_show_area    = input.bool(true,  "Sweep Area Box", group=GRP_TS)
-ts_show_dpurge  = input.bool(true,  "Double Purge (D-Purge)", group=GRP_TS)
+ts_show_sweep   = input.bool(false, "Sweep Line + Label", group=GRP_TS)
+ts_show_area    = input.bool(false, "Sweep Area Box", group=GRP_TS)
+ts_show_dpurge  = input.bool(false, "Double Purge (D-Purge)", group=GRP_TS)
 ts_show_mss     = input.bool(true,  "Show MSS Break", group=GRP_TS)
 ts_show_zone    = input.bool(true,  "Show LTF FVG / iFVG Zone", group=GRP_TS)
 ts_show_isweep  = input.bool(true,  "Show i-Sweep Retest", group=GRP_TS)
