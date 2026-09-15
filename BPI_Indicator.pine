@@ -684,8 +684,9 @@ f_draw_projections(bool bearish, int anchor_t, int extreme_t, float c2_extreme, 
 // ============================================================
 // DRAW HELPERS
 // ============================================================
-f_label(int x, float y, string txt, color txt_col, bool x_time) =>
-    array.push(labels, label.new(x, y, txt, xloc=x_time ? xloc.bar_time : xloc.bar_index, style=label.style_label_center, color=model_label_bg, textcolor=txt_col, size=model_label_size, text_formatting=text.format_bold))
+f_label(int x, float y, string txt, color txt_col, bool bearish) =>
+    float lbl_off = math.max(nz(ta.atr(14)) * 0.25, syminfo.mintick * 8)
+    array.push(labels, label.new(x, bearish ? y + lbl_off : y - lbl_off, txt, xloc=xloc.bar_time, style=bearish ? label.style_label_down : label.style_label_up, color=model_label_bg, textcolor=txt_col, size=model_label_size, text_formatting=text.format_bold))
 
 f_draw_tspot(bool bearish, int src_t, float src_h, float src_l, float src_c) =>
     if show_tspot and not na(src_t) and not na(src_h) and not na(src_l) and not na(src_c)
@@ -737,8 +738,12 @@ f_htf_candle_eq_price(float o, float h, float l, float c) =>
 
 f_strip_labels(int cnt_, int bx_, int st_, int tfms_, array<float> hs_, array<float> ls_, array<float> cs_, array<int> ts_, string sz_) =>
     array<bool> mf = array.new<bool>(cnt_, false)
+    array<string> tx = array.new<string>(cnt_, "")
     if show_model_labels and show_htf_model_labels
+        int found = 0
         for m = 1 to cnt_ - 2
+            if found > history
+                break
             float ph = array.get(hs_, m + 1)
             float pl = array.get(ls_, m + 1)
             float ch = array.get(hs_, m)
@@ -747,14 +752,28 @@ f_strip_labels(int cnt_, int bx_, int st_, int tfms_, array<float> hs_, array<fl
             bool br = ch > ph and cc <= ph
             bool bl = cl < pl and cc >= pl
             if (br or bl) and (bias == "Neutral" or (bias == "Bearish") == br)
-                for d = 0 to 2
+                // Same follow-through rules as the model engine: C3 taking out C2's
+                // extreme kills C3/C4, C4 taking out C3's extreme kills C4.
+                bool f3 = false
+                if m >= 1
+                    f3 := br ? array.get(hs_, m - 1) > ch : array.get(ls_, m - 1) < cl
+                bool f4 = false
+                if not f3 and m >= 2
+                    f4 := br ? array.get(hs_, m - 2) > array.get(hs_, m - 1) : array.get(ls_, m - 2) < array.get(ls_, m - 1)
+                int last_d = f3 ? 0 : f4 ? 1 : 2
+                for d = 0 to last_d
                     int i_ = m - d
-                    if i_ >= 0 and (d == 0 ? show_c2 : d == 1 ? show_c3 : show_c4)
-                        float hi_ = array.get(hs_, i_)
-                        float lo_ = array.get(ls_, i_)
-                        if not na(hi_) and not na(lo_)
-                            array.push(labels, label.new(bx_ + (cnt_ - 1 - i_) * st_, lo_ - (hi_ - lo_) * 0.05 - syminfo.mintick * 4, d == 0 ? "C2" : d == 1 ? "C3" : "C4", style=label.style_label_up, color=model_label_bg, textcolor=valid_color, size=sz_, text_formatting=text.format_bold))
-                            array.set(mf, i_, true)
+                    if i_ >= 0 and array.get(tx, i_) == "" and (d == 0 ? show_c2 : d == 1 ? show_c3 : show_c4)
+                        array.set(tx, i_, d == 0 ? "C2" : d == 1 ? "C3" : "C4")
+                found += 1
+        for i_ = 0 to cnt_ - 1
+            string t_ = array.get(tx, i_)
+            if t_ != ""
+                float hi_ = array.get(hs_, i_)
+                float lo_ = array.get(ls_, i_)
+                if not na(hi_) and not na(lo_)
+                    array.push(labels, label.new(bx_ + (cnt_ - 1 - i_) * st_, lo_ - (hi_ - lo_) * 0.05 - syminfo.mintick * 4, t_, style=label.style_label_up, color=model_label_bg, textcolor=valid_color, size=sz_, text_formatting=text.format_bold))
+                    array.set(mf, i_, true)
     if show_htf_time_labels
         for tl = 0 to cnt_ - 1
             float tlh = array.get(hs_, tl)
@@ -1326,17 +1345,17 @@ if barstate.islast
 
         if show_model_labels
             if show_c2
-                f_label(f_mid_time(c2t, htf_ms), bearish ? c2h : c2l, "C2", state_col, true)
+                f_label(f_mid_time(c2t, htf_ms), bearish ? c2h : c2l, "C2", state_col, bearish)
             if show_follow_through and show_c3 and c3_idx >= 0
                 int c3t = array.get(arr_t, c3_idx)
                 float c3h = array.get(arr_h, c3_idx)
                 float c3l = array.get(arr_l, c3_idx)
-                f_label(f_mid_time(c3t, htf_ms), bearish ? c3h : c3l, "C3", state_col, true)
+                f_label(f_mid_time(c3t, htf_ms), bearish ? c3h : c3l, "C3", state_col, bearish)
             if show_follow_through and show_c4 and c4_idx >= 0
                 int c4t = array.get(arr_t, c4_idx)
                 float c4h = array.get(arr_h, c4_idx)
                 float c4l = array.get(arr_l, c4_idx)
-                f_label(f_mid_time(c4t, htf_ms), bearish ? c4h : c4l, "C4", state_col, true)
+                f_label(f_mid_time(c4t, htf_ms), bearish ? c4h : c4l, "C4", state_col, bearish)
 
         setups_drawn += 1
 
