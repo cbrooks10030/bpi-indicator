@@ -67,42 +67,42 @@ hfvg_Imbalance_Settings hfvg_HTF_6_Settings = hfvg_Imbalance_Settings.new()
 string hfvg_tooltip1 = "HTF FVG Settings:\n\tShow/Hide timeframe\n\tTimeframe to display\n\tBullish FVG Color\n\tBearish FVG Color\n\tMaximum number of FVGs to display"
 string hfvg_tooltip2 = "Mitigated FVG Settings:\n\tShow/Hide mitigated (Applies to all).\n\tBullish FVG Color\n\tBearish FVG Color\n\tWhen to mark it as mitigated (Based on HTF timeframe, not current timeframe)"
 
-hfvg_HTF_1_Settings.show       := input.bool(true, "", inline="htf1", group=hfvg_GRP)
+hfvg_HTF_1_Settings.show       := input.bool(false, "", inline="htf1", group=hfvg_GRP)
 hfvg_htf_1                      = input.timeframe("5", "", inline="htf1", group=hfvg_GRP)
 hfvg_HTF_1_Settings.htf        := hfvg_htf_1
 hfvg_HTF_1_Settings.color_bull := input.color(color.new(color.green,90), "", inline="htf1", group=hfvg_GRP)
 hfvg_HTF_1_Settings.color_bear := input.color(color.new(color.blue,90), "", inline="htf1", group=hfvg_GRP)
-hfvg_HTF_1_Settings.max_count  := input.int(20, "", inline="htf1", group=hfvg_GRP, tooltip = hfvg_tooltip1)
+hfvg_HTF_1_Settings.max_count  := input.int(2, "", inline="htf1", group=hfvg_GRP, tooltip = hfvg_tooltip1)
 
-hfvg_HTF_2_Settings.show       := input.bool(true, "", inline="htf2", group=hfvg_GRP)
+hfvg_HTF_2_Settings.show       := input.bool(false, "", inline="htf2", group=hfvg_GRP)
 hfvg_htf_2                      = input.timeframe("15", "", inline="htf2", group=hfvg_GRP)
 hfvg_HTF_2_Settings.htf        := hfvg_htf_2
 hfvg_HTF_2_Settings.color_bull := input.color(color.new(color.green,90), "", inline="htf2", group=hfvg_GRP)
 hfvg_HTF_2_Settings.color_bear := input.color(color.new(color.blue,90), "", inline="htf2", group=hfvg_GRP)
-hfvg_HTF_2_Settings.max_count  := input.int(20, "", inline="htf2", group=hfvg_GRP, tooltip = hfvg_tooltip1)
+hfvg_HTF_2_Settings.max_count  := input.int(2, "", inline="htf2", group=hfvg_GRP, tooltip = hfvg_tooltip1)
 
-hfvg_HTF_3_Settings.show       := input.bool(true, "", inline="htf3", group=hfvg_GRP)
+hfvg_HTF_3_Settings.show       := input.bool(false, "", inline="htf3", group=hfvg_GRP)
 hfvg_htf_3                      = input.timeframe("60", "", inline="htf3", group=hfvg_GRP)
 hfvg_HTF_3_Settings.htf        := hfvg_htf_3
 hfvg_HTF_3_Settings.color_bull := input.color(color.new(color.green,90), "", inline="htf3", group=hfvg_GRP)
 hfvg_HTF_3_Settings.color_bear := input.color(color.new(color.blue,90), "", inline="htf3", group=hfvg_GRP)
-hfvg_HTF_3_Settings.max_count  := input.int(20, "", inline="htf3", group=hfvg_GRP, tooltip = hfvg_tooltip1)
+hfvg_HTF_3_Settings.max_count  := input.int(2, "", inline="htf3", group=hfvg_GRP, tooltip = hfvg_tooltip1)
 
-hfvg_HTF_4_Settings.show       := input.bool(true, "", inline="htf4", group=hfvg_GRP)
+hfvg_HTF_4_Settings.show       := input.bool(false, "", inline="htf4", group=hfvg_GRP)
 hfvg_htf_4                      = input.timeframe("240", "", inline="htf4", group=hfvg_GRP)
 hfvg_HTF_4_Settings.htf        := hfvg_htf_4
 hfvg_HTF_4_Settings.color_bull := input.color(color.new(color.green,90), "", inline="htf4", group=hfvg_GRP)
 hfvg_HTF_4_Settings.color_bear := input.color(color.new(color.blue,90), "", inline="htf4", group=hfvg_GRP)
-hfvg_HTF_4_Settings.max_count  := input.int(10, "", inline="htf4", group=hfvg_GRP, tooltip = hfvg_tooltip1)
+hfvg_HTF_4_Settings.max_count  := input.int(2, "", inline="htf4", group=hfvg_GRP, tooltip = hfvg_tooltip1)
 
-hfvg_HTF_5_Settings.show       := input.bool(true, "", inline="htf5", group=hfvg_GRP)
+hfvg_HTF_5_Settings.show       := input.bool(false, "", inline="htf5", group=hfvg_GRP)
 hfvg_htf_5                      = input.timeframe("1D", "", inline="htf5", group=hfvg_GRP)
 hfvg_HTF_5_Settings.htf        := hfvg_htf_5
 hfvg_HTF_5_Settings.color_bull := input.color(color.new(color.green,90), "", inline="htf5", group=hfvg_GRP)
 hfvg_HTF_5_Settings.color_bear := input.color(color.new(color.blue,90), "", inline="htf5", group=hfvg_GRP)
-hfvg_HTF_5_Settings.max_count  := input.int(10, "", inline="htf5", group=hfvg_GRP, tooltip = hfvg_tooltip1)
+hfvg_HTF_5_Settings.max_count  := input.int(2, "", inline="htf5", group=hfvg_GRP, tooltip = hfvg_tooltip1)
 
-hfvg_HTF_6_Settings.show       := input.bool(true, "", inline="htf6", group=hfvg_GRP)
+hfvg_HTF_6_Settings.show       := input.bool(false, "", inline="htf6", group=hfvg_GRP)
 hfvg_htf_6                      = input.timeframe("1W", "", inline="htf6", group=hfvg_GRP)
 hfvg_HTF_6_Settings.htf        := hfvg_htf_6
 hfvg_HTF_6_Settings.color_bull := input.color(color.new(color.green,90), "", inline="htf6", group=hfvg_GRP)
@@ -259,17 +259,20 @@ method CheckMitigated(hfvg_ImbalanceStructure IS, o, h, l, c) =>
         for i = IS.imbalance.size() - 1 to 0
             imb = IS.imbalance.get(i)
             if not imb.mitigated
-                switch hfvg_settings.mitigated_type
+                bool mitigated_now = switch hfvg_settings.mitigated_type
                     "None" =>
-                        imb.mitigated := false
+                        false
                     'Wick filled' =>
-                        imb.mitigated := imb.open <= imb.close ? low <= imb.open : high >= imb.open
+                        imb.open <= imb.close ? low <= imb.open : high >= imb.open
                     'Body filled' =>
-                        imb.mitigated := imb.open < imb.close ? math.min(o, c) <= imb.open : math.max(o, c) >= imb.open
+                        imb.open < imb.close ? math.min(o, c) <= imb.open : math.max(o, c) >= imb.open
                     'Wick filled half' =>
-                        imb.mitigated := imb.open <= imb.close ? low <= imb.middle : high >= imb.middle
+                        imb.open <= imb.close ? low <= imb.middle : high >= imb.middle
                     'Body filled half' =>
-                        imb.mitigated := imb.open <= imb.close ? math.min(o, c) <= imb.middle : math.max(o, c) >= imb.middle
+                        imb.open <= imb.close ? math.min(o, c) <= imb.middle : math.max(o, c) >= imb.middle
+                    =>
+                        false
+                imb.mitigated := mitigated_now
                 if imb.mitigated
                     if not hfvg_settings.mitigated_show
                         if not na(imb.box)
