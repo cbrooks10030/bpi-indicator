@@ -1,3 +1,7 @@
 crop_*.png
 fractal_source.txt
 *.rtf
+
+# Stray npm lockfile: this repository contains no JavaScript project.
+package-lock.json
+node_modules/
