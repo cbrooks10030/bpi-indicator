@@ -1418,8 +1418,6 @@ if barstate.islast
                     array.push(lines, line.new(x1, lvl, x2, lvl, xloc=xloc.bar_time, color=dir == 1 ? bull_cisd_color : bear_cisd_color, width=dir == 1 ? bull_cisd_width : bear_cisd_width, style=f_style(dir == 1 ? bull_cisd_style : bear_cisd_style)))
                     cisd_drawn += 1
 
-alertcondition(alerts_on, "TTFM Rebuild v1.27 Fixed Running", "TTFM Rebuild v1.27 Fixed is active")
-
 
 // Per-bar trigger interface for downstream ATM/Unicorn consumers.
 ns_cisd_fired_bull = cisd_bull_trigger
@@ -1574,14 +1572,22 @@ daily_line_end   = bar_index + math.max(daily_label_x_offset, 0)
 
 // Shared look for every right-edge text label: one grey text color (the BSL/SSL grey)
 // and an anti-overlap pass. Each right-edge label is collected into lbl_all as it is
-// drawn; a final pass walks that list once on the last bar and folds any label that
-// lands on top of an earlier one into that label's text as "FIRST/SECOND".
+// drawn; a final pass walks that list once on the last bar, ordered by price, and folds
+// any label that lands on top of a lower one into that label's text as "LOWER/HIGHER".
+// lbl_keep holds the lbl_all indices of labels that are created once and only moved
+// afterwards (Daily High/Low, PDH/PDL); those must be blanked rather than deleted,
+// because nothing recreates them on later bars. Every other right-edge label is rebuilt
+// from scratch on each last-bar pass and can be deleted to free its object slot.
 lbl_text_col = input.color(color.new(#4e5057, 25), "Right-Edge Text Color", group=GRP_SESSIONS, tooltip="Shared text color for the right-edge labels: session H/L, Midnight, 8:30, Daily High/Low, PDH/PDL, BSL/SSL.")
 lbl_antiov   = input.bool(true, "Prevent Overlapping Right-Edge Text", group=GRP_SESSIONS, tooltip="Labels landing on the same price are merged into one, e.g. PDL/SSL.")
 lbl_tol_mlt  = input.float(0.15, "Overlap Sensitivity (x ATR)", minval=0.01, maxval=2.0, step=0.01, group=GRP_SESSIONS)
 lbl_tol = nz(ta.atr(14)) * lbl_tol_mlt
 var array<label> lbl_all = array.new_label()
+var array<int>   lbl_keep = array.new_int()
+var array<int>   lbl_ord  = array.new_int()
 array.clear(lbl_all)
+array.clear(lbl_keep)
+array.clear(lbl_ord)
 
 // Resolve the x-anchor + label style for a session H/L label.
 //  - Not swept: label at the right edge using the user's Session Label Position.
@@ -2296,7 +2302,11 @@ if show_daily_high and not na(cur_day_high)
     line.set_xy1(dh_line, cur_day_start_bar, cur_day_high)
     line.set_xy2(dh_line, daily_line_end, cur_day_high)
     label.set_xy(dh_label, dh_x, cur_day_high)
+    // Text is reapplied every bar: the anti-overlap pass blanks this label while it is
+    // merged away, and nothing else would restore it once the cluster separates again.
+    label.set_text(dh_label, text_daily_visible ? "Daily High" : "")
     array.push(lbl_all, dh_label)
+    array.push(lbl_keep, array.size(lbl_all) - 1)
 
 // Draw / update current-day low
 if show_daily_low and not na(cur_day_low)
@@ -2307,7 +2317,9 @@ if show_daily_low and not na(cur_day_low)
     line.set_xy1(dl_line, cur_day_start_bar, cur_day_low)
     line.set_xy2(dl_line, daily_line_end, cur_day_low)
     label.set_xy(dl_label, dl_x, cur_day_low)
+    label.set_text(dl_label, text_daily_visible ? "Daily Low" : "")
     array.push(lbl_all, dl_label)
+    array.push(lbl_keep, array.size(lbl_all) - 1)
 
 // Draw / update previous-day high (horizontal, extends to current bar)
 if show_pdh and not na(prev_day_high)
@@ -2317,7 +2329,9 @@ if show_pdh and not na(prev_day_high)
         pdh_label := label.new(pdh_x, prev_day_high, text_daily_visible ? "PDH" : "", color=TRANSP, textcolor=lbl_text_col, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
     line.set_xy2(pdh_line, daily_line_end, prev_day_high)
     label.set_xy(pdh_label, pdh_x, prev_day_high)
+    label.set_text(pdh_label, text_daily_visible ? "PDH" : "")
     array.push(lbl_all, pdh_label)
+    array.push(lbl_keep, array.size(lbl_all) - 1)
 
 // Draw / update previous-day low
 if show_pdl and not na(prev_day_low)
@@ -2327,7 +2341,9 @@ if show_pdl and not na(prev_day_low)
         pdl_label := label.new(pdl_x, prev_day_low, text_daily_visible ? "PDL" : "", color=TRANSP, textcolor=lbl_text_col, style=daily_label_style, size=daily_label_size, text_font_family=font.family_monospace)
     line.set_xy2(pdl_line, daily_line_end, prev_day_low)
     label.set_xy(pdl_label, pdl_x, prev_day_low)
+    label.set_text(pdl_label, text_daily_visible ? "PDL" : "")
     array.push(lbl_all, pdl_label)
+    array.push(lbl_keep, array.size(lbl_all) - 1)
 
 
 //+------------------------------------------------------------------------------------------------------------+//
@@ -3217,14 +3233,21 @@ var float   brk_nPl1 = na
 
 // Function: Get pivot points
 brk_Fmtf() =>
-    phPs = ta.pivothigh(brk_rlBars, brk_rlBars)
-    plPs = ta.pivotlow(brk_rlBars, brk_rlBars)
+    // Confirmation timing: evaluated inside the HTF context, the extra [1] reads the
+    // previous *completed* HTF bar. Combined with lookahead_on on the request below, a
+    // chart bar therefore only ever receives HTF data that had already closed at that
+    // point in time, so history and realtime resolve identically — the same pattern as
+    // the [close[1], time[1]] request further down. Without it, lookahead_on hands the
+    // containing HTF bar's final value to every chart bar inside that bar, which on
+    // history reveals a pivot up to one full HTF bar before it could be known live.
+    phPs = ta.pivothigh(brk_rlBars, brk_rlBars)[1]
+    plPs = ta.pivotlow(brk_rlBars, brk_rlBars)[1]
     int phBi = na
     int plBi = na
     if not na(phPs)
-        phBi := time[brk_rlBars]
+        phBi := time[brk_rlBars + 1]
     if not na(plPs)
-        plBi := time[brk_rlBars]
+        plBi := time[brk_rlBars + 1]
     [phPs, phBi, plPs, plBi]
 
 // Get HTF pivots and data
@@ -3283,11 +3306,12 @@ if brk_breakHighCond
     // Display lines
     brk_newLin = line.new(brk_pH.pi, brk_pH.pp, brk_timeHighCond, brk_pH.pp, color = brk_tfL0 and brk_linCon ? brk_linCol : na, xloc = xloc.bar_time, style = brk_bull ? brk_bosStyle : brk_mssStyle, width = brk_bull ? brk_bosWidth : brk_mssWidth)
 
-    // Repeated alerts
+    // Repeated alerts. Confirmation timing: freq_once_per_bar_close fires on the closing
+    // tick only, so an intrabar break that is still present at the close is what alerts.
     if brk_bosBullAlert and brk_bull
-        alert('Bull BOS')
+        alert('Bull BOS', alert.freq_once_per_bar_close)
     else if brk_mssBullAlert and not brk_bull
-        alert('Bull Breaker')
+        alert('Bull Breaker', alert.freq_once_per_bar_close)
 
     brk_bull := true
     brk_mssBearVar := false
@@ -3325,11 +3349,12 @@ if brk_breakLowCond
     // Display lines
     brk_newLin = line.new(brk_pL.pi, brk_pL.pp, brk_timeLowCond, brk_pL.pp, color = brk_tfL0 and brk_linCon ? brk_linCol : na, xloc = xloc.bar_time, style = brk_bull ? brk_mssStyle : brk_bosStyle, width = brk_bull ? brk_mssWidth : brk_bosWidth)
 
-    // Repeated alerts
+    // Repeated alerts. Confirmation timing: freq_once_per_bar_close fires on the closing
+    // tick only, so an intrabar break that is still present at the close is what alerts.
     if brk_bosBearAlert and not brk_bull
-        alert('Bear BOS')
+        alert('Bear BOS', alert.freq_once_per_bar_close)
     else if brk_mssBearAlert and brk_bull
-        alert('Bear Breaker')
+        alert('Bear Breaker', alert.freq_once_per_bar_close)
 
     brk_bull := false
     brk_mssBullVar := false
@@ -4567,14 +4592,38 @@ if ts_on
             ts_draw(m)
 
 // --- Right-edge text anti-overlap: merge colliding labels into "PDL/SSL" ---
+// Ordering is by label price (ties fall back to draw order), not by draw order alone, so
+// a given set of levels always merges to the same text regardless of which feature drew
+// first: the lowest label of a cluster keeps the text and reads upward.
 if lbl_antiov and barstate.islast and array.size(lbl_all) > 1
-    for i = 1 to array.size(lbl_all) - 1
-        label li = array.get(lbl_all, i)
-        string ti = label.get_text(li)
-        if ti != ""
-            for j = 0 to i - 1
-                label lj = array.get(lbl_all, j)
-                if ti != "" and label.get_text(lj) != "" and math.abs(label.get_y(lj) - label.get_y(li)) < lbl_tol
-                    label.set_text(lj, label.get_text(lj) + "/" + ti)
-                    label.set_text(li, "")
-                    ti := ""
+    int lbl_n = array.size(lbl_all)
+    for i = 0 to lbl_n - 1
+        array.push(lbl_ord, i)
+    for i = 0 to lbl_n - 2
+        int mn = i
+        for j = i + 1 to lbl_n - 1
+            float yj = label.get_y(array.get(lbl_all, array.get(lbl_ord, j)))
+            float ym = label.get_y(array.get(lbl_all, array.get(lbl_ord, mn)))
+            if yj < ym or (yj == ym and array.get(lbl_ord, j) < array.get(lbl_ord, mn))
+                mn := j
+        if mn != i
+            int swap = array.get(lbl_ord, i)
+            array.set(lbl_ord, i, array.get(lbl_ord, mn))
+            array.set(lbl_ord, mn, swap)
+    int anchor = -1
+    for k = 0 to lbl_n - 1
+        int idx = array.get(lbl_ord, k)
+        label lk = array.get(lbl_all, idx)
+        if label.get_text(lk) != ""
+            if anchor == -1
+                anchor := idx
+            else
+                label la = array.get(lbl_all, anchor)
+                if math.abs(label.get_y(lk) - label.get_y(la)) < lbl_tol
+                    label.set_text(la, label.get_text(la) + "/" + label.get_text(lk))
+                    if array.includes(lbl_keep, idx)
+                        label.set_text(lk, "")
+                    else
+                        label.delete(lk)
+                else
+                    anchor := idx

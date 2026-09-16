@@ -3,6 +3,10 @@
 //+------------------------------------------------------------------------------------------------------------+//
 //+--- CISD by tncylyv  (Change In State of Delivery)                                                       ---+//
 //+------------------------------------------------------------------------------------------------------------+//
+// HISTORICAL REFERENCE COPY — NOT SHIPPED, NOT IN SYNC WITH BPI_Indicator.pine.
+// This file records the CISD module as it stood when it was first ported. The host script
+// has since diverged (see audit finding F-20); this copy is kept for provenance only and is
+// deliberately not updated, so nothing here should be read as the current behavior.
 // Visual port (behavior-preserving) of the standalone "CISD by tncylyv" indicator. Replaces the host script's
 // old on-chart CISD lines/labels (now disabled via `cisd_old_visual`). This is a self-contained visual +
 // MTF trend table and does NOT feed the C2/C3/C4/ATM models (those keep using bull_cisd_confirmed/bear_cisd_confirmed).
