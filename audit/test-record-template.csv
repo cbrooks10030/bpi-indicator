@@ -23,7 +23,7 @@ T-21,Market open behavior,,,10ac946,,MNQ1!,5,candles,none,,NY AM levels initiali
 T-22,Market close and gap,,,10ac946,,MNQ1!,5,candles,none,,No spurious sweeps across the gap,,,UNTESTED,,
 T-23,Per-condition alerts,,,10ac946,,MNQ1!,15,candles,none,,All 20 conditions available; no leftover TTFM condition,,,UNTESTED,Low,Remove TTFM alertcondition
 T-24,Any alert() function call coverage,,,10ac946,,MNQ1!,15,candles,none,,Turtle Soup and Breakers fire; others do not; documented,,,UNTESTED,,
-T-25,R-06 unconfirmed Breakers alert,,,10ac946,,MNQ1!,5,candles,brk alerts on,,Alert fires only at bar close,,,UNTESTED,Medium,Add alert.freq_once_per_bar_close
+T-25,R-06 unconfirmed Breakers alert,,,10ac946,,MNQ1!,5,candles,brk alerts on; run in both Body Only and Body / Wick,,Alert fires only at bar close,,,UNTESTED,Medium,Add alert.freq_once_per_bar_close; BOS calls expected to fail in both modes
 T-26,Visual/alert match,,,10ac946,,MNQ1!,15,candles,defaults,,Every fired alert has a visible mark,,,UNTESTED,High,A-25 and A-27 expected to fail
 T-27,Duplicate alert delivery,,,10ac946,,MNQ1!,5,candles,both mechanisms configured,,Duplicate behavior recorded,,,UNTESTED,,
 T-28,HTF below chart timeframe,,,10ac946,,MNQ1!,15,candles,custom_htf=1,,Behavior recorded; guard or documentation decided,,,UNTESTED,,
@@ -33,3 +33,6 @@ T-31,Alternate chart types,,,10ac946,,MNQ1!,15,heikin ashi / renko,none,,Behavio
 T-32,Light theme legibility,,,10ac946,,MNQ1!,15,candles,use_light_theme=true,,All text legible on white,,,UNTESTED,,
 T-33,Mobile rendering,,,10ac946,,MNQ1!,5,candles,defaults,,Colliding labels recorded,,,UNTESTED,,
 T-34,New or illiquid symbol,,,10ac946,,,15,candles,none,,No runtime error with under 200 bars of history,,,UNTESTED,,
+T-35,F-23 Breakers alerts fire while lines hidden,,,10ac946,,MNQ1!,240,candles,brk_tfStructure=60 and all four alert toggles on,,Record whether alerts fire with no visible structure lines,,,UNTESTED,Medium,Gate alerts on brk_tfL0
+T-36,F-24 dead alert-name inputs,,,10ac946,,MNQ1!,5,candles,brk_bosBullName set to a distinctive string,,Record delivered alert text; expected the hardcoded Bull BOS,,,UNTESTED,Low,Wire the name inputs or remove them
+T-37,Post-lookahead-fix regression,,,10ac946,,MNQ1!,5,candles,brk_tfStructure=60,,BOS/MSS mark count and positions recorded before and after the fix,,,UNTESTED,,Expect fewer/later marks - intended

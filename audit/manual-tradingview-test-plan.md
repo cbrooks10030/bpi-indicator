@@ -57,7 +57,10 @@ Environment for every test unless stated otherwise: TradingView Pine Editor, the
 |---|---|---|---|
 | T-23 | Per-condition alerts | Create one alert for each of the 20 `alertcondition()`s | All 20 appear in the dropdown; none is the leftover `TTFM Rebuild v1.27 Fixed Running` (it should have been deleted) |
 | T-24 | `alert()` coverage | Create one "Any alert() function call" alert; wait for a Turtle Soup sweep and a BOS | Both fire. Confirm that GK FVG / Unicorn / CISD do **not** fire through this alert — and that this is documented |
-| T-25 | Unconfirmed firing (R-06) | Watch a Breakers alert during a bar whose wick breaks a pivot and closes back inside | **Currently expected to FAIL** (fires intrabar). Re-run after adding `alert.freq_once_per_bar_close` |
+| T-25 | Unconfirmed firing (R-06) | Watch a Breakers alert during a bar whose wick breaks a pivot and closes back inside. Run once in `'Body Only'` and once in `'Body / Wick'` | **Currently expected to FAIL** for the two BOS calls in both modes, and for the two MSS calls in `'Body / Wick'` only. Re-run after adding `alert.freq_once_per_bar_close` |
+| T-35 | F-23 — alerts fire while lines are hidden | Set the chart timeframe *above* `brk_tfStructure`, enable all four `alert()` toggles plus an "Any alert() function call" alert | Record whether alerts fire with no visible structure lines |
+| T-36 | F-24 — dead alert-name inputs | Set `brk_bosBullName` to a distinctive string and trigger a Bull BOS | Record the delivered text. Expected: the hardcoded `Bull BOS` |
+| T-37 | Post-fix regression | After the look-ahead fix, count and locate BOS/MSS marks over a fixed 500-bar window, before vs after | Counts recorded. Fewer and/or later marks expected — intended, not a regression |
 | T-26 | Visual/alert match | For each fired alert, confirm a corresponding visual exists | A-25 (Sweep) and A-27 (Entry) are expected to fail under default settings — no visual exists |
 | T-27 | Duplicate alerts | Same signal via `alertcondition` and `alert()` (BOS/MSS) | Confirm whether a user with both configured receives two notifications; document |
 

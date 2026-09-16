@@ -16,14 +16,22 @@ Steps:
 4. Have an attorney confirm the MPL-2.0 position before charging money.
 
 ### 2. Fix the look-ahead bias in the Breakers engine (F-01)
-Effort: < 1 session. Lines 3218–3231.
+Effort: < 1 session. Line 3231 only — the second request at 3252 already uses the safe `[close[1], time[1]]` pattern.
 
-Either request the pivot with `lookahead = barmerge.lookahead_off`, or keep `lookahead_on` and read the pivot from a confirmed offset — mirroring the already-correct pattern at line 3252 (`[close[1], time[1]]`). Then run T-05 both before and after so the difference is documented evidence, not an assertion.
+Either request the pivot with `lookahead = barmerge.lookahead_off`, or keep `lookahead_on` and read the pivot from a confirmed offset, mirroring line 3252. Run T-05 before and after, and T-37 to record the change in mark count, so the difference is documented evidence rather than an assertion.
+
+This fix moves **all eight** Breakers alert emitters, not four — see `breakers-alert-inventory.md` for the per-alert breakdown.
 
 Note the behavioral consequence: BOS/MSS lines will appear **later** on historical charts after the fix. That is the point, but it will look like a regression to anyone who has grown used to the current output. Say so in the release notes.
 
 ### 3. Fix Breakers alert frequency (F-09)
-Effort: minutes. Add `alert.freq_once_per_bar_close` to the four `alert()` calls at 3288, 3290, 3330, 3332, or gate them on `barstate.isconfirmed`. Verify with T-25.
+Effort: minutes. Add `alert.freq_once_per_bar_close` to the four `alert()` calls at 3288, 3290, 3330, 3332, or gate them on `barstate.isconfirmed`. Verify with T-25 in both `'Body Only'` and `'Body / Wick'` modes. The two BOS calls (3288, 3330) are the ones with real premature-firing exposure; the MSS calls are only exposed in `'Body / Wick'`.
+
+### 3b. Gate the Breakers alerts on `brk_tfL0` (F-23)
+Effort: minutes. `brk_FtfLimit()` currently hides the structure lines by setting `color = na` but leaves all eight alerts firing. Add `brk_tfL0` to the alert guards, or drive the conditions themselves from it.
+
+### 3c. Wire up or remove the Breakers alert-name inputs (F-24)
+Effort: minutes. `brk_bosBullName`, `brk_bosBearName`, `brk_mssBullName`, `brk_mssBearName` are declared and never used; the `alert()` calls pass hardcoded literals. Either pass the inputs into `alert()` or delete the inputs — a settings field that silently does nothing is worse than no field. Verify with T-36.
 
 ### 4. Settle the Turtle Soup intrabar question (F-11)
 Effort: 1 session, mostly waiting for a live market. Run T-09. If object-field mutation is not rolled back, gate the sweep detection on `barstate.isconfirmed` (the alerts are already close-gated, so only the drawing changes). Until this is answered, no "non-repainting" language may be published.
