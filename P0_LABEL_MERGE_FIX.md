@@ -65,7 +65,7 @@ Clustering is measured against the **anchor**, not against the previous label. A
 
 ## Known risks
 
-1. **Compilation unverified**, and the pass grew (a selection sort plus two extra arrays). The script was already near Pine's token cap; a token-limit failure is possible. Test T-P00.
+1. **Compilation verified** (test T-P00, 2026-09-16, warnings only): `array.includes()`, the label getters and the nested selection sort compile, and the branch stayed under Pine's token cap. Runtime merge behavior (T-L01 to T-L08) is still untested.
 2. **Cost is O(n²)** in the number of right-edge labels. `n` is bounded by the enabled features (roughly a dozen), the pass runs only under `barstate.islast`, and the previous implementation was also O(n²) — but this is worth knowing before anything else is added to `lbl_all`.
 3. **Deletion leaves a dangling id** in the owning `var` (e.g. `midnight_open_label`). The next bar's code calls `label.delete` on it again, which Pine treats as a no-op, and then reassigns it. No path reads text or position from a deleted label. This is the part of the change most worth confirming on a real chart.
 4. `label.delete` frees the slot only until the next last-bar pass recreates the label, so the saving is real but small. F-19's practical impact was always the ordering and the permanent blanking, not slot exhaustion.

@@ -4,7 +4,7 @@ Baseline: `audit-baseline-20260916` = `10ac9466cb3d6753d952f1e6c087b3e2f4f5fb19`
 Branch: `remediation/p0-safe-fixes`
 Scope: `BPI_Indicator.pine`, the `brk_Fmtf()` helper only. No other Breakers logic was touched.
 
-**Not compiled.** There is no offline Pine compiler; the only validation path is the TradingView Pine Editor. Nothing in this document reports observed chart behavior — every behavioral statement below is a prediction derived from the source and from documented Pine semantics, and must be confirmed by the tests in `P0_BREAKERS_TEST_PLAN.md` before it is treated as fact.
+**Compiled, not behaviorally tested.** There is no offline Pine compiler; the only validation path is the TradingView Pine Editor, where this branch compiled on 2026-09-16 (MNQ1! 15m, warnings only — see test T-P00). Nothing in this document reports observed chart behavior — every behavioral statement below is a prediction derived from the source and from documented Pine semantics, and must be confirmed by the tests in `P0_BREAKERS_TEST_PLAN.md` before it is treated as fact.
 
 ---
 
@@ -91,7 +91,7 @@ Visuals affected: the BOS/MSS structure lines drawn at `brk_lin`, and nothing el
 
 ## 5. Known risks
 
-1. **Compilation is unverified.** `ta.pivothigh(...)[1]` and `time[brk_rlBars + 1]` are ordinary Pine forms, but the script was already close to Pine's compile token cap before this branch, and this branch adds tokens (here and in the label pass). A token-limit failure is a realistic outcome and would need code to be trimmed elsewhere. Test T-P00.
+1. **Compilation verified, behavior not.** `ta.pivothigh(...)[1]` and `time[brk_rlBars + 1]` compile, and the branch stayed under Pine's token cap (test T-P00, 2026-09-16). Whether the historical BOS/MSS sequence is actually look-ahead-free is still unverified and requires T-P01 through T-P05.
 2. **The state machine may reorder, not just shift.** See §3. Differences must be recorded from an actual before/after comparison (T-P05), not assumed.
 3. **`brk_module.pine` still carries the defect.** That standalone copy has the identical unoffset request. It is not shipped and was deliberately left alone, as this task limits changes to what it names. It should either be fixed or marked as a historical copy in a follow-up.
 4. **Unrelated finding F-23 is still open.** `brk_FtfLimit()` hides the structure lines by setting the line color to `na` but does not gate the alerts, so on a chart above the structure timeframe all eight alerts still fire with nothing drawn. Out of scope here; see `audit/remediation-plan.md` §3b.

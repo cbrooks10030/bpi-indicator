@@ -1,7 +1,7 @@
 # P0 — Breakers manual test plan
 
 Applies to `remediation/p0-safe-fixes` (look-ahead fix F-01 + alert timing F-09).
-Record every run in `P0_MANUAL_TEST_RECORD.csv`. Nothing here has been executed — **all tests are currently UNTESTED**, and no Pine compilation has been performed in this environment.
+Record every run in `P0_MANUAL_TEST_RECORD.csv`. Only T-P00 (Pine Editor compilation) has been executed — it passed with warnings only. **Every behavioral test below is still UNTESTED.**
 
 ## Environment
 
