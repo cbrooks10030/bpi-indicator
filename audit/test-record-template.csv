@@ -1,0 +1,35 @@
+test_id,test_name,date_time_utc,tester,commit_sha,tradingview_account_tier,symbol,timeframe,chart_type,settings_deviation_from_default,steps_performed,expected_result,actual_result,evidence_filename,result,severity_if_failed,follow_up_action
+T-00a,Clean compile,,,10ac946,,,,,none,,"Compiled. Added to chart. with zero errors",,,UNTESTED,,
+T-00b,Warning inventory,,,10ac946,,,,,none,,All warnings recorded,,,UNTESTED,,
+T-00c,Token headroom,,,10ac946,,,,,none,,Compiled under the 100256 token limit; count recorded,,,UNTESTED,,
+T-01,Model layer renders,,,10ac946,,MNQ1!,15,candles,none,,Newest setup only carries C2/C3/C4 text,,,UNTESTED,,
+T-02,Extra HTF strips,,,10ac946,,MNQ1!,15,candles,none,,30m/1H/4H strips render side by side without overlap,,,UNTESTED,,
+T-03,Pivot markers,,,10ac946,,MNQ1!,15,candles,MQmarkers on,,Markers sit on their pivot bars,,,UNTESTED,,
+T-04,Session levels full day,,,10ac946,,MNQ1!,5,candles,none,,All session/daily levels dotted with right-edge grey text,,,UNTESTED,,
+T-05,R-01 look-ahead in Breakers,,,10ac946,,MNQ1!,5,candles,brk_tfStructure=60,,Historical and Bar Replay first-appearance indices are identical,,,UNTESTED,Critical,Fix lookahead before release
+T-06,R-03 C3/C4 provisionality,,,10ac946,,MNQ1!,15,candles,none,,Differences before/after HTF close are documented,,,UNTESTED,High,Document in user guide
+T-07,SMT stability across reload,,,10ac946,,MNQ1!,15,candles,show_smt on with pair,,Identical divergences after reload,,,UNTESTED,,
+T-09,R-05 Turtle Soup intrabar state,,,10ac946,,MNQ1!,1,candles,ts_show_sweep on,,Decide whether a non-repainting statement is permissible,,,UNTESTED,Medium,Blocks any non-repaint claim
+T-12,Session H/L freeze,,,10ac946,,MNQ1!,5,candles,none,,Line stops extending at breach,,,UNTESTED,,
+T-13,PDH/PDL rollover,,,10ac946,,MNQ1!,15,candles,none,,Levels update at the new day,,,UNTESTED,,
+T-14,F-07 session window on high TF,,,10ac946,,MNQ1!,60,candles,none,,Determine whether Midnight/8:30 Open lines draw,,,UNTESTED,Medium,Widen session window or document
+T-15,Load and responsiveness,,,10ac946,,MNQ1!,1,candles,all features on,,Chart loads without calculation timeout,,,UNTESTED,,
+T-16,Reload consistency,,,10ac946,,MNQ1!,15,candles,all features on,,10 noted marks reappear identically,,,UNTESTED,,
+T-17,Settings-change consistency,,,10ac946,,MNQ1!,15,candles,toggle one input,,No ghost-candle flash; historical marks unchanged,,,UNTESTED,,
+T-18,Bar Replay step-through,,,10ac946,,MNQ1!,5,candles,all engines on,,No runtime errors; no premature marks,,,UNTESTED,,
+T-19,Model recompute during replay,,,10ac946,,MNQ1!,5,candles,none,,Matches the R-02 disclosure text,,,UNTESTED,,
+T-20,Live session forward test,,,10ac946,,MNQ1!,5,candles,none,,No errors through a full RTH session,,,UNTESTED,,
+T-21,Market open behavior,,,10ac946,,MNQ1!,5,candles,none,,NY AM levels initialize with no na artifacts,,,UNTESTED,,
+T-22,Market close and gap,,,10ac946,,MNQ1!,5,candles,none,,No spurious sweeps across the gap,,,UNTESTED,,
+T-23,Per-condition alerts,,,10ac946,,MNQ1!,15,candles,none,,All 20 conditions available; no leftover TTFM condition,,,UNTESTED,Low,Remove TTFM alertcondition
+T-24,Any alert() function call coverage,,,10ac946,,MNQ1!,15,candles,none,,Turtle Soup and Breakers fire; others do not; documented,,,UNTESTED,,
+T-25,R-06 unconfirmed Breakers alert,,,10ac946,,MNQ1!,5,candles,brk alerts on,,Alert fires only at bar close,,,UNTESTED,Medium,Add alert.freq_once_per_bar_close
+T-26,Visual/alert match,,,10ac946,,MNQ1!,15,candles,defaults,,Every fired alert has a visible mark,,,UNTESTED,High,A-25 and A-27 expected to fail
+T-27,Duplicate alert delivery,,,10ac946,,MNQ1!,5,candles,both mechanisms configured,,Duplicate behavior recorded,,,UNTESTED,,
+T-28,HTF below chart timeframe,,,10ac946,,MNQ1!,15,candles,custom_htf=1,,Behavior recorded; guard or documentation decided,,,UNTESTED,,
+T-29,Drawing object cap,,,10ac946,,MNQ1!,1,candles,max everything,,No drawings silently disappear,,,UNTESTED,,
+T-30,Multi-symbol sweep,,,10ac946,,ES1!/SPY/EURUSD/BTCUSD,15,candles,none,,Per-symbol label placement acceptable,,,UNTESTED,,
+T-31,Alternate chart types,,,10ac946,,MNQ1!,15,heikin ashi / renko,none,,Behavior recorded and documented,,,UNTESTED,,
+T-32,Light theme legibility,,,10ac946,,MNQ1!,15,candles,use_light_theme=true,,All text legible on white,,,UNTESTED,,
+T-33,Mobile rendering,,,10ac946,,MNQ1!,5,candles,defaults,,Colliding labels recorded,,,UNTESTED,,
+T-34,New or illiquid symbol,,,10ac946,,,15,candles,none,,No runtime error with under 200 bars of history,,,UNTESTED,,
