@@ -1777,34 +1777,30 @@ method reset(KeyLevel k) =>
     k.startBar := na
 
 method render(KeyLevel k, bool show, color clr, string txt) =>
-    if show and not na(k.price)
-        int x2 = bar_index + kl_extend
+    bool showLine = show and not na(k.price)
+    bool showLbl  = showLine and kl_showLabels
+    int  x2       = bar_index + kl_extend
+    if not showLine and not na(k.ln)
+        line.delete(k.ln)
+        k.ln := na
+    if not showLbl and not na(k.lbl)
+        label.delete(k.lbl)
+        k.lbl := na
+    if showLine
         if na(k.ln)
             k.ln := line.new(k.startBar, k.price, x2, k.price, xloc.bar_index, extend.none, clr, lineStyleFromStr(kl_lineStyle), kl_lineWidth)
-        else
-            line.set_xy1(k.ln, k.startBar, k.price)
-            line.set_xy2(k.ln, x2, k.price)
-            line.set_color(k.ln, clr)
-            line.set_style(k.ln, lineStyleFromStr(kl_lineStyle))
-            line.set_width(k.ln, kl_lineWidth)
-        if kl_showLabels
-            if na(k.lbl)
-                k.lbl := label.new(x2, k.price, txt, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_left, color = na, textcolor = clr, size = textSize(kl_labelSize), text_font_family = font.family_monospace)
-            else
-                label.set_xy(k.lbl, x2, k.price)
-                label.set_text(k.lbl, txt)
-                label.set_textcolor(k.lbl, clr)
-                label.set_size(k.lbl, textSize(kl_labelSize))
-        else if not na(k.lbl)
-            label.delete(k.lbl)
-            k.lbl := na
-    else
-        if not na(k.ln)
-            line.delete(k.ln)
-            k.ln := na
-        if not na(k.lbl)
-            label.delete(k.lbl)
-            k.lbl := na
+        line.set_xy1(k.ln, k.startBar, k.price)
+        line.set_xy2(k.ln, x2, k.price)
+        line.set_color(k.ln, clr)
+        line.set_style(k.ln, lineStyleFromStr(kl_lineStyle))
+        line.set_width(k.ln, kl_lineWidth)
+    if showLbl
+        if na(k.lbl)
+            k.lbl := label.new(x2, k.price, txt, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_left, color = na, textcolor = clr, size = textSize(kl_labelSize), text_font_family = font.family_monospace)
+        label.set_xy(k.lbl, x2, k.price)
+        label.set_text(k.lbl, txt)
+        label.set_textcolor(k.lbl, clr)
+        label.set_size(k.lbl, textSize(kl_labelSize))
 
 var KeyLevel kl_midnight = KeyLevel.new()
 var KeyLevel kl_830      = KeyLevel.new()
