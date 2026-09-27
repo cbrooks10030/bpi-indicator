@@ -18,7 +18,7 @@ htfCandleCount = input.int(5, 'HTF Candles', minval = 1, maxval = 10, group = gr
 hideHtf        = input.bool(false, 'Hide?', group = grpCandles, inline = 'count', tooltip = 'Hide HTF candles preview')
 showHtf2 = input.bool(false, 'Show HTF 2', group = grpCandles, inline = 'extrahtf')
 showHtf3 = input.bool(false, 'Show HTF 3', group = grpCandles, inline = 'extrahtf')
-candleOffsetIn = input.int(0, 'Offset', minval = 0, group = grpCandles)
+candleOffsetIn = input.int(0, 'Offset', minval = -500, maxval = 500, step = 1, group = grpCandles, tooltip = 'Horizontal offset in bars for the whole HTF block (HTF 1, 2, 3 and Daily move together). Positive = right, negative = left.')
 
 bullBody   = input.color(color.rgb(165, 214, 167), 'Body', group = grpCandles, inline = 'body')
 bearBody   = input.color(color.rgb(46, 46, 46), group = grpCandles, inline = 'body')
