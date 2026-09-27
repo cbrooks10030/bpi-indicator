@@ -600,6 +600,10 @@ settings.cisd_show              := cisd_show_input
 ic_cisd_show_input              = input.bool(true, 'IC-CISD', inline='cisd', group=group_sweep, tooltip='Same-side IC-CISD after main CISD confirm through C4 (stops on setup or C4 invalid). Uses CISD colors/width/style. Extreme marked with a dot.')
 settings.ic_cisd_show           := ic_cisd_show_input
 settings.ic_dot_size            := input.string(size.tiny, 'Dot', options=[size.tiny, size.small, size.normal, size.large], inline='cisd', group=group_sweep, active = ic_cisd_show_input)
+psp_show_input                  = input.bool(true, 'Protected Swing Points', group=group_sweep, inline='psp', tooltip='Dots marking the protected swing extreme of each IC-CISD.')
+psp_color_input                 = input.color(color.rgb(0, 0, 0), '', group=group_sweep, inline='psp', active = psp_show_input and ic_cisd_show_input)
+psp_use_cisd_color              = input.bool(false, 'Use CISD colour', group=group_sweep, inline='psp', tooltip='Colour the dots with the bullish/bearish CISD colours instead of the fixed colour above. Taken swings are always grey.', active = psp_show_input and ic_cisd_show_input)
+ic_dots_current_only            = input.bool(true, 'Current C2 only', group=group_sweep, inline='psp2', tooltip='Show the dots only for the most recent C2 setup (live setup, or the latest completed one when nothing is live). Older setups keep their IC-CISD lines but lose the dots.', active = psp_show_input and ic_cisd_show_input)
 settings.cisd_bull_color        := input.color(color.rgb(41,98,255), 'Bull          ', inline='cisd_color', group=group_sweep, active = cisd_show_input or ic_cisd_show_input)
 settings.cisd_bear_color        := input.color(color.rgb(242,54,69), 'Bear', inline='cisd_color', group=group_sweep, active = cisd_show_input or ic_cisd_show_input)
 settings.cisd_width             := input.int(2, 'Width', options=[1, 2, 3, 4], inline='cisd_style', group=group_sweep, active = cisd_show_input or ic_cisd_show_input)
@@ -2178,9 +2182,11 @@ method DrawSetups(CandleSet candleSet) =>
                         color ic_col = ic.taken ? color.gray : (setup.is_bullish ? settings.cisd_bull_color : settings.cisd_bear_color)
                         if not na(ic.level) and not na(ic.start_idx) and not na(ic.end_idx)
                             bin.lines.push(line.new(ic.start_idx, ic.level, ic.end_idx, ic.level, color = ic_col, style = cisd_line_style, width = settings.cisd_width))
-                        if not na(ic.extreme_price) and not na(ic.extreme_idx)
+                        bool ic_dot_ok = psp_show_input and (not ic_dots_current_only or (i == 0 and not candleSet.has_live_bearish and not candleSet.has_live_bullish))
+                        if ic_dot_ok and not na(ic.extreme_price) and not na(ic.extreme_idx)
                             ic_dot_style = setup.is_bullish ? label.style_label_up : label.style_label_down
-                            bin.labels.push(label.new(ic.extreme_idx, ic.extreme_price, "●", color = color_transparent, textcolor = ic_col, style = ic_dot_style, size = settings.ic_dot_size))
+                            color psp_col = ic.taken ? color.gray : (psp_use_cisd_color ? ic_col : psp_color_input)
+                            bin.labels.push(label.new(ic.extreme_idx, ic.extreme_price, "●", color = color_transparent, textcolor = psp_col, style = ic_dot_style, size = settings.ic_dot_size))
                 
                 // ==== LAYER 6: SMT LINE - SKIP if invalid ====
                 if not setup.is_invalid and smt_show_input and setup.has_smt and not na(setup.smt_x1) and not na(setup.smt_x2)
@@ -2365,9 +2371,10 @@ method DrawSetups(CandleSet candleSet) =>
                 color ic_col_l = ic_l.taken ? color.gray : (is_bull ? settings.cisd_bull_color : settings.cisd_bear_color)
                 if not na(ic_l.level) and not na(ic_l.start_idx) and not na(ic_l.end_idx)
                     bin.lines.push(line.new(ic_l.start_idx, ic_l.level, ic_l.end_idx, ic_l.level, color = ic_col_l, style = cisd_line_style, width = settings.cisd_width))
-                if not na(ic_l.extreme_price) and not na(ic_l.extreme_idx)
+                if psp_show_input and not na(ic_l.extreme_price) and not na(ic_l.extreme_idx)
                     ic_dot_style_l = is_bull ? label.style_label_up : label.style_label_down
-                    bin.labels.push(label.new(ic_l.extreme_idx, ic_l.extreme_price, "●", color = color_transparent, textcolor = ic_col_l, style = ic_dot_style_l, size = settings.ic_dot_size))
+                    color psp_col_l = ic_l.taken ? color.gray : (psp_use_cisd_color ? ic_col_l : psp_color_input)
+                    bin.labels.push(label.new(ic_l.extreme_idx, ic_l.extreme_price, "●", color = color_transparent, textcolor = psp_col_l, style = ic_dot_style_l, size = settings.ic_dot_size))
         
         // ==== LAYER 6: SMT LINE - SKIP if invalid ====
         if not setup.is_invalid and smt_show_input and setup.has_smt and not na(setup.smt_x1) and not na(setup.smt_x2)
@@ -2632,25 +2639,25 @@ formatRemaining(int ms, bool forceHours) =>
 //#endregion
 
 //#region [HTF 2 / HTF 3 / DAILY CANDLES]
-grpExtHtf      = 'HTF 2 / HTF 3 Candles'
-htfCandleCount = input.int(5, 'HTF Candles', minval = 1, maxval = 10, group = grpExtHtf, inline = 'count')
-hideHtf        = input.bool(false, 'Hide?', group = grpExtHtf, inline = 'count', tooltip = 'Hide the HTF 2 / HTF 3 blocks and the Daily candle')
-showHtf2       = input.bool(false, 'Show HTF 2', group = grpExtHtf, inline = 'extrahtf')
-showHtf3       = input.bool(false, 'Show HTF 3', group = grpExtHtf, inline = 'extrahtf', tooltip = 'Extra HTF candle blocks drawn to the right of the fractal model\'s HTF block. Timeframes are picked automatically from the chart timeframe. They follow "Offset HTF Candles".')
+grpExtHtf      = group_htf
+htfCandleCount = input.int(5, 'HTF 2/3 Candles', minval = 1, maxval = 10, group = grpExtHtf, inline = 'count')
+hideHtf        = input.bool(false, 'Hide HTF 2/3?', group = grpExtHtf, inline = 'count', tooltip = 'Hide the HTF 2 / HTF 3 blocks and the Daily candle')
+showHtf2       = input.bool(true, 'Show HTF 2', group = grpExtHtf, inline = 'extrahtf')
+showHtf3       = input.bool(true, 'Show HTF 3', group = grpExtHtf, inline = 'extrahtf', tooltip = 'Extra HTF candle blocks drawn to the right of the fractal model\'s HTF block. Timeframes are picked automatically from the chart timeframe. They follow "Offset HTF Candles".')
 extBlockGap    = input.int(2, 'Gap between blocks', minval = 0, maxval = 30, group = grpExtHtf, inline = 'extgap', tooltip = 'Bars of space between the HTF 1, HTF 2, HTF 3 and Daily blocks.')
 
-bullBody   = input.color(color.rgb(165, 214, 167), 'Body', group = grpExtHtf, inline = 'body')
-bearBody   = input.color(color.rgb(46, 46, 46), '', group = grpExtHtf, inline = 'body')
-borderBull = input.color(color.rgb(46, 46, 46), 'Borders', group = grpExtHtf, inline = 'border')
-borderBear = input.color(color.rgb(46, 46, 46), '', group = grpExtHtf, inline = 'border')
-wickBull   = input.color(color.rgb(46, 46, 46), 'Wick', group = grpExtHtf, inline = 'wick')
-wickBear   = input.color(color.rgb(46, 46, 46), '', group = grpExtHtf, inline = 'wick')
+bullBody   = input.color(color.rgb(165, 214, 167), 'HTF 2/3 Body', group = grpExtHtf, inline = 'body2')
+bearBody   = input.color(color.rgb(46, 46, 46), '', group = grpExtHtf, inline = 'body2')
+borderBull = input.color(color.rgb(46, 46, 46), 'HTF 2/3 Borders', group = grpExtHtf, inline = 'border2')
+borderBear = input.color(color.rgb(46, 46, 46), '', group = grpExtHtf, inline = 'border2')
+wickBull   = input.color(color.rgb(46, 46, 46), 'HTF 2/3 Wick', group = grpExtHtf, inline = 'wick2')
+wickBear   = input.color(color.rgb(46, 46, 46), '', group = grpExtHtf, inline = 'wick2')
 
-showHtfTf     = input.bool(true, 'HTF Info', group = grpExtHtf, inline = 'htfinfo', tooltip = 'Shows the higher timeframe label and/or a countdown to the close of the live HTF candle, centered above each block.')
+showHtfTf     = input.bool(true, 'HTF 2/3 Info', group = grpExtHtf, inline = 'htfinfo', tooltip = 'Shows the higher timeframe label and/or a countdown to the close of the live HTF candle, centered above each block.')
 showHtfTimer  = input.bool(true, 'Countdown', group = grpExtHtf, inline = 'htfinfo')
 showHtfStamps = input.bool(false, 'Time Stamps', group = grpExtHtf, inline = 'htfinfo', tooltip = 'Shows the open time (or day name for daily+ candles) under each individual HTF candle.')
 htfInfoColor  = input.color(color.new(#1a1a1a, 0), '', group = grpExtHtf, inline = 'htfinfo')
-labelSize     = input.string('Small', 'Label Size', options = ['Tiny', 'Small', 'Normal', 'Large', 'Huge'], group = grpExtHtf, inline = 'lblsize')
+labelSize     = input.string('Small', 'HTF 2/3 Label Size', options = ['Tiny', 'Small', 'Normal', 'Large', 'Huge'], group = grpExtHtf, inline = 'lblsize')
 
 grpDaily         = 'HTF Daily Candle'
 showDaily        = input.bool(true, 'Show Daily Candle', group = grpDaily, inline = 'daily', tooltip = 'Draws the live candle of the selected period as a single wide candle to the right of the HTF blocks.')
