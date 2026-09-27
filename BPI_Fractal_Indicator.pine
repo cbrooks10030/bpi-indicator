@@ -6,6 +6,8 @@ indicator("BPI Fractal Indicator", overlay = true, max_boxes_count = 500, max_li
 grpModel   = 'General Settings'
 showAlerts = input.bool(true, 'Alerts?', group = grpModel, inline = 'alerts', tooltip = "To turn on the alerts, follow these steps:\n\n1) Make sure that the 'Alerts?' toggle is ON.\n2) Find, and click on, the three dots next to the indicator title on the top left of your chart, or right-click on the indicator on the chart.\n3) Click 'Add Alert on Fractal Model [Pro+]'\n4) Choose the Alert Name, if you wish, and confirm by clicking 'Create'")
 showEarlyCisdAlerts = input.bool(false, 'Early CISD Alerts?', group = grpModel, inline = 'alerts', tooltip = "The global 'Alerts?' toggle above acts as a master switch. If it is OFF, Early CISD alerts will not fire even if this toggle is ON.")
+showCisdAlerts = input.bool(true, 'CISD', group = grpModel, inline = 'alerts2', tooltip = 'Alert when a setup CISD is confirmed (body close through the CISD level).')
+showSmtAlerts  = input.bool(true, 'SMT', group = grpModel, inline = 'alerts2', tooltip = 'Alert when a new SMT divergence is drawn.')
 showHistory = input.int(1, 'History', minval = 0, maxval = 40, group = grpModel, tooltip = 'Number of past setups (valid or invalidated) to keep drawn on the chart. 0 = unlimited.')
 biasFilter = input.string('Neutral', 'Bias', options = ['Neutral', 'Bearish', 'Bullish'], group = grpModel)
 modelType  = input.string('Auto', 'Fractal', options = ['Custom', 'Auto', '1m-15m', '2m-20m', '3m-30m', '5m-1H', '15m-4H', '30m-6H', '1H-1D', '4H-1W', '1D-1W'], group = grpModel, inline = 'fractal')
@@ -565,18 +567,6 @@ manageExtraHTF(array<HtfCandle> candles, string tf, int maxCount) =>
             candles.set(0, candles.first().update(high, low, close, bar_index))
         candles
 
-drawEarlyCisd(bool isBull, float level, int idx, int confirmBar) =>
-    array<EarlyCisdRecord> target = isBull ? bullEarlyCisdRecords : bearEarlyCisdRecords
-    color clr = isBull ? earlyCisdBullColor : earlyCisdBearColor
-    if showEarlyCisd
-        ln = line.new(idx, level, confirmBar + 3, level, color = clr, style = lineStyleFromStr(earlyCisdStyle), width = earlyCisdWidth)
-        label lbl = na
-        if showLabels
-            lbl := label.new(confirmBar + 3, level, isBull ? '+CISD' : '-CISD', xloc = xloc.bar_index, style = label.style_label_left, color = na, textcolor = clr, size = textSize(labelSize), text_font_family = font.family_default)
-        target.push(EarlyCisdRecord.new(ln, lbl, confirmBar))
-    if showAlerts and showEarlyCisdAlerts
-        alert((isBull ? 'Bullish' : 'Bearish') + ' Early CISD confirmed on ' + syminfo.ticker, alert.freq_once_per_bar)
-
 pruneEarlyCisd(array<EarlyCisdRecord> recs, int thresholdBar) =>
     if not na(thresholdBar)
         while recs.size() > 0 and recs.first().barIndex < thresholdBar
@@ -686,6 +676,22 @@ autoTf = switch modelType
     =>          autoHTF()
 
 validTf = modelType == 'Auto' ? isAutoValidTf(tfMins(curTfCode())) : tfMins(curTfCode()) <= tfMins(ltfCode())
+
+// "5m-1H NQ1!: Potential Bullish Candle 2"
+buildAlertMsg(bool isBull, bool potential, string name) =>
+    str.format('{0}-{1} {2}: {3}{4} {5}', tfLabel(timeframe.period), tfLabel(autoTf), syminfo.ticker, potential ? 'Potential ' : '', isBull ? 'Bullish' : 'Bearish', name)
+
+drawEarlyCisd(bool isBull, float level, int idx, int confirmBar) =>
+    array<EarlyCisdRecord> target = isBull ? bullEarlyCisdRecords : bearEarlyCisdRecords
+    color clr = isBull ? earlyCisdBullColor : earlyCisdBearColor
+    if showEarlyCisd
+        ln = line.new(idx, level, confirmBar + 3, level, color = clr, style = lineStyleFromStr(earlyCisdStyle), width = earlyCisdWidth)
+        label lbl = na
+        if showLabels
+            lbl := label.new(confirmBar + 3, level, isBull ? '+CISD' : '-CISD', xloc = xloc.bar_index, style = label.style_label_left, color = na, textcolor = clr, size = textSize(labelSize), text_font_family = font.family_default)
+        target.push(EarlyCisdRecord.new(ln, lbl, confirmBar))
+    if showAlerts and showEarlyCisdAlerts
+        alert(buildAlertMsg(isBull, false, 'Early CISD'), alert.freq_once_per_bar)
 
 [currentO, currentH, currentL, currentC, prevH1, prevL1] = request.security(syminfo.tickerid, autoTf, [open[0], high[0], low[0], close[0], high[1], low[1]], lookahead = barmerge.lookahead_on)
 
@@ -808,6 +814,8 @@ method checkCisdConfirm(C2Setup s) =>
         confirmed = s.isBull ? close > s.cisdLevel : close < s.cisdLevel
         if confirmed
             confirmCisd(s, bar_index)
+            if showAlerts and showCisdAlerts
+                alert(buildAlertMsg(s.isBull, false, 'CISD'), alert.freq_once_per_bar)
     s
 
 processC2(bool trigger, bool allow, bool isBull, float extremePrice, int extremeBar, float sweepFromPrice, int sweepFromBar, float cisdLevel, int cisdIndex, bool cisdAlreadyConfirmed, int cisdConfirmBar, C2Setup existing) =>
@@ -1017,9 +1025,9 @@ sellSetup := sellSetup.checkCisdConfirm()
 
 if showAlerts
     if c2BuyTrigger and allowBuy
-        alert('Bullish C2 formed on ' + syminfo.ticker, alert.freq_once_per_bar)
+        alert(buildAlertMsg(true, false, 'Candle 2'), alert.freq_once_per_bar)
     if c2SellTrigger and allowSell
-        alert('Bearish C2 formed on ' + syminfo.ticker, alert.freq_once_per_bar)
+        alert(buildAlertMsg(false, false, 'Candle 2'), alert.freq_once_per_bar)
 
 if showVlines and periodChanged
     vLines.unshift(line.new(bar_index, low - ta.tr, bar_index, high + ta.tr, xloc.bar_index, extend.both, lineColor, lineStyleFromStr(lineStyle), lineWidth))
@@ -1549,6 +1557,9 @@ f_smt_add(string _type, int _x1, float _y1, int _x2, float _y2, float _score, st
     if not skip
         line ln = line.new(_x1, _y1, _x2, _y2, color=smt_lineColor, width=smt_lineWidth, style=f_smt_line_style(smt_lineStyle))
         label lb = smt_showLabels ? label.new(_x2, _y2, _txt, style=_type == "Bearish" ? label.style_label_down : label.style_label_up, textcolor=smt_labelText, color=smt_labelBg, size=f_smt_label_size(smt_labelSize)) : na
+
+        if showAlerts and showSmtAlerts
+            alert(buildAlertMsg(_type == "Bullish", false, 'SMT'), alert.freq_once_per_bar)
 
         array.push(smt_lines, ln)
         array.push(smt_labels, lb)
