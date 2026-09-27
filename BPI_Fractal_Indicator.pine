@@ -2632,13 +2632,25 @@ formatRemaining(int ms, bool forceHours) =>
 //#endregion
 
 //#region [HTF 2 / HTF 3 / DAILY CANDLES]
-grpExtHtf = 'HTF 2 / HTF 3 Candles'
-showHtf2      = input.bool(false, 'Show HTF 2', group = grpExtHtf, inline = 'extrahtf')
-showHtf3      = input.bool(false, 'Show HTF 3', group = grpExtHtf, inline = 'extrahtf', tooltip = 'Extra HTF candle blocks drawn to the right of the fractal model\'s HTF block. Timeframes are picked automatically from the chart timeframe. They share the model\'s candle colours, size, count and "Offset HTF Candles".')
-extBlockGap   = input.int(2, 'Gap between blocks', minval = 0, maxval = 30, group = grpExtHtf, inline = 'extgap', tooltip = 'Bars of space between the HTF 1, HTF 2, HTF 3 and Daily blocks.')
-showHtfStamps = input.bool(false, 'Time Stamps', group = grpExtHtf, inline = 'extinfo', tooltip = 'Open time (or day name for daily+ candles) under each HTF 2 / HTF 3 candle.')
-extInfoColor  = input.color(color.new(#1a1a1a, 0), 'Info colour', group = grpExtHtf, inline = 'extinfo')
-extInfoSize   = input.string('Small', '', options = ['Tiny', 'Small', 'Normal', 'Large', 'Huge'], group = grpExtHtf, inline = 'extinfo')
+grpExtHtf      = 'HTF 2 / HTF 3 Candles'
+htfCandleCount = input.int(5, 'HTF Candles', minval = 1, maxval = 10, group = grpExtHtf, inline = 'count')
+hideHtf        = input.bool(false, 'Hide?', group = grpExtHtf, inline = 'count', tooltip = 'Hide the HTF 2 / HTF 3 blocks and the Daily candle')
+showHtf2       = input.bool(false, 'Show HTF 2', group = grpExtHtf, inline = 'extrahtf')
+showHtf3       = input.bool(false, 'Show HTF 3', group = grpExtHtf, inline = 'extrahtf', tooltip = 'Extra HTF candle blocks drawn to the right of the fractal model\'s HTF block. Timeframes are picked automatically from the chart timeframe. They follow "Offset HTF Candles".')
+extBlockGap    = input.int(2, 'Gap between blocks', minval = 0, maxval = 30, group = grpExtHtf, inline = 'extgap', tooltip = 'Bars of space between the HTF 1, HTF 2, HTF 3 and Daily blocks.')
+
+bullBody   = input.color(color.rgb(165, 214, 167), 'Body', group = grpExtHtf, inline = 'body')
+bearBody   = input.color(color.rgb(46, 46, 46), '', group = grpExtHtf, inline = 'body')
+borderBull = input.color(color.rgb(46, 46, 46), 'Borders', group = grpExtHtf, inline = 'border')
+borderBear = input.color(color.rgb(46, 46, 46), '', group = grpExtHtf, inline = 'border')
+wickBull   = input.color(color.rgb(46, 46, 46), 'Wick', group = grpExtHtf, inline = 'wick')
+wickBear   = input.color(color.rgb(46, 46, 46), '', group = grpExtHtf, inline = 'wick')
+
+showHtfTf     = input.bool(true, 'HTF Info', group = grpExtHtf, inline = 'htfinfo', tooltip = 'Shows the higher timeframe label and/or a countdown to the close of the live HTF candle, centered above each block.')
+showHtfTimer  = input.bool(true, 'Countdown', group = grpExtHtf, inline = 'htfinfo')
+showHtfStamps = input.bool(false, 'Time Stamps', group = grpExtHtf, inline = 'htfinfo', tooltip = 'Shows the open time (or day name for daily+ candles) under each individual HTF candle.')
+htfInfoColor  = input.color(color.new(#1a1a1a, 0), '', group = grpExtHtf, inline = 'htfinfo')
+labelSize     = input.string('Small', 'Label Size', options = ['Tiny', 'Small', 'Normal', 'Large', 'Huge'], group = grpExtHtf, inline = 'lblsize')
 
 grpDaily         = 'HTF Daily Candle'
 showDaily        = input.bool(true, 'Show Daily Candle', group = grpDaily, inline = 'daily', tooltip = 'Draws the live candle of the selected period as a single wide candle to the right of the HTF blocks.')
@@ -2652,10 +2664,14 @@ dailyLabelColor  = input.color(#4e5057, '', group = grpDaily, inline = 'dailylbl
 dailyLabelSize   = input.string('Small', '', options = ['Tiny', 'Small', 'Normal', 'Large', 'Huge'], group = grpDaily, inline = 'dailylbl')
 
 // Geometry shared with the model's HTF block
-int extCandleW   = settings.width
-int extSpacing   = settings.width + 1
-int extCount     = htf.settings.max_display
-bool extHideAll  = settings.hide_candles
+// Geometry: our blocks use a fixed 3-bar candle (as before); HTF 1 geometry comes from the model
+int extCandleW   = 2
+int extSpacing   = 3
+int extCount     = htfCandleCount
+bool extHideAll  = hideHtf
+int htf1CandleW  = settings.width
+int htf1Spacing  = settings.width + 1
+int htf1Count    = htf.settings.max_display
 
 type HtfCandle
     float o
@@ -2712,14 +2728,14 @@ method draw(HtfCandle c, int leftBar, string tf) =>
     box.set_right(c.body, leftBar + extCandleW)
     box.set_top(c.body, math.max(c.o, c.c))
     box.set_bottom(c.body, math.min(c.o, c.c))
-    box.set_bgcolor(c.body, isBull ? settings.bull_body : settings.bear_body)
-    box.set_border_color(c.body, isBull ? settings.bull_border : settings.bear_border)
+    box.set_bgcolor(c.body, isBull ? bullBody : bearBody)
+    box.set_border_color(c.body, isBull ? borderBull : borderBear)
     line.set_xy1(c.wickUp, midX, c.h)
     line.set_xy2(c.wickUp, midX, math.max(c.o, c.c))
-    line.set_color(c.wickUp, isBull ? settings.bull_wick : settings.bear_wick)
+    line.set_color(c.wickUp, isBull ? wickBull : wickBear)
     line.set_xy1(c.wickDown, midX, c.l)
     line.set_xy2(c.wickDown, midX, math.min(c.o, c.c))
-    line.set_color(c.wickDown, isBull ? settings.bull_wick : settings.bear_wick)
+    line.set_color(c.wickDown, isBull ? wickBull : wickBear)
     c.midX := midX
 
     string timeText = ''
@@ -2731,12 +2747,12 @@ method draw(HtfCandle c, int leftBar, string tf) =>
 
     if showHtfStamps
         if na(c.timeLbl)
-            c.timeLbl := label.new(midX, c.l, timeText, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_up, color = na, textcolor = extInfoColor, size = textSize(extInfoSize), text_font_family = font.family_default)
+            c.timeLbl := label.new(midX, c.l, timeText, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_up, color = na, textcolor = htfInfoColor, size = textSize(labelSize), text_font_family = font.family_default)
         else
             label.set_xy(c.timeLbl, midX, c.l)
             label.set_text(c.timeLbl, timeText)
-            label.set_textcolor(c.timeLbl, extInfoColor)
-            label.set_size(c.timeLbl, textSize(extInfoSize))
+            label.set_textcolor(c.timeLbl, htfInfoColor)
+            label.set_size(c.timeLbl, textSize(labelSize))
     else if not na(c.timeLbl)
         label.delete(c.timeLbl)
         c.timeLbl := na
@@ -2744,9 +2760,9 @@ method draw(HtfCandle c, int leftBar, string tf) =>
 
 newHtfCandle() =>
     HtfCandle.new(open, high, low, close, bar_index, bar_index,
-         box.new(bar_index, high, bar_index, low, border_color = settings.bull_border, border_width = 1),
-         line.new(bar_index, high, bar_index, high, color = settings.bull_wick),
-         line.new(bar_index, low, bar_index, low, color = settings.bull_wick),
+         box.new(bar_index, high, bar_index, low, border_color = borderBull, border_width = 1),
+         line.new(bar_index, high, bar_index, high, color = wickBull),
+         line.new(bar_index, low, bar_index, low, color = wickBull),
          na, openTime = time)
 
 getExtraHTFs() =>
@@ -2808,17 +2824,17 @@ drawExtBlock(array<HtfCandle> candles, string tf, int startRel, label infoLbl) =
     for i = 1 to n - 1
         blockHigh := math.max(blockHigh, candles.get(i).h)
     int center = bar_index + startRel + int(extSpacing * (n - 1) / 2) + int(extCandleW / 2)
-    string infoText = tfLabel(tf)
-    if settings.htf_timer_show
+    string infoText = showHtfTf ? tfLabel(tf) : ''
+    if showHtfTimer
         int remMs = time_close(tf) - (barstate.isrealtime ? timenow : time_close)
         infoText := infoText + '\n(' + formatRemaining(remMs, tfMins(tf) >= 60) + ')'
-    if settings.htf_label_show
+    if (showHtfTf or showHtfTimer)
         if na(lbl)
-            lbl := label.new(center, blockHigh, infoText, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_down, color = na, textcolor = extInfoColor, size = textSize(extInfoSize), text_font_family = font.family_default)
+            lbl := label.new(center, blockHigh, infoText, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_down, color = na, textcolor = htfInfoColor, size = textSize(labelSize), text_font_family = font.family_default)
         else
             label.set_xy(lbl, center, blockHigh)
             label.set_text(lbl, infoText)
-            label.set_textcolor(lbl, extInfoColor)
+            label.set_textcolor(lbl, htfInfoColor)
     else if not na(lbl)
         label.delete(lbl)
         lbl := na
@@ -2854,7 +2870,7 @@ if showHtf3 and not extHideAll
 // --- drawing (last bar) ---
 if barstate.islast or barstate.isrealtime
     // Right edge of the model's HTF 1 block, relative to bar_index
-    int htf1Right = settings.offset + extSpacing * (extCount - 1) + extCandleW
+    int htf1Right = settings.offset + htf1Spacing * (htf1Count - 1) + htf1CandleW
     int htf2Start = htf1Right + 1 + extBlockGap
     int nextStart = htf2Start
 
@@ -2879,9 +2895,9 @@ if barstate.islast or barstate.isrealtime
 
     if showDaily and not extHideAll and not na(dailyO)
         bool  dBull  = dailyC >= dailyO
-        color dBody  = dBull ? settings.bull_body : settings.bear_body
-        color dBord  = dBull ? settings.bull_border : settings.bear_border
-        color dWick  = dBull ? settings.bull_wick : settings.bear_wick
+        color dBody  = dBull ? bullBody : bearBody
+        color dBord  = dBull ? borderBull : borderBear
+        color dWick  = dBull ? wickBull : wickBear
         float dTop   = math.max(dailyO, dailyC)
         float dBot   = math.min(dailyO, dailyC)
         if na(dailyBody)
@@ -2907,17 +2923,17 @@ if barstate.islast or barstate.isrealtime
             line.delete(dailyOpenLn)
             dailyOpenLn := na
 
-        string dailyInfoText = tfLabel(dailyTf)
-        if settings.htf_timer_show
+        string dailyInfoText = showHtfTf ? tfLabel(dailyTf) : ''
+        if showHtfTimer
             int dailyRemainingMs = time_close(dailyTf) - (barstate.isrealtime ? timenow : time_close)
             dailyInfoText := dailyInfoText + '\n(' + formatRemaining(dailyRemainingMs, tfMins(dailyTf) >= 60) + ')'
-        if settings.htf_label_show
+        if (showHtfTf or showHtfTimer)
             if na(dailyInfoLbl)
-                dailyInfoLbl := label.new(dailyMid, dailyH, dailyInfoText, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_down, color = na, textcolor = extInfoColor, size = textSize(extInfoSize), text_font_family = font.family_default)
+                dailyInfoLbl := label.new(dailyMid, dailyH, dailyInfoText, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_down, color = na, textcolor = htfInfoColor, size = textSize(labelSize), text_font_family = font.family_default)
             else
                 label.set_xy(dailyInfoLbl, dailyMid, dailyH)
                 label.set_text(dailyInfoLbl, dailyInfoText)
-                label.set_textcolor(dailyInfoLbl, extInfoColor)
+                label.set_textcolor(dailyInfoLbl, htfInfoColor)
         else if not na(dailyInfoLbl)
             label.delete(dailyInfoLbl)
             dailyInfoLbl := na
