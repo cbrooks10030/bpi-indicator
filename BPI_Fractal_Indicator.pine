@@ -47,6 +47,17 @@ lhColor = input.color(color.new(#1a1a1a, 30), '', group = grpCandles, inline = '
 lhStyle = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], group = grpCandles, inline = 'lh')
 lhWidth = input.int(1, '', minval = 1, group = grpCandles, inline = 'lh')
 
+grpDaily         = 'HTF Daily Candle'
+showDaily        = input.bool(true, 'Show Daily Candle', group = grpDaily, inline = 'daily', tooltip = 'Draws the live candle of the selected period as a single wide candle to the right of the HTF 3 block.')
+dailyTf          = input.timeframe('1D', '', group = grpDaily, inline = 'daily')
+dailyWidth       = input.int(6, 'Body Width', minval = 2, maxval = 20, group = grpDaily, inline = 'dailyw')
+dailyGap         = input.int(2, 'Gap', minval = 0, maxval = 30, group = grpDaily, inline = 'dailyw', tooltip = 'Extra bars of space between the HTF 3 block and the daily candle.')
+showDailyOpenLn  = input.bool(true, 'Open Line', group = grpDaily, inline = 'dailyopen', tooltip = 'Dotted line from the period open back on the chart out to the daily candle.')
+dailyOpenColor   = input.color(color.new(color.gray, 30), '', group = grpDaily, inline = 'dailyopen')
+showDailyLevels  = input.bool(true, 'H/O/L Labels', group = grpDaily, inline = 'dailylbl', tooltip = 'Dotted stubs from the daily candle with text-only price labels for the period High, Open and Low.')
+dailyLabelColor  = input.color(#4e5057, '', group = grpDaily, inline = 'dailylbl')
+dailyLabelSize   = input.string('Small', '', options = ['Tiny', 'Small', 'Normal', 'Large', 'Huge'], group = grpDaily, inline = 'dailylbl')
+
 grpVisuals = 'Model Style'
 showLabels = input.bool(true, 'Labels?', group = grpVisuals, inline = 'lbl')
 labelSize  = input.string('Normal', '', group = grpVisuals, inline = 'lbl', options = ['Tiny', 'Small', 'Normal', 'Large', 'Huge'], active = showLabels)
@@ -248,6 +259,18 @@ var line                     htfOpenLn            = na
 var label                    htfInfoLbl           = na
 var label                    htf2InfoLbl          = na
 var label                    htf3InfoLbl          = na
+
+var float dailyO       = na
+var float dailyH       = na
+var float dailyL       = na
+var float dailyC       = na
+var int   dailyFromBar = na
+var box   dailyBody    = na
+var line  dailyWick    = na
+var line  dailyOpenLn  = na
+var label dailyInfoLbl = na
+var array<line>  dailyLvlLines  = array.new<line>()
+var array<label> dailyLvlLabels = array.new<label>()
 
 allowBuy  = biasFilter != 'Bearish'
 allowSell = biasFilter != 'Bullish'
@@ -940,6 +963,18 @@ else if htfCandles.size() > 0
 
 [htf2Tf, htf3Tf] = getExtraHTFs()
 
+bool dailyNewPeriod = time(dailyTf) != time(dailyTf)[1]
+if showDaily
+    if dailyNewPeriod or na(dailyO)
+        dailyO       := open
+        dailyH       := high
+        dailyL       := low
+        dailyFromBar := bar_index
+    else
+        dailyH := math.max(dailyH, high)
+        dailyL := math.min(dailyL, low)
+    dailyC := close
+
 if showHtf2
     htf2Candles := manageExtraHTF(htf2Candles, htf2Tf, htfCandleCount)
 if showHtf3
@@ -1158,6 +1193,99 @@ if (barstate.islast or barstate.isrealtime) and validTf and htfCandles.size() > 
     else if not na(htf3InfoLbl)
         label.delete(htf3InfoLbl)
         htf3InfoLbl := na
+
+    int htf3Right  = htf3Start + (htfCandleCount - 1) * candleSpacing + 2
+    int dailyLeft  = bar_index + htf3Right + (blockGap + dailyGap) * candleSpacing
+    int dailyRight = dailyLeft + dailyWidth
+    int dailyMid   = dailyLeft + int(dailyWidth / 2)
+
+    if showDaily and not na(dailyO)
+        bool  dBull  = dailyC >= dailyO
+        color dBody  = dBull ? bullBody : bearBody
+        color dBord  = dBull ? borderBull : borderBear
+        color dWick  = dBull ? wickBull : wickBear
+        float dTop   = math.max(dailyO, dailyC)
+        float dBot   = math.min(dailyO, dailyC)
+        if na(dailyBody)
+            dailyBody := box.new(dailyLeft, dTop, dailyRight, dBot, dBord, 1, bgcolor = dBody, xloc = xloc.bar_index)
+            dailyWick := line.new(dailyMid, dailyH, dailyMid, dailyL, xloc.bar_index, extend.none, dWick)
+        else
+            box.set_lefttop(dailyBody, dailyLeft, dTop)
+            box.set_rightbottom(dailyBody, dailyRight, dBot)
+            box.set_bgcolor(dailyBody, dBody)
+            box.set_border_color(dailyBody, dBord)
+            line.set_xy1(dailyWick, dailyMid, dailyH)
+            line.set_xy2(dailyWick, dailyMid, dailyL)
+            line.set_color(dailyWick, dWick)
+
+        if showDailyOpenLn
+            if na(dailyOpenLn)
+                dailyOpenLn := line.new(dailyFromBar, dailyO, dailyLeft, dailyO, xloc.bar_index, extend.none, dailyOpenColor, line.style_dotted)
+            else
+                line.set_xy1(dailyOpenLn, dailyFromBar, dailyO)
+                line.set_xy2(dailyOpenLn, dailyLeft, dailyO)
+                line.set_color(dailyOpenLn, dailyOpenColor)
+        else if not na(dailyOpenLn)
+            line.delete(dailyOpenLn)
+            dailyOpenLn := na
+
+        string dailyInfoText = tfLabel(dailyTf)
+        if showHtfTimer
+            int dailyRemainingMs = time_close(dailyTf) - (barstate.isrealtime ? timenow : time_close)
+            dailyInfoText := dailyInfoText + '\n(' + formatRemaining(dailyRemainingMs, tfMins(dailyTf) >= 60) + ')'
+        if showHtfTf or showHtfTimer
+            if na(dailyInfoLbl)
+                dailyInfoLbl := label.new(dailyMid, dailyH, dailyInfoText, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_down, color = na, textcolor = htfInfoColor, size = textSize(labelSize), text_font_family = font.family_default)
+            else
+                label.set_xy(dailyInfoLbl, dailyMid, dailyH)
+                label.set_text(dailyInfoLbl, dailyInfoText)
+                label.set_textcolor(dailyInfoLbl, htfInfoColor)
+        else if not na(dailyInfoLbl)
+            label.delete(dailyInfoLbl)
+            dailyInfoLbl := na
+
+        if showDailyLevels
+            int dailyLblX = dailyRight + 3
+            array<float>  lvlPrices = array.from(dailyH, dailyO, dailyL)
+            array<string> lvlNames  = array.from('D.High', 'D.Open', 'D.Low')
+            for i = 0 to 2
+                float  p   = lvlPrices.get(i)
+                string txt = lvlNames.get(i) + ' ' + str.tostring(p, format.mintick)
+                if dailyLvlLines.size() <= i
+                    dailyLvlLines.push(line.new(dailyMid, p, dailyLblX, p, xloc.bar_index, extend.none, dailyLabelColor, line.style_dotted))
+                    dailyLvlLabels.push(label.new(dailyLblX, p, txt, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_left, color = na, textcolor = dailyLabelColor, size = textSize(dailyLabelSize), text_font_family = font.family_monospace))
+                else
+                    line ln = dailyLvlLines.get(i)
+                    line.set_xy1(ln, dailyMid, p)
+                    line.set_xy2(ln, dailyLblX, p)
+                    line.set_color(ln, dailyLabelColor)
+                    label lb = dailyLvlLabels.get(i)
+                    label.set_xy(lb, dailyLblX, p)
+                    label.set_text(lb, txt)
+                    label.set_textcolor(lb, dailyLabelColor)
+                    label.set_size(lb, textSize(dailyLabelSize))
+        else
+            while dailyLvlLines.size() > 0
+                line.delete(dailyLvlLines.pop())
+            while dailyLvlLabels.size() > 0
+                label.delete(dailyLvlLabels.pop())
+    else
+        if not na(dailyBody)
+            box.delete(dailyBody)
+            dailyBody := na
+        if not na(dailyWick)
+            line.delete(dailyWick)
+            dailyWick := na
+        if not na(dailyOpenLn)
+            line.delete(dailyOpenLn)
+            dailyOpenLn := na
+        if not na(dailyInfoLbl)
+            label.delete(dailyInfoLbl)
+            dailyInfoLbl := na
+        while dailyLvlLines.size() > 0
+            line.delete(dailyLvlLines.pop())
+        while dailyLvlLabels.size() > 0
+            label.delete(dailyLvlLabels.pop())
 else
     if not na(htfInfoLbl)
         label.delete(htfInfoLbl)
