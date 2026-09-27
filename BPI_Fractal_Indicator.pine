@@ -1737,6 +1737,124 @@ alertcondition(smt_active, "SMT Divergence", "SMT divergence engine running")
 
 //#endregion
 
+//#region [KEY LEVELS — Midnight Open, 8:30 Open, PDH/PDL]
+// Ported from the previous BPI_Indicator.pine. Dotted line extended past the last bar
+// with a text-only monospace label at the right end (BSL/SSL style).
+
+grpKeyLvls        = 'Key Levels'
+kl_showMidnight   = input.bool(true, 'Midnight Open (00:00 ET)', group = grpKeyLvls, inline = 'klmid')
+kl_midnightColor  = input.color(#4e5057, '', group = grpKeyLvls, inline = 'klmid')
+kl_midnightText   = input.string('Midnight', '', group = grpKeyLvls, inline = 'klmid')
+kl_show830        = input.bool(true, '8:30 Open (ET)', group = grpKeyLvls, inline = 'kl830')
+kl_830Color       = input.color(#4e5057, '', group = grpKeyLvls, inline = 'kl830')
+kl_830Text        = input.string('8:30', '', group = grpKeyLvls, inline = 'kl830')
+kl_showPdh        = input.bool(true, 'Previous Day High', group = grpKeyLvls, inline = 'klpdh')
+kl_pdhColor       = input.color(#4e5057, '', group = grpKeyLvls, inline = 'klpdh')
+kl_pdhText        = input.string('PDH', '', group = grpKeyLvls, inline = 'klpdh')
+kl_showPdl        = input.bool(true, 'Previous Day Low', group = grpKeyLvls, inline = 'klpdl')
+kl_pdlColor       = input.color(#4e5057, '', group = grpKeyLvls, inline = 'klpdl')
+kl_pdlText        = input.string('PDL', '', group = grpKeyLvls, inline = 'klpdl')
+kl_lineStyle      = input.string('Dotted', 'Line', options = ['Solid', 'Dashed', 'Dotted'], group = grpKeyLvls, inline = 'klstyle')
+kl_lineWidth      = input.int(1, '', minval = 1, maxval = 4, group = grpKeyLvls, inline = 'klstyle')
+kl_extend         = input.int(10, 'Extend (bars)', minval = 0, maxval = 100, group = grpKeyLvls, inline = 'klstyle', tooltip = 'How far past the last bar the level lines are extended before the label.')
+kl_showLabels     = input.bool(true, 'Labels', group = grpKeyLvls, inline = 'kllbl')
+kl_labelSize      = input.string('Small', '', options = ['Tiny', 'Small', 'Normal', 'Large', 'Huge'], group = grpKeyLvls, inline = 'kllbl')
+
+type KeyLevel
+    float price    = na
+    int   startBar = na
+    line  ln       = na
+    label lbl      = na
+
+method reset(KeyLevel k) =>
+    if not na(k.ln)
+        line.delete(k.ln)
+        k.ln := na
+    if not na(k.lbl)
+        label.delete(k.lbl)
+        k.lbl := na
+    k.price    := na
+    k.startBar := na
+
+method render(KeyLevel k, bool show, color clr, string txt) =>
+    if show and not na(k.price)
+        int x2 = bar_index + kl_extend
+        if na(k.ln)
+            k.ln := line.new(k.startBar, k.price, x2, k.price, xloc.bar_index, extend.none, clr, lineStyleFromStr(kl_lineStyle), kl_lineWidth)
+        else
+            line.set_xy1(k.ln, k.startBar, k.price)
+            line.set_xy2(k.ln, x2, k.price)
+            line.set_color(k.ln, clr)
+            line.set_style(k.ln, lineStyleFromStr(kl_lineStyle))
+            line.set_width(k.ln, kl_lineWidth)
+        if kl_showLabels
+            if na(k.lbl)
+                k.lbl := label.new(x2, k.price, txt, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_left, color = na, textcolor = clr, size = textSize(kl_labelSize), text_font_family = font.family_monospace)
+            else
+                label.set_xy(k.lbl, x2, k.price)
+                label.set_text(k.lbl, txt)
+                label.set_textcolor(k.lbl, clr)
+                label.set_size(k.lbl, textSize(kl_labelSize))
+        else if not na(k.lbl)
+            label.delete(k.lbl)
+            k.lbl := na
+    else
+        if not na(k.ln)
+            line.delete(k.ln)
+            k.ln := na
+        if not na(k.lbl)
+            label.delete(k.lbl)
+            k.lbl := na
+
+var KeyLevel kl_midnight = KeyLevel.new()
+var KeyLevel kl_830      = KeyLevel.new()
+var KeyLevel kl_pdh      = KeyLevel.new()
+var KeyLevel kl_pdl      = KeyLevel.new()
+
+// First bar inside a narrow window at 00:00 / 08:30 New York time
+int kl_midnightSess = time(timeframe.period, '0000-0002', 'America/New_York')
+int kl_830Sess      = time(timeframe.period, '0830-0832', 'America/New_York')
+bool kl_isMidnight  = not na(kl_midnightSess) and na(kl_midnightSess[1])
+bool kl_is830       = not na(kl_830Sess) and na(kl_830Sess[1])
+
+if kl_isMidnight
+    kl_midnight.reset()
+    kl_midnight.price    := open
+    kl_midnight.startBar := bar_index
+if kl_is830
+    kl_830.reset()
+    kl_830.price    := open
+    kl_830.startBar := bar_index
+
+// Running current-day H/L, snapshotted to PDH/PDL at each new day
+var float kl_curDayHigh     = na
+var float kl_curDayLow      = na
+var int   kl_curDayStartBar = na
+bool kl_isNewDay = ta.change(time('D')) != 0
+
+if kl_isNewDay
+    if not na(kl_curDayHigh)
+        kl_pdh.reset()
+        kl_pdh.price    := kl_curDayHigh
+        kl_pdh.startBar := kl_curDayStartBar
+        kl_pdl.reset()
+        kl_pdl.price    := kl_curDayLow
+        kl_pdl.startBar := kl_curDayStartBar
+    kl_curDayHigh     := high
+    kl_curDayLow      := low
+    kl_curDayStartBar := bar_index
+else
+    kl_curDayHigh     := na(kl_curDayHigh) ? high : math.max(kl_curDayHigh, high)
+    kl_curDayLow      := na(kl_curDayLow)  ? low  : math.min(kl_curDayLow, low)
+    kl_curDayStartBar := na(kl_curDayStartBar) ? bar_index : kl_curDayStartBar
+
+if barstate.islast
+    kl_midnight.render(kl_showMidnight, kl_midnightColor, kl_midnightText)
+    kl_830.render(kl_show830, kl_830Color, kl_830Text)
+    kl_pdh.render(kl_showPdh, kl_pdhColor, kl_pdhText)
+    kl_pdl.render(kl_showPdl, kl_pdlColor, kl_pdlText)
+//#endregion
+
 //#region [HTF FVG (ICT) — fadi]
 
 
