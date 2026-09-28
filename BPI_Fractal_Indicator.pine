@@ -2182,7 +2182,8 @@ method DrawSetups(CandleSet candleSet) =>
                         color ic_col = ic.taken ? color.gray : (setup.is_bullish ? settings.cisd_bull_color : settings.cisd_bear_color)
                         if not na(ic.level) and not na(ic.start_idx) and not na(ic.end_idx)
                             bin.lines.push(line.new(ic.start_idx, ic.level, ic.end_idx, ic.level, color = ic_col, style = cisd_line_style, width = settings.cisd_width))
-                        bool ic_dot_ok = psp_show_input and (not ic_dots_current_only or (i == 0 and not candleSet.has_live_bearish and not candleSet.has_live_bullish))
+                        bool live_has_ic = (candleSet.has_live_bearish and candleSet.live_bearish.cisd_triggered and not na(candleSet.live_bearish.ic_list) and candleSet.live_bearish.ic_list.size() > 0) or (candleSet.has_live_bullish and candleSet.live_bullish.cisd_triggered and not na(candleSet.live_bullish.ic_list) and candleSet.live_bullish.ic_list.size() > 0)
+                        bool ic_dot_ok = psp_show_input and (not ic_dots_current_only or (i == 0 and not live_has_ic))
                         if ic_dot_ok and not na(ic.extreme_price) and not na(ic.extreme_idx)
                             ic_dot_style = setup.is_bullish ? label.style_label_up : label.style_label_down
                             color psp_col = ic.taken ? color.gray : (psp_use_cisd_color ? ic_col : psp_color_input)
