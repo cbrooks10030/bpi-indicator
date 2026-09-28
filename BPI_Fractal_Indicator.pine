@@ -601,8 +601,8 @@ ic_cisd_show_input              = input.bool(true, 'IC-CISD', inline='cisd', gro
 settings.ic_cisd_show           := ic_cisd_show_input
 settings.ic_dot_size            := input.string(size.tiny, 'Dot', options=[size.tiny, size.small, size.normal, size.large], inline='cisd', group=group_sweep, active = ic_cisd_show_input)
 psp_show_input                  = input.bool(true, 'Protected Swing Points', group=group_sweep, inline='psp', tooltip='Dots marking the protected swing extreme of each IC-CISD.')
-psp_color_input                 = input.color(color.rgb(0, 0, 0), '', group=group_sweep, inline='psp', active = psp_show_input and ic_cisd_show_input)
-psp_use_cisd_color              = input.bool(false, 'Use CISD colour', group=group_sweep, inline='psp', tooltip='Colour the dots with the bullish/bearish CISD colours instead of the fixed colour above. Taken swings are always grey.', active = psp_show_input and ic_cisd_show_input)
+psp_color_input                 = input.color(color.rgb(255, 235, 59), '', group=group_sweep, inline='psp', active = psp_show_input and ic_cisd_show_input)
+psp_use_cisd_color              = input.bool(true, 'Use CISD colour', group=group_sweep, inline='psp', tooltip='Colour the dots with the bullish/bearish CISD colours instead of the fixed colour above. Taken swings are always grey.', active = psp_show_input and ic_cisd_show_input)
 ic_dots_current_only            = input.bool(true, 'Current C2 only', group=group_sweep, inline='psp2', tooltip='Show the dots only for the most recent C2 setup (live setup, or the latest completed one when nothing is live). Older setups keep their IC-CISD lines but lose the dots.', active = psp_show_input and ic_cisd_show_input)
 settings.cisd_bull_color        := input.color(color.rgb(41,98,255), 'Bull          ', inline='cisd_color', group=group_sweep, active = cisd_show_input or ic_cisd_show_input)
 settings.cisd_bear_color        := input.color(color.rgb(242,54,69), 'Bear', inline='cisd_color', group=group_sweep, active = cisd_show_input or ic_cisd_show_input)
