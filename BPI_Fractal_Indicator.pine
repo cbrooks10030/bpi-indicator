@@ -684,15 +684,15 @@ smt_sym2_ticker = smt_sym2_resolved != "" ? syminfo.ticker(smt_sym2_resolved) : 
 htf_label_show_input            = input.bool(true, 'HTF Label     ', group=group_label, inline = 'HTFlabel')
 settings.htf_label_show         := htf_label_show_input
 settings.htf_label_color        := input.color(color.rgb(0, 0, 0), '', group=group_label, inline = 'HTFlabel', active = htf_label_show_input)
-settings.htf_label_size         := input.string(size.large, '', [size.tiny, size.small, size.normal, size.large, size.huge], group=group_label, inline = 'HTFlabel', active = htf_label_show_input)
+settings.htf_label_size         := input.string(size.small, '', [size.tiny, size.small, size.normal, size.large, size.huge], group=group_label, inline = 'HTFlabel', active = htf_label_show_input)
 settings.label_position         := input.string("Top", 'Pos', options=['Both', 'Top', 'Bottom'], group=group_label, inline = 'HTFlabel', active = htf_label_show_input)
 
 htf_timer_show_input            = input.bool(true, 'Remaining Time', inline = 'timer', group=group_label,active = htf_label_show_input)
 settings.htf_timer_show         := htf_timer_show_input
 settings.htf_timer_color        := input.color(color.rgb(0, 0, 0), '', inline = 'timer', group=group_label, active = htf_timer_show_input and htf_label_show_input)
-settings.htf_timer_size         := input.string(size.normal, '', [size.tiny, size.small, size.normal, size.large, size.huge], group=group_label, inline = 'timer', active = htf_timer_show_input and htf_label_show_input)
+settings.htf_timer_size         := input.string(size.small, '', [size.tiny, size.small, size.normal, size.large, size.huge], group=group_label, inline = 'timer', active = htf_timer_show_input and htf_label_show_input)
 
-daily_name_input                = input.bool(true, 'Interval Value', group=group_label, inline = 'dow')
+daily_name_input                = input.bool(false, 'Time Stamps', group=group_label, inline = 'dow')
 settings.daily_name             := daily_name_input
 settings.dow_color              := input.color(color.rgb(0, 0, 0), '', group=group_label, inline = 'dow', active = daily_name_input)
 settings.dow_size               := input.string(size.small, '', [size.tiny, size.small, size.normal, size.large, size.huge], group=group_label, inline = 'dow', active = daily_name_input)
