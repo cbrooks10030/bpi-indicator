@@ -2138,3 +2138,293 @@ if show_smt and smt_deleteInvalid and array.size(smt_lines) > 0
             f_smt_delete(i)
 
 //#endregion
+
+//#region [OPENING RANGE GAP]
+//+------------------------------------------------------------------------------------------------------------+//
+//+--- Opening Range Gap (9:30 AM ET) — ported from ICT Open Range Gap (fadi)                                 ---+//
+//+------------------------------------------------------------------------------------------------------------+//
+// The ORG is the gap between the prior session's close (16:14 ET) and the current session's
+// open (09:30 ET). Inputs mirror the fadi ORG indicator: open line, close line, C.E., quadrants,
+// backgrounds, fills, labels, trace, and "extend to end of day".
+
+string GRP_ORG = "Opening Range Gap (9:30 AM)"
+org_show_openrange   = input.bool(true,  "Show Open Range Gap",                        group=GRP_ORG, inline="org_on")
+org_hide_above       = input.timeframe("15", "Hide above timeframe",                   group=GRP_ORG, inline="org_on")
+org_max              = input.int(5, "Limit to last X days", minval=1, maxval=100,      group=GRP_ORG)
+org_buffer           = input.int(10, "Extend to the right by", minval=1, maxval=100,   group=GRP_ORG)
+org_factor           = input.float(5.0, "Minimum ORG size",  minval=0.0,               group=GRP_ORG, tooltip="Hide Open Range Gaps smaller than this dollar size.")
+org_extend_eod       = input.bool(false, "Extend to end of day",                       group=GRP_ORG)
+
+org_single_on        = input.bool(true,  "Use one color for all", inline="org_single", group=GRP_ORG, tooltip="When on, every ORG element (lines, C.E., quadrants, background, fill, labels) uses the single color chosen here, keeping each element's own transparency.")
+org_single_color     = input.color(color.new(color.gray, 10), "",       inline="org_single", group=GRP_ORG)
+
+org_o_color          = input.color(color.new(color.gray, 10), "Open    ",  inline="org_open",  group=GRP_ORG)
+org_o_style_in       = input.string("solid", "",  options=["solid","dashed","dotted"], inline="org_open",  group=GRP_ORG)
+
+org_c_color          = input.color(color.new(color.gray, 10), "Close   ",  inline="org_close", group=GRP_ORG)
+org_c_style_in       = input.string("solid", "",  options=["solid","dashed","dotted"], inline="org_close", group=GRP_ORG)
+
+org_ce_color         = input.color(color.new(color.red, 10),  "C.E.    ",  inline="org_ce",    group=GRP_ORG)
+org_ce_style_in      = input.string("dashed",  "",  options=["solid","dashed","dotted"], inline="org_ce",  group=GRP_ORG)
+
+org_o_trace_color    = input.color(color.new(color.gray, 10), "Trace Open", inline="org_trace", group=GRP_ORG)
+org_o_trace_style_in = input.string("solid", "",  options=["solid","dashed","dotted"], inline="org_trace", group=GRP_ORG)
+
+org_show_qdr         = input.bool(true, "Quadrants      ", inline="org_qdr", group=GRP_ORG)
+org_qdr_color        = input.color(color.new(color.gray, 10), "", inline="org_qdr", group=GRP_ORG)
+org_qdr_style_in     = input.string("dotted", "", options=["solid","dashed","dotted"], inline="org_qdr", group=GRP_ORG)
+
+org_show_bg          = input.bool(true, "Background      ", inline="org_bg", group=GRP_ORG)
+org_bg1              = input.color(color.new(color.blue,   90), "", inline="org_bg", group=GRP_ORG)
+org_bg2              = input.color(color.new(color.green,  90), "", inline="org_bg", group=GRP_ORG)
+org_bg3              = input.color(color.new(color.red,    90), "", inline="org_bg", group=GRP_ORG)
+org_bg4              = input.color(color.new(color.orange, 90), "", inline="org_bg", group=GRP_ORG)
+
+org_show_fill        = input.bool(false, "Fill             ", inline="org_fill", group=GRP_ORG)
+org_fill1            = input.color(color.new(color.blue, 95), "", inline="org_fill", group=GRP_ORG)
+org_fill2            = input.color(color.new(color.blue, 80), "", inline="org_fill", group=GRP_ORG)
+
+org_show_labels_in   = input.bool(false, "Pane labels",       inline="org_label", group=GRP_ORG)
+org_label_size_in    = input.string(size.small, "", [size.tiny, size.small, size.normal, size.large, size.huge], inline="org_label", group=GRP_ORG)
+org_label_color      = input.color(color.gray, "",  inline="org_label", group=GRP_ORG)
+org_label_bg         = input.color(color.new(color.black, 100), "", inline="org_label", group=GRP_ORG)
+
+// Single-color override: recolor every ORG element with the chosen hue while
+// preserving each element's original transparency.
+if org_single_on
+    org_o_color       := color.new(org_single_color, color.t(org_o_color))
+    org_c_color       := color.new(org_single_color, color.t(org_c_color))
+    org_ce_color      := color.new(org_single_color, color.t(org_ce_color))
+    org_o_trace_color := color.new(org_single_color, color.t(org_o_trace_color))
+    org_qdr_color     := color.new(org_single_color, color.t(org_qdr_color))
+    org_bg1           := color.new(org_single_color, color.t(org_bg1))
+    org_bg2           := color.new(org_single_color, color.t(org_bg2))
+    org_bg3           := color.new(org_single_color, color.t(org_bg3))
+    org_bg4           := color.new(org_single_color, color.t(org_bg4))
+    org_fill1         := color.new(org_single_color, color.t(org_fill1))
+    org_fill2         := color.new(org_single_color, color.t(org_fill2))
+    org_label_color   := color.new(org_single_color, color.t(org_label_color))
+
+org_labels_visible   = org_show_labels_in
+
+// Translate style strings to line.style_* constants
+lineStyleOrg(string s) =>
+    switch s
+        "dashed" => line.style_dashed
+        "dotted" => line.style_dotted
+        =>          line.style_solid
+
+org_o_style       = lineStyleOrg(org_o_style_in)
+org_c_style       = lineStyleOrg(org_c_style_in)
+org_ce_style      = lineStyleOrg(org_ce_style_in)
+org_o_trace_style = lineStyleOrg(org_o_trace_style_in)
+org_qdr_style     = lineStyleOrg(org_qdr_style_in)
+
+type OpenRange
+    float    ropen
+    float    rclose
+    int      close_time
+    int      open_time
+    line     line_open
+    line     line_open_trace
+    line     line_close
+    line     line_q1
+    line     line_q2
+    line     line_ce
+    linefill lf_org1
+    linefill lf_org2
+    linefill lf_org3
+    linefill lf_org4
+    label    label_open
+    label    label_q1
+    label    label_ce
+    label    label_q3
+    label    label_close
+    box      box_fill1
+    box      box_fill2
+
+var OpenRange[] org_ranges = array.new<OpenRange>()
+
+// Should ORG draw on this chart timeframe?
+orgValidTF() =>
+    timeframe.in_seconds() <= timeframe.in_seconds(org_hide_above)
+
+// Session markers (16:14 -> 09:30 ET, i.e. the overnight gap)
+org_session_time = time(timeframe.period, "1614-0930", "America/New_York")
+org_session_started = not na(org_session_time) and na(org_session_time[1])
+org_session_ended   = na(org_session_time)     and not na(org_session_time[1])
+
+method orgClear(OpenRange r) =>
+    line.delete(r.line_open)
+    line.delete(r.line_open_trace)
+    line.delete(r.line_close)
+    line.delete(r.line_q1)
+    line.delete(r.line_q2)
+    line.delete(r.line_ce)
+    linefill.delete(r.lf_org1)
+    linefill.delete(r.lf_org2)
+    linefill.delete(r.lf_org3)
+    linefill.delete(r.lf_org4)
+    label.delete(r.label_open)
+    label.delete(r.label_q1)
+    label.delete(r.label_ce)
+    label.delete(r.label_q3)
+    label.delete(r.label_close)
+    box.delete(r.box_fill1)
+    box.delete(r.box_fill2)
+
+method orgTerminate(OpenRange r) =>
+    // Freeze drawing at current bar and remove the right-hand fill box + quadrant labels
+    if not na(r.line_open)
+        line.set_x2(r.line_open, time)
+        line.set_x2(r.line_close, time)
+        if not na(r.line_q1)
+            line.set_x2(r.line_q1, time)
+        if not na(r.line_q2)
+            line.set_x2(r.line_q2, time)
+        line.set_x2(r.line_ce, time)
+    box.delete(r.box_fill1)
+    box.delete(r.box_fill2)
+    label.delete(r.label_open)
+    label.delete(r.label_q1)
+    label.delete(r.label_ce)
+    label.delete(r.label_q3)
+    label.delete(r.label_close)
+
+method orgUpdateFill(OpenRange r) =>
+    if not na(r.box_fill2)
+        if r.ropen < r.rclose
+            if box.get_bottom(r.box_fill2) >= r.ropen and low < box.get_bottom(r.box_fill2)
+                box.set_bottom(r.box_fill2, math.max(low, r.ropen))
+                box.set_bottom(r.box_fill1, box.get_bottom(r.box_fill2))
+        else
+            if box.get_bottom(r.box_fill2) <= r.ropen and high > box.get_bottom(r.box_fill2)
+                box.set_bottom(r.box_fill2, math.min(high, r.ropen))
+                box.set_bottom(r.box_fill1, box.get_bottom(r.box_fill2))
+    r
+
+// ORG render loop
+if orgValidTF() and org_show_openrange
+    int tc = (time - time[1]) * org_buffer
+    int ts = (time - time[1]) * 3
+
+    if org_session_started
+        if org_extend_eod and org_ranges.size() > 0
+            old = org_ranges.first()
+            old.orgTerminate()
+        OpenRange nr = OpenRange.new()
+        nr.ropen      := close
+        nr.open_time  := time
+        org_ranges.unshift(nr)
+
+    if org_session_ended and org_ranges.size() > 0
+        r = org_ranges.first()
+        r.rclose     := open
+        r.close_time := time
+
+    // Render latest range
+    if org_ranges.size() > 0
+        r = org_ranges.first()
+
+        // Phase 1: open-only (trace line from the 16:14 close price)
+        if na(r.rclose) and not na(r.ropen)
+            if na(r.line_open_trace)
+                if org_labels_visible
+                    r.label_open := label.new(time + tc, r.ropen, str.tostring(r.ropen, "#,##0.00") + " (open)", xloc=xloc.bar_time, textcolor=org_label_color, color=org_label_bg, size=org_label_size_in, style=label.style_label_left)
+                r.line_open_trace := line.new(r.open_time, r.ropen, time + tc, r.ropen, xloc=xloc.bar_time, color=org_o_trace_color, style=org_o_trace_style)
+            else
+                line.set_x2(r.line_open_trace, time + tc)
+                if not na(r.label_open)
+                    label.set_x(r.label_open, time + tc)
+
+        // Phase 2: full range (close recorded)
+        if not na(r.rclose)
+            if math.abs(r.ropen - r.rclose) >= org_factor
+                if na(r.line_open)
+                    float q  = math.abs(r.ropen - r.rclose) / 4
+                    float q1 = r.rclose > r.ropen ? r.rclose - q        : r.ropen - q
+                    float q2 = r.rclose > r.ropen ? r.rclose - (q * 2)  : r.ropen - (q * 2)
+                    float q3 = r.rclose > r.ropen ? r.rclose - (q * 3)  : r.ropen - (q * 3)
+
+                    r.line_open  := line.new(r.close_time, r.ropen,  time + tc, r.ropen,  xloc=xloc.bar_time, color=org_o_color,  style=org_o_style)
+                    r.line_ce    := line.new(r.close_time, q2,       time + tc, q2,       xloc=xloc.bar_time, color=org_ce_color, style=org_ce_style)
+                    r.line_close := line.new(r.close_time, r.rclose, time + tc, r.rclose, xloc=xloc.bar_time, color=org_c_color,  style=org_c_style)
+
+                    if org_show_qdr
+                        r.line_q1 := line.new(r.close_time, q1, time + tc, q1, xloc=xloc.bar_time, color=org_qdr_color, style=org_qdr_style)
+                        r.line_q2 := line.new(r.close_time, q3, time + tc, q3, xloc=xloc.bar_time, color=org_qdr_color, style=org_qdr_style)
+
+                    if org_show_bg
+                        if r.ropen < r.rclose
+                            if org_show_qdr
+                                r.lf_org1 := linefill.new(r.line_open, r.line_q2,    org_bg1)
+                                r.lf_org2 := linefill.new(r.line_q2,   r.line_ce,    org_bg2)
+                                r.lf_org3 := linefill.new(r.line_ce,   r.line_q1,    org_bg3)
+                                r.lf_org4 := linefill.new(r.line_q1,   r.line_close, org_bg4)
+                            else
+                                r.lf_org1 := linefill.new(r.line_open, r.line_ce,    org_bg1)
+                                r.lf_org2 := linefill.new(r.line_ce,   r.line_close, org_bg2)
+                        else
+                            if org_show_qdr
+                                r.lf_org1 := linefill.new(r.line_open, r.line_q1,    org_bg1)
+                                r.lf_org2 := linefill.new(r.line_q1,   r.line_ce,    org_bg2)
+                                r.lf_org3 := linefill.new(r.line_ce,   r.line_q2,    org_bg3)
+                                r.lf_org4 := linefill.new(r.line_q2,   r.line_close, org_bg4)
+                            else
+                                r.lf_org1 := linefill.new(r.line_open, r.line_ce,    org_bg1)
+                                r.lf_org2 := linefill.new(r.line_ce,   r.line_close, org_bg2)
+
+                    if org_show_fill
+                        r.box_fill1 := box.new(time + tc, r.ropen,  time + tc - ts, r.rclose, xloc=xloc.bar_time, border_color=org_fill1, bgcolor=org_fill1)
+                        r.box_fill2 := box.new(time + tc, r.rclose, time + tc - ts, r.rclose, xloc=xloc.bar_time, border_color=org_fill2, bgcolor=org_fill2)
+
+                    if org_labels_visible
+                        if org_show_qdr
+                            if r.ropen < r.rclose
+                                r.label_q1 := label.new(time + tc, q1, str.tostring(q1, "#,##0.00") + " (1/4)", xloc=xloc.bar_time, textcolor=org_label_color, color=org_label_bg, size=org_label_size_in, style=label.style_label_left)
+                                r.label_q3 := label.new(time + tc, q3, str.tostring(q3, "#,##0.00") + " (3/4)", xloc=xloc.bar_time, textcolor=org_label_color, color=org_label_bg, size=org_label_size_in, style=label.style_label_left)
+                            else
+                                r.label_q1 := label.new(time + tc, q1, str.tostring(q1, "#,##0.00") + " (3/4)", xloc=xloc.bar_time, textcolor=org_label_color, color=org_label_bg, size=org_label_size_in, style=label.style_label_left)
+                                r.label_q3 := label.new(time + tc, q3, str.tostring(q3, "#,##0.00") + " (1/4)", xloc=xloc.bar_time, textcolor=org_label_color, color=org_label_bg, size=org_label_size_in, style=label.style_label_left)
+                        r.label_ce    := label.new(time + tc, q2,       str.tostring(q2, "#,##0.00") + " (1/2)",  xloc=xloc.bar_time, textcolor=org_label_color, color=org_label_bg, size=org_label_size_in, style=label.style_label_left)
+                        r.label_close := label.new(time + tc, r.rclose, str.tostring(r.rclose, "#,##0.00") + " (close)", xloc=xloc.bar_time, textcolor=org_label_color, color=org_label_bg, size=org_label_size_in, style=label.style_label_left)
+                else
+                    // Continue extending existing lines while inside the tracked window
+                    in_window = org_extend_eod or (hour(time, "America/New_York") < 10 or (hour(time, "America/New_York") == 10 and minute(time, "America/New_York") == 0))
+                    if in_window
+                        line.set_x2(r.line_open,  time + tc)
+                        if not na(r.line_open_trace)
+                            line.set_x2(r.line_open_trace, r.close_time)
+                        line.set_x2(r.line_close, time + tc)
+                        if not na(r.line_q1)
+                            line.set_x2(r.line_q1, time + tc)
+                        line.set_x2(r.line_ce, time + tc)
+                        if not na(r.line_q2)
+                            line.set_x2(r.line_q2, time + tc)
+                        if not na(r.label_open)
+                            label.set_x(r.label_open, time + tc)
+                        if not na(r.label_q1)
+                            label.set_x(r.label_q1, time + tc)
+                        if not na(r.label_ce)
+                            label.set_x(r.label_ce, time + tc)
+                        if not na(r.label_q3)
+                            label.set_x(r.label_q3, time + tc)
+                        if not na(r.label_close)
+                            label.set_x(r.label_close, time + tc)
+                        if not na(r.box_fill1)
+                            box.set_right(r.box_fill1, time + tc)
+                            box.set_left(r.box_fill1,  time + tc - ts)
+                            box.set_right(r.box_fill2, time + tc)
+                            box.set_left(r.box_fill2,  time + tc - ts)
+                        r.orgUpdateFill()
+
+        // Terminate range at 10:00 ET unless user asked to extend to EOD
+        if not org_extend_eod and hour(time, "America/New_York") == 10 and minute(time, "America/New_York") == 0
+            r.orgTerminate()
+
+    // Enforce max history
+    while org_ranges.size() > org_max
+        old = org_ranges.pop()
+        old.orgClear()
+
+//#endregion
