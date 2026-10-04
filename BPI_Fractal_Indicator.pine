@@ -1396,8 +1396,6 @@ alertcondition(bullEarlyCisdFiredThisBar and showAlerts and showEarlyCisdAlerts,
 alertcondition(bearEarlyCisdFiredThisBar and showAlerts and showEarlyCisdAlerts, title = 'Bearish Early CISD', message = 'Bearish Early CISD confirmed on {{ticker}} ({{interval}})')
 alertcondition(cisdBullFiredThisBar and showAlerts, title = 'Bullish CISD Confirmed', message = 'Bullish CISD confirmed on {{ticker}} ({{interval}})')
 alertcondition(cisdBearFiredThisBar and showAlerts, title = 'Bearish CISD Confirmed', message = 'Bearish CISD confirmed on {{ticker}} ({{interval}})')
-alertcondition(c2BuyTrigger and allowBuy and showAlerts, title = 'Bullish C2 Closure', message = 'Bullish Sweep + C2 confirmed on {{ticker}} ({{interval}})')
-alertcondition(c2SellTrigger and allowSell and showAlerts, title = 'Bearish C2 Closure', message = 'Bearish Sweep + C2 confirmed on {{ticker}} ({{interval}})')
 
 if showVlines and periodChanged
     vLines.unshift(line.new(bar_index, low - ta.tr, bar_index, high + ta.tr, xloc.bar_index, extend.both, lineColor, lineStyleFromStr(lineStyle), lineWidth))
