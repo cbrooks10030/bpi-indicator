@@ -122,7 +122,7 @@ klHistory    = input.int(1, 'Days To Keep', minval = 1, maxval = 20, group = grp
 klShowLabel  = input.bool(true, 'Show Labels', group = grpKL, inline = 'kllbl')
 klShowPrice  = input.bool(true, 'Show Price', group = grpKL, inline = 'kllbl')
 klLabelSize  = input.string('Small', 'Label Size', options = ['Tiny', 'Small', 'Normal', 'Large'], group = grpKL)
-klLabelOffset = input.int(0, 'Label Offset (bars right)', minval = 0, maxval = 100, group = grpKL, tooltip = 'Shifts every Key Level and Session label this many bars to the right of the last candle. All labels move together.')
+klLabelOffset = input.int(0, 'Offset (bars right)', minval = 0, maxval = 100, group = grpKL, tooltip = 'Extends every Key Level and Session line, with its label, this many bars to the right of the last candle. All move together.')
 
 showPDH  = input.bool(true, 'PDH', group = grpKL, inline = 'pdh')
 pdhColor = input.color(color.new(color.red, 0), '', group = grpKL, inline = 'pdh')
@@ -1498,7 +1498,7 @@ addKL(array<line> lns, array<label> lbs, float price, string txt, color clr, str
 // Only the newest line of each level keeps extending; older ones stay frozen.
 extendKL(array<line> lns, array<label> lbs) =>
     if lns.size() > 0
-        line.set_x2(lns.last(), bar_index)
+        line.set_x2(lns.last(), bar_index + klLabelOffset)
         lb = lbs.last()
         if not na(lb)
             label.set_x(lb, bar_index + klLabelOffset)
@@ -1576,7 +1576,7 @@ newSessLine(array<line> lns, array<label> lbs, float price, string txt, color cl
 updateSessLine(array<line> lns, array<label> lbs, int x1, float price, string txt) =>
     if lns.size() > 0
         line.set_xy1(lns.last(), x1, price)
-        line.set_xy2(lns.last(), bar_index, price)
+        line.set_xy2(lns.last(), bar_index + klLabelOffset, price)
         lb = lbs.last()
         if not na(lb)
             label.set_xy(lb, bar_index + klLabelOffset, price)
