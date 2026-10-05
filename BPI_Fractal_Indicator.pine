@@ -60,6 +60,7 @@ grpVisuals = 'Model Style'
 showLabels = input.bool(true, 'Labels?', group = grpVisuals, inline = 'lbl')
 labelSize  = input.string('Normal', '', group = grpVisuals, inline = 'lbl', options = ['Tiny', 'Small', 'Normal', 'Large', 'Huge'], active = showLabels)
 c2c3c4Color = input.color(color.new(#2e2e2e, 0), '', group = grpVisuals, inline = 'lbl', active = showLabels)
+c2LabelOffset = input.int(20, 'C2 Label Offset (ticks)', minval = 0, maxval = 1000, group = grpVisuals, tooltip = 'Pushes only the C2 label further away from its candle (down for bullish, up for bearish) so it does not overlap text from other indicators.', active = showLabels)
 showSweep  = input.bool(true, 'Candle 1 Sweep', group = grpVisuals, inline = 'sweep')
 sweepColor = input.color(color.new(#2e2e2e, 0), '', group = grpVisuals, inline = 'sweep')
 sweepStyle = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], group = grpVisuals, inline = 'sweep')
@@ -1159,7 +1160,7 @@ method checkCisdConfirm(C2Setup s) =>
 processC2(bool trigger, bool allow, bool isBull, float extremePrice, int extremeBar, float sweepFromPrice, int sweepFromBar, float cisdLevel, int cisdIndex, bool cisdAlreadyConfirmed, int cisdConfirmBar, C2Setup existing) =>
     C2Setup result = existing
     if trigger and allow
-        label lbl = (validTf and showLabels) ? directionalLabel(extremeBar, extremePrice, 'C2', isBull) : na
+        label lbl = (validTf and showLabels) ? directionalLabel(extremeBar, extremePrice + (isBull ? -1 : 1) * c2LabelOffset * syminfo.mintick, 'C2', isBull) : na
         drawSweepLine(sweepFromBar, sweepFromPrice, bar_index)
         // Confirmed Sweep + C2 closure alert: fires exactly at the moment the
         // Candle 1 Sweep line is drawn and a new C2 setup is registered.
