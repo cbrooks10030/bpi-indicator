@@ -60,7 +60,9 @@ grpVisuals = 'Model Style'
 showLabels = input.bool(true, 'Labels?', group = grpVisuals, inline = 'lbl')
 labelSize  = input.string('Normal', '', group = grpVisuals, inline = 'lbl', options = ['Tiny', 'Small', 'Normal', 'Large', 'Huge'], active = showLabels)
 c2c3c4Color = input.color(color.new(#2e2e2e, 0), '', group = grpVisuals, inline = 'lbl', active = showLabels)
-c2LabelOffset = input.int(20, 'C2 Label Offset (ticks)', minval = 0, maxval = 1000, group = grpVisuals, tooltip = 'Pushes only the C2 label further away from its candle (down for bullish, up for bearish) so it does not overlap text from other indicators.', active = showLabels)
+c2LabelOffset = input.int(20, 'Label Offset (ticks)  C2', minval = -1000, maxval = 1000, group = grpVisuals, inline = 'lbloff', active = showLabels, tooltip = 'Moves each label further from its candle (positive) or closer/into it (negative): down for bullish setups, up for bearish.')
+c3LabelOffset = input.int(0, 'C3', minval = -1000, maxval = 1000, group = grpVisuals, inline = 'lbloff', active = showLabels)
+c4LabelOffset = input.int(0, 'C4', minval = -1000, maxval = 1000, group = grpVisuals, inline = 'lbloff', active = showLabels)
 showSweep  = input.bool(true, 'Candle 1 Sweep', group = grpVisuals, inline = 'sweep')
 sweepColor = input.color(color.new(#2e2e2e, 0), '', group = grpVisuals, inline = 'sweep')
 sweepStyle = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], group = grpVisuals, inline = 'sweep')
@@ -1046,7 +1048,7 @@ drawPhase(bool isBull, bool isC4) =>
     line  dash = showEQ ? line.new(bar_index, yDash, bar_index, yDash, color = eqColor, width = eqWidth, style = lineStyleFromStr(eqStyle)) : na
     label lbl  = na
     if showTSpot and showLabels and validTf
-        lbl := directionalLabel(bar_index + 2, isBull ? bot : top, isC4 ? 'C4' : 'C3', isBull)
+        lbl := directionalLabel(bar_index + 2, (isBull ? bot : top) + (isBull ? -1 : 1) * (isC4 ? c4LabelOffset : c3LabelOffset) * syminfo.mintick, isC4 ? 'C4' : 'C3', isBull)
     [bx, dash, lbl, top, bot]
 
 newSetup(bool isBull, float extreme, label c2Lbl, float cisdLevel, int cisdIndex, bool cisdAlreadyConfirmed, int cisdConfirmBar, int c2BarIndex) =>
