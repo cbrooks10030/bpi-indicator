@@ -1873,7 +1873,7 @@ if show_smt and smt_pair1 == ""
 
 // One tuple request per pair (request.security runs every bar regardless of the ternary, so fewer calls = faster load).
 [smt_p1HighRaw, smt_p1LowRaw] = request.security(smt_pair1, timeframe.period, [high, low])
-[smt_p2HighRaw, smt_p2LowRaw] = request.security(smt_useSecondPair ? smt_pair2 : syminfo.tickerid, timeframe.period, [high, low])
+[smt_p2HighRaw, smt_p2LowRaw] = request.security(smt_pair2, timeframe.period, [high, low])
 smt_p1High = show_smt ? smt_p1HighRaw : na
 smt_p1Low  = show_smt ? smt_p1LowRaw : na
 smt_p2High = show_smt and smt_useSecondPair ? smt_p2HighRaw : na
