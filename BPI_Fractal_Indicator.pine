@@ -2429,3 +2429,98 @@ if orgValidTF() and org_show_openrange
         old.orgClear()
 
 //#endregion
+
+//#region [ICT FVG + OB (GK)]
+// Port of "Simple ICT Order Blocks and Fair Value Gaps" by Gowtham Kannakaje L.
+// Performance: active boxes are capped (gk_maxActive) and mitigated boxes beyond gk_maxMit are deleted,
+// so per-bar work stays bounded. Candle recoloring and the HTF-FVG section (5000-bar scans) are not ported.
+gk_GRP      = "ICT FVG / OB (GK)"
+gk_mitType  = input.string("Close", "Mitigation Type", options = ["Close", "Wick"], tooltip = "Choose how Order Blocks and Fair Value Gaps are mitigated", inline = "gk_first", group = gk_GRP)
+gk_simple   = input.bool(true, "Simple version", tooltip = "Keep chart clean (boxes are not extended to the right)", inline = "gk_first", group = gk_GRP)
+gk_maxActive = input.int(30, "Max Active Boxes", minval = 5, maxval = 200, group = gk_GRP, inline = "gk_lim")
+gk_maxMit    = input.int(20, "Max Mitigated Kept", minval = 0, maxval = 200, group = gk_GRP, inline = "gk_lim", tooltip = "Oldest boxes beyond these limits are deleted to keep the indicator fast.")
+
+gk_showFVG  = input.bool(true,  "Show FVG Boxes", group = gk_GRP, inline = "gk_3")
+gk_delFVG   = input.bool(false, "Delete Mitigated FVG", group = gk_GRP, inline = "gk_3")
+gk_fvgBullB = input.color(color.rgb(76, 175, 80, 80),  "FVG border: Bullish", group = gk_GRP, inline = "gk_4")
+gk_fvgBearB = input.color(color.rgb(255, 82, 82, 80),  "Bearish", group = gk_GRP, inline = "gk_4")
+gk_fvgBullF = input.color(color.rgb(76, 175, 80, 97),  "FVG box: Bullish", group = gk_GRP, inline = "gk_5")
+gk_fvgBearF = input.color(color.rgb(255, 82, 82, 97),  "Bearish", group = gk_GRP, inline = "gk_5")
+
+gk_showOB   = input.bool(false, "Show OB Boxes", group = gk_GRP, inline = "gk_2", tooltip = "Order Blocks are valid only if the candle forming the FVG closes away from the Order Block.")
+gk_delOB    = input.bool(true,  "Delete Mitigated OB", group = gk_GRP, inline = "gk_2")
+gk_obBullB  = input.color(color.rgb(71, 239, 245, 80), "OB border: Bullish", group = gk_GRP, inline = "gk_6")
+gk_obBearB  = input.color(color.rgb(198, 70, 248, 80), "Bearish", group = gk_GRP, inline = "gk_6")
+gk_obBullF  = input.color(color.rgb(71, 239, 245, 97), "OB box: Bullish", group = gk_GRP, inline = "gk_7")
+gk_obBearF  = input.color(color.rgb(198, 70, 248, 97), "Bearish", group = gk_GRP, inline = "gk_7")
+gk_obText   = input.color(color.rgb(255, 255, 255, 99), "OB Text", group = gk_GRP, inline = "gk_7")
+
+gk_mitLow   = gk_mitType == "Close" ? close[1] : low
+gk_mitHigh  = gk_mitType == "Close" ? close[1] : high
+gk_bullFVG  = low - high[2] > 0 and open[1] < close[1]
+gk_bearFVG  = low[2] - high > 0 and open[1] > close[1]
+
+var box[] gk_bullFvgArr = array.new<box>()
+var box[] gk_bearFvgArr = array.new<box>()
+var box[] gk_bullObArr  = array.new<box>()
+var box[] gk_bearObArr  = array.new<box>()
+var box[] gk_mitArr     = array.new<box>()
+
+gk_pushCapped(box[] arr, box b, int cap) =>
+    arr.push(b)
+    while arr.size() > cap
+        box.delete(arr.shift())
+
+gk_retire(box b, bool del) =>
+    if del
+        box.delete(b)
+    else
+        box.set_right(b, bar_index)
+        box.set_extend(b, extend.none)
+        gk_pushCapped(gk_mitArr, b, gk_maxMit)
+
+// Bullish: mitigated when price trades below the box bottom; bearish: above the box top.
+gk_mitigate(box[] arr, bool bull, bool del) =>
+    if arr.size() > 0
+        for i = arr.size() - 1 to 0
+            b = arr.get(i)
+            if (bull and gk_mitLow < box.get_bottom(b)) or (not bull and gk_mitHigh > box.get_top(b))
+                arr.remove(i)
+                gk_retire(b, del)
+
+gk_ext = gk_simple ? extend.none : extend.right
+
+if gk_showFVG
+    if gk_bullFVG
+        gk_pushCapped(gk_bullFvgArr, box.new(bar_index - 2, high[2], bar_index, low, border_color = gk_simple ? color.rgb(76, 175, 79, 50) : gk_fvgBullB, bgcolor = gk_fvgBullF, extend = gk_ext), gk_maxActive)
+    if gk_bearFVG
+        gk_pushCapped(gk_bearFvgArr, box.new(bar_index - 2, low[2], bar_index, high, border_color = gk_simple ? color.rgb(255, 82, 82, 50) : gk_fvgBearB, bgcolor = gk_fvgBearF, extend = gk_ext), gk_maxActive)
+    if not gk_simple
+        gk_mitigate(gk_bullFvgArr, true,  gk_delFVG)
+        gk_mitigate(gk_bearFvgArr, false, gk_delFVG)
+
+// Order blocks: last opposing candle (2, 3 or 4 bars back) before the FVG, confirmed by a close beyond its high/low.
+gk_bullOB2 = gk_bullFVG and open[2] > close[2] and close[1] > high[2]
+gk_bullOB3 = gk_bullFVG and open[2] <= close[2] and open[3] > close[3] and close[1] > high[3] and not (low[1] - high[3] > 0 and open[3] > close[3])
+gk_bullOB4 = gk_bullFVG and open[2] <= close[2] and open[3] <= close[3] and open[4] > close[4] and close[1] > high[4] and not (low[1] - high[3] > 0 and open[3] > close[3]) and not (low[2] - high[4] > 0 and open[4] > close[4]) and not (low[1] - high[3] > 0 and open[4] > close[4])
+gk_bearOB2 = gk_bearFVG and open[2] < close[2] and close[1] < low[2]
+gk_bearOB3 = gk_bearFVG and open[2] >= close[2] and open[3] < close[3] and close[1] < low[3] and not (low[3] - high[1] > 0 and open[3] < close[3])
+gk_bearOB4 = gk_bearFVG and open[2] >= close[2] and open[3] >= close[3] and open[4] < close[4] and close[1] < low[4] and not (low[3] - high[1] > 0 and open[3] < close[3]) and not (low[4] - high[2] > 0 and open[4] < close[4]) and not (low[3] - high[1] > 0 and open[4] < close[4])
+
+if gk_showOB
+    int gk_bullBar = gk_bullOB2 ? 2 : gk_bullOB3 ? 3 : gk_bullOB4 ? 4 : 0
+    int gk_bearBar = gk_bearOB2 ? 2 : gk_bearOB3 ? 3 : gk_bearOB4 ? 4 : 0
+    if gk_bullBar > 0
+        gk_pushCapped(gk_bullObArr, box.new(bar_index - gk_bullBar, high[gk_bullBar], bar_index, low[gk_bullBar], border_color = gk_obBullB, bgcolor = gk_obBullF, text = gk_bullBar == 2 ? "Naked OB" : "Covered OB", text_color = gk_obText, text_size = size.small, extend = gk_ext), gk_maxActive)
+    if gk_bearBar > 0
+        gk_pushCapped(gk_bearObArr, box.new(bar_index - gk_bearBar, high[gk_bearBar], bar_index, low[gk_bearBar], border_color = gk_obBearB, bgcolor = gk_obBearF, text = gk_bearBar == 2 ? "Naked OB" : "Covered OB", text_color = gk_obText, text_size = size.small, extend = gk_ext), gk_maxActive)
+    if not gk_simple
+        gk_mitigate(gk_bullObArr, true,  gk_delOB)
+        gk_mitigate(gk_bearObArr, false, gk_delOB)
+
+alertcondition(gk_bullOB2 or gk_bullOB3 or gk_bullOB4, "GK Bullish OB", "Bullish OB")
+alertcondition(gk_bearOB2 or gk_bearOB3 or gk_bearOB4, "GK Bearish OB", "Bearish OB")
+alertcondition(gk_bullFVG, "GK Bullish FVG", "Bullish FVG")
+alertcondition(gk_bearFVG, "GK Bearish FVG", "Bearish FVG")
+alertcondition(gk_bullFVG or gk_bearFVG, "GK All FVG", "All FVG")
+//#endregion
