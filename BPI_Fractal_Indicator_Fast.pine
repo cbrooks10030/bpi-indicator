@@ -1,5 +1,5 @@
 //@version=6
-indicator("BPI Fractal Indicator", overlay = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)
+indicator("BPI Fractal Indicator (Fast)", overlay = true, max_boxes_count = 500, max_lines_count = 500, max_labels_count = 500)
 
 //#region [INPUTS]
 
@@ -1871,10 +1871,13 @@ if not tbl_show and not na(wm)
 if show_smt and smt_pair1 == ""
     runtime.error("No SMT auto pair detected for this chart symbol.")
 
-smt_p1High = show_smt ? request.security(smt_pair1, timeframe.period, high) : na
-smt_p1Low  = show_smt ? request.security(smt_pair1, timeframe.period, low) : na
-smt_p2High = show_smt and smt_useSecondPair ? request.security(smt_pair2, timeframe.period, high) : na
-smt_p2Low  = show_smt and smt_useSecondPair ? request.security(smt_pair2, timeframe.period, low) : na
+// One tuple request per pair (request.security runs every bar regardless of the ternary, so fewer calls = faster load).
+[smt_p1HighRaw, smt_p1LowRaw] = request.security(smt_pair1, timeframe.period, [high, low])
+[smt_p2HighRaw, smt_p2LowRaw] = request.security(smt_useSecondPair ? smt_pair2 : syminfo.tickerid, timeframe.period, [high, low])
+smt_p1High = show_smt ? smt_p1HighRaw : na
+smt_p1Low  = show_smt ? smt_p1LowRaw : na
+smt_p2High = show_smt and smt_useSecondPair ? smt_p2HighRaw : na
+smt_p2Low  = show_smt and smt_useSecondPair ? smt_p2LowRaw : na
 
 smt_cPH  = show_smt ? ta.pivothigh(high, smt_swingLen, smt_swingLen) : na
 smt_cPL  = show_smt ? ta.pivotlow(low, smt_swingLen, smt_swingLen) : na
