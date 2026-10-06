@@ -12,7 +12,7 @@ showEarlyCisdAlerts = input.bool(false, 'Early CISD Alerts?', group = grpModel, 
 showSweepC2Alerts = input.bool(false, 'C2 Closure Alerts?', group = grpModel, inline = 'alerts', tooltip = "Fires when a Candle 1 Sweep line is drawn together with a confirmed C2 close (i.e. a new C2 setup is created). The global 'Alerts?' toggle above acts as a master switch.")
 sweepC2AlertTemplate = input.string('{side} Sweep + C2 confirmed on {ticker}', 'C2 Closure Alert Message', group = grpModel, tooltip = "Customize the text sent by the Sweep+C2 alert. Placeholders:\n{side}   -> 'Bullish' or 'Bearish'\n{ticker} -> the chart's ticker symbol\n\nNote: because this script fires alerts via alert() rather than alertcondition(), the 'Message' box in TradingView's Create Alert dialog is ignored — edit the text here instead.", active = showSweepC2Alerts)
 showIcCisdAlerts = input.bool(true, 'IC-CISD Alerts?', group = grpModel, tooltip = "Fires when a protected swing (IC-CISD) is confirmed. The global 'Alerts?' toggle acts as a master switch.")
-showHistory = input.int(1, 'History', minval = 0, maxval = 40, group = grpModel, tooltip = 'Number of past setups (valid or invalidated) to keep drawn on the chart. 0 = unlimited.')
+showHistory = input.int(10, 'History', minval = 0, maxval = 40, group = grpModel, tooltip = 'Number of past setups (valid or invalidated) to keep drawn on the chart. 0 = unlimited.')
 modelType  = input.string('Auto', 'Fractal', options = ['Custom', 'Auto', '1m-15m', '2m-20m', '3m-30m', '5m-1H', '15m-4H', '30m-6H', '1H-1D', '2H-2D', '3H-3D', '4H-1W', '8H-2W', '12H-3W', '1D-1M', '2D-2M', '1W-3M', '2W-6M', '3W-9M', '1M-12M'], group = grpModel, inline = 'fractal')
 showEarlyCisd = input.bool(true, 'Early CISD', group = grpModel, inline = 'fractal')
 customLTF  = input.timeframe('5',  'Custom LTF                      ', group = grpModel, inline = 'custom', active = modelType == 'Custom')
@@ -125,7 +125,7 @@ klHistory    = input.int(1, 'Days To Keep', minval = 1, maxval = 20, group = grp
 klShowLabel  = input.bool(true, 'Show Labels', group = grpKL, inline = 'kllbl')
 klShowPrice  = input.bool(false, 'Show Price', group = grpKL, inline = 'kllbl')
 klLabelSize  = input.string('Small', 'Label Size', options = ['Tiny', 'Small', 'Normal', 'Large'], group = grpKL)
-klLabelOffset = input.int(0, 'Offset (bars right)', minval = 0, maxval = 100, group = grpKL, tooltip = 'Extends every Key Level and Session line, with its label, this many bars to the right of the last candle. All move together.')
+klLabelOffset = input.int(9, 'Offset (bars right)', minval = 0, maxval = 100, group = grpKL, tooltip = 'Extends every Key Level and Session line, with its label, this many bars to the right of the last candle. All move together.')
 
 showPDH  = input.bool(true, 'PDH', group = grpKL, inline = 'pdh')
 pdhColor = input.color(color.new(color.red, 0), '', group = grpKL, inline = 'pdh')
