@@ -1083,13 +1083,6 @@ method advanceToC4(C2Setup s) =>
     s.c4Invalid := false
     s
 
-method finish(C2Setup s) =>
-    if not na(s.c4Box)
-        box.set_right(s.c4Box, bar_index)
-        line.set_x2(s.c4Dash, bar_index)
-    s.phase := 0
-    s
-
 method deleteStdDev(C2Setup s) =>
     if not na(s.stdDevData)
         if not na(s.stdDevData.lines)
@@ -1099,6 +1092,14 @@ method deleteStdDev(C2Setup s) =>
             for lb in s.stdDevData.labels
                 label.delete(lb)
         s.stdDevData := na
+    s
+
+method finish(C2Setup s) =>
+    if not na(s.c4Box)
+        box.set_right(s.c4Box, bar_index)
+        line.set_x2(s.c4Dash, bar_index)
+    s.phase := 0
+    s.deleteStdDev()
     s
 
 method extendAndCheck(C2Setup s) =>
@@ -1150,6 +1151,7 @@ method checkC4Invalid(C2Setup s) =>
             if not na(s.c4Box)
                 box.delete(s.c4Box)
                 s.c4Box := na
+            s.deleteStdDev()
     s
 
 method checkCisdConfirm(C2Setup s) =>
@@ -1172,6 +1174,8 @@ processC2(bool trigger, bool allow, bool isBull, float extremePrice, int extreme
         if showAlerts and showSweepC2Alerts
             sweepC2Msg = str.replace_all(str.replace_all(sweepC2AlertTemplate, '{side}', isBull ? 'Bullish' : 'Bearish'), '{ticker}', syminfo.ticker)
             alert(sweepC2Msg, alert.freq_once_per_bar)
+        if not na(existing)
+            existing.deleteStdDev()
         result := newSetup(isBull, extremePrice, lbl, cisdLevel, cisdIndex, cisdAlreadyConfirmed, cisdConfirmBar, extremeBar)
     else if periodChanged and not na(existing) and not existing.dead
         result := existing.phase == 1 ? existing.advanceToC4() : existing.phase == 2 ? existing.finish() : existing
