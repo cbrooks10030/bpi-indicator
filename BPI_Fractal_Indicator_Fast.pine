@@ -7,7 +7,7 @@ grpBias    = 'Overall Bias'
 biasFilter = input.string('Neutral', 'Bias', options = ['Neutral', 'Bearish', 'Bullish'], group = grpBias)
 
 grpModel   = 'General Settings'
-showAlerts = input.bool(true, 'Alerts?', group = grpModel, inline = 'alerts', tooltip = "To turn on the alerts, follow these steps:\n\n1) Make sure that the 'Alerts?' toggle is ON.\n2) Find, and click on, the three dots next to the indicator title on the top left of your chart, or right-click on the indicator on the chart.\n3) Click 'Add Alert on Fractal Model [Pro+]'\n4) Choose the Alert Name, if you wish, and confirm by clicking 'Create'")
+showAlerts = input.bool(true, 'Alerts?', group = grpModel, inline = 'alerts', tooltip = "To turn on the alerts, follow these steps:\n\n1) Make sure that the 'Alerts?' toggle is ON.\n2) Find, and click on, the three dots next to the indicator title on the top left of your chart, or right-click on the indicator on the chart.\n3) Click 'Add Alert on BPI Fractal Indicator'\n4) Choose the Alert Name, if you wish, and confirm by clicking 'Create'")
 showEarlyCisdAlerts = input.bool(false, 'Early CISD Alerts?', group = grpModel, inline = 'alerts', tooltip = "The global 'Alerts?' toggle above acts as a master switch. If it is OFF, Early CISD alerts will not fire even if this toggle is ON.")
 showSweepC2Alerts = input.bool(false, 'C2 Closure Alerts?', group = grpModel, inline = 'alerts', tooltip = "Fires when a Candle 1 Sweep line is drawn together with a confirmed C2 close (i.e. a new C2 setup is created). The global 'Alerts?' toggle above acts as a master switch.")
 sweepC2AlertTemplate = input.string('{side} Sweep + C2 confirmed on {ticker}', 'C2 Closure Alert Message', group = grpModel, tooltip = "Customize the text sent by the Sweep+C2 alert. Placeholders:\n{side}   -> 'Bullish' or 'Bearish'\n{ticker} -> the chart's ticker symbol\n\nNote: because this script fires alerts via alert() rather than alertcondition(), the 'Message' box in TradingView's Create Alert dialog is ignored — edit the text here instead.", active = showSweepC2Alerts)
@@ -219,6 +219,10 @@ tbl_show_smt     = input.bool(true, 'SMT?',     inline = 'tbl_rows', group = grp
 //#region [CONSTANTS AND STATE]
 
 candleSpacing = 3
+max_bars_back(open, 1000)
+max_bars_back(high, 1000)
+max_bars_back(low, 1000)
+max_bars_back(close, 1000)
 noColor       = color.new(#000000, 100)
 icBackfillMaxBars = 300
 icGreyBars = 10   // bars a taken (grey) protected-swing dot stays visible before it is deleted
@@ -1163,7 +1167,7 @@ method checkCisdConfirm(C2Setup s) =>
 
 processC2(bool trigger, bool allow, bool isBull, float extremePrice, int extremeBar, float sweepFromPrice, int sweepFromBar, float cisdLevel, int cisdIndex, bool cisdAlreadyConfirmed, int cisdConfirmBar, C2Setup existing) =>
     C2Setup result = existing
-    if trigger and allow
+    if trigger and allow and not na(extremePrice) and not na(extremeBar)
         label lbl = (validTf and showLabels) ? directionalLabel(extremeBar, extremePrice + (isBull ? -1 : 1) * c2LabelOffset * syminfo.mintick, 'C2', isBull) : na
         drawSweepLine(sweepFromBar, sweepFromPrice, bar_index)
         // Confirmed Sweep + C2 closure alert: fires exactly at the moment the
@@ -1872,23 +1876,23 @@ if not tbl_show and not na(wm)
 // ============================================================
 // SMT DIVERGENCE ENGINE -- Auto Pair + Optional Second Pair
 // ============================================================
-if show_smt and smt_pair1 == ""
-    runtime.error("No SMT auto pair detected for this chart symbol.")
+// Symbols without a registered pair simply run without SMT (table shows "SMT: n/a").
+smt_enabled = show_smt and smt_pair1 != ""
 
 // One tuple request per pair (request.security runs every bar regardless of the ternary, so fewer calls = faster load).
 [smt_p1HighRaw, smt_p1LowRaw] = request.security(smt_pair1, timeframe.period, [high, low])
 [smt_p2HighRaw, smt_p2LowRaw] = request.security(smt_pair2, timeframe.period, [high, low])
-smt_p1High = show_smt ? smt_p1HighRaw : na
-smt_p1Low  = show_smt ? smt_p1LowRaw : na
-smt_p2High = show_smt and smt_useSecondPair ? smt_p2HighRaw : na
-smt_p2Low  = show_smt and smt_useSecondPair ? smt_p2LowRaw : na
+smt_p1High = smt_enabled ? smt_p1HighRaw : na
+smt_p1Low  = smt_enabled ? smt_p1LowRaw : na
+smt_p2High = smt_enabled and smt_useSecondPair ? smt_p2HighRaw : na
+smt_p2Low  = smt_enabled and smt_useSecondPair ? smt_p2LowRaw : na
 
-smt_cPH  = show_smt ? ta.pivothigh(high, smt_swingLen, smt_swingLen) : na
-smt_cPL  = show_smt ? ta.pivotlow(low, smt_swingLen, smt_swingLen) : na
-smt_p1PH = show_smt ? ta.pivothigh(smt_p1High, smt_swingLen, smt_swingLen) : na
-smt_p1PL = show_smt ? ta.pivotlow(smt_p1Low, smt_swingLen, smt_swingLen) : na
-smt_p2PH = show_smt and smt_useSecondPair ? ta.pivothigh(smt_p2High, smt_swingLen, smt_swingLen) : na
-smt_p2PL = show_smt and smt_useSecondPair ? ta.pivotlow(smt_p2Low, smt_swingLen, smt_swingLen) : na
+smt_cPH  = smt_enabled ? ta.pivothigh(high, smt_swingLen, smt_swingLen) : na
+smt_cPL  = smt_enabled ? ta.pivotlow(low, smt_swingLen, smt_swingLen) : na
+smt_p1PH = smt_enabled ? ta.pivothigh(smt_p1High, smt_swingLen, smt_swingLen) : na
+smt_p1PL = smt_enabled ? ta.pivotlow(smt_p1Low, smt_swingLen, smt_swingLen) : na
+smt_p2PH = smt_enabled and smt_useSecondPair ? ta.pivothigh(smt_p2High, smt_swingLen, smt_swingLen) : na
+smt_p2PL = smt_enabled and smt_useSecondPair ? ta.pivotlow(smt_p2Low, smt_swingLen, smt_swingLen) : na
 
 smt_pivotBar = bar_index - smt_swingLen
 
@@ -2003,6 +2007,8 @@ f_smt_nearest(array<int> _barsArr, array<float> _valsArr, int _targetBar, int _m
     if array.size(_barsArr) > 0
         for i = array.size(_barsArr) - 1 to 0
             int swingBar = array.get(_barsArr, i)
+            if swingBar < _targetBar - _maxDist
+                break
             int dist = math.abs(swingBar - _targetBar)
 
             if dist <= _maxDist and dist < bestDist
@@ -2013,19 +2019,19 @@ f_smt_nearest(array<int> _barsArr, array<float> _valsArr, int _targetBar, int _m
     [val, b]
 
 // Store pair pivots first so same-zone pair swings are available.
-if show_smt and not na(smt_p1PH)
+if smt_enabled and not na(smt_p1PH)
     array.push(smt_p1Highs, smt_p1PH)
     array.push(smt_p1HighBars, smt_pivotBar)
 
-if show_smt and not na(smt_p1PL)
+if smt_enabled and not na(smt_p1PL)
     array.push(smt_p1Lows, smt_p1PL)
     array.push(smt_p1LowBars, smt_pivotBar)
 
-if show_smt and smt_useSecondPair and not na(smt_p2PH)
+if smt_enabled and smt_useSecondPair and not na(smt_p2PH)
     array.push(smt_p2Highs, smt_p2PH)
     array.push(smt_p2HighBars, smt_pivotBar)
 
-if show_smt and smt_useSecondPair and not na(smt_p2PL)
+if smt_enabled and smt_useSecondPair and not na(smt_p2PL)
     array.push(smt_p2Lows, smt_p2PL)
     array.push(smt_p2LowBars, smt_pivotBar)
 
@@ -2040,6 +2046,8 @@ f_smt_detect_bearish(float _curChartHigh, int _curChartBar, array<float> _pHighs
 
             for i = array.size(smt_cHighs) - 1 to 0
                 int refChartBar = array.get(smt_cHighBars, i)
+                if _curChartBar - refChartBar > smt_lookback
+                    break
 
                 if _curChartBar > refChartBar and _curChartBar - refChartBar <= smt_lookback
                     float refChartHigh = array.get(smt_cHighs, i)
@@ -2072,6 +2080,8 @@ f_smt_detect_bullish(float _curChartLow, int _curChartBar, array<float> _pLows, 
 
             for i = array.size(smt_cLows) - 1 to 0
                 int refChartBar = array.get(smt_cLowBars, i)
+                if _curChartBar - refChartBar > smt_lookback
+                    break
 
                 if _curChartBar > refChartBar and _curChartBar - refChartBar <= smt_lookback
                     float refChartLow = array.get(smt_cLows, i)
@@ -2093,21 +2103,21 @@ f_smt_detect_bullish(float _curChartLow, int _curChartBar, array<float> _pLows, 
             if not na(bestScore)
                 f_smt_add("Bullish", bestBar, bestPrice, _curChartBar, _curChartLow, bestScore)
 
-if show_smt and not na(smt_cPH)
+if smt_enabled and not na(smt_cPH)
     f_smt_detect_bearish(smt_cPH, smt_pivotBar, smt_p1Highs, smt_p1HighBars)
     if smt_useSecondPair
         f_smt_detect_bearish(smt_cPH, smt_pivotBar, smt_p2Highs, smt_p2HighBars)
 
-if show_smt and not na(smt_cPL)
+if smt_enabled and not na(smt_cPL)
     f_smt_detect_bullish(smt_cPL, smt_pivotBar, smt_p1Lows, smt_p1LowBars)
     if smt_useSecondPair
         f_smt_detect_bullish(smt_cPL, smt_pivotBar, smt_p2Lows, smt_p2LowBars)
 
-if show_smt and not na(smt_cPH)
+if smt_enabled and not na(smt_cPH)
     array.push(smt_cHighs, smt_cPH)
     array.push(smt_cHighBars, smt_pivotBar)
 
-if show_smt and not na(smt_cPL)
+if smt_enabled and not na(smt_cPL)
     array.push(smt_cLows, smt_cPL)
     array.push(smt_cLowBars, smt_pivotBar)
 
@@ -2137,7 +2147,7 @@ if array.size(smt_p2Lows) > smt_maxSwings
     array.shift(smt_p2Lows)
     array.shift(smt_p2LowBars)
 
-if show_smt and smt_deleteInvalid and array.size(smt_lines) > 0
+if smt_enabled and smt_deleteInvalid and array.size(smt_lines) > 0
     for i = array.size(smt_lines) - 1 to 0
         string typ = array.get(smt_types, i)
         float lvl = array.get(smt_prices, i)
