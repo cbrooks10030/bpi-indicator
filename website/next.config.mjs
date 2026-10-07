@@ -20,6 +20,9 @@ const securityHeaders = [
 const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  images: {
+    remotePatterns: [{ protocol: "https", hostname: "i.ytimg.com", pathname: "/vi/**" }],
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

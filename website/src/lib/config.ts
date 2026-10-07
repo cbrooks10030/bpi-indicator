@@ -107,43 +107,55 @@ export const whyChoose = [
   },
 ];
 
-// Feature-by-feature walkthrough (TTrades style). `image` points to an asset in
-// /public — drop a GIF/screenshot there to replace the placeholder.
-export const walkthrough = [
+// Feature-by-feature walkthrough. `media` is either a screenshot in /public
+// (drop the file there to replace the placeholder) or a short YouTube clip.
+// Clips load as a thumbnail only; the player is fetched when pressed.
+export type WalkthroughMedia =
+  | { kind: "image"; src: string }
+  | { kind: "youtube"; id: string; start?: number; title: string };
+
+export const walkthrough: { eyebrow: string; title: string; body: string; media: WalkthroughMedia }[] = [
   {
-    title: "Indicator Overview",
-    body: "The whole fractal model on one chart — setups, CISD, HTF candles, key levels and SMT working together.",
-    image: "/features/overview.png",
+    eyebrow: "Overview",
+    title: "The whole model. One chart.",
+    body: "Setups, CISD, projected HTF candles, key levels and SMT — all working together, nothing to draw by hand.",
+    media: { kind: "image", src: "/features/overview.png" },
   },
   {
-    title: "Fractal Model Setups",
-    body: "Candle 2 sweep-and-reclaim detection with C3/C4 expansion boxes, equilibrium and standard-deviation projections for the live setup.",
-    image: "/features/fractal.png",
+    eyebrow: "Fractal model",
+    title: "Candle 2, caught the moment it confirms.",
+    body: "Sweep-and-reclaim detection with C3/C4 expansion boxes, equilibrium and standard-deviation projections for the live setup only.",
+    media: { kind: "image", src: "/features/fractal.png" },
   },
   {
-    title: "CISD, Early CISD & IC-CISD",
-    body: "Change-in-state-of-delivery lines plus protected swing points that grey out once taken.",
-    image: "/features/cisd.png",
+    eyebrow: "CISD · Early CISD · IC-CISD",
+    title: "See the shift in delivery as it happens.",
+    body: "Change-in-state-of-delivery lines with protected swing points that grey out the moment they are taken.",
+    media: { kind: "image", src: "/features/cisd.png" },
   },
   {
-    title: "Higher Timeframe Candles",
-    body: "Up to three projected HTF blocks, 4H and Daily candles, with countdown, HTF open and O/C time lines.",
-    image: "/features/htf-candles.png",
+    eyebrow: "Higher timeframe",
+    title: "HTF context, on your execution chart.",
+    body: "Up to three projected HTF blocks plus 4H and Daily candles, with countdown, HTF open and O/C time lines.",
+    media: { kind: "image", src: "/features/htf-candles.png" },
   },
   {
-    title: "Key Levels & Sessions",
+    eyebrow: "Key levels & sessions",
+    title: "Every level that matters, already drawn.",
     body: "PDH/PDL, Midnight / 8:30 / 6PM opens, Asia and London highs and lows, and the Opening Range Gap with C.E. and quadrants.",
-    image: "/features/key-levels.png",
+    media: { kind: "image", src: "/features/key-levels.png" },
   },
   {
-    title: "FVG & Order Blocks",
+    eyebrow: "FVG & order blocks",
+    title: "Imbalances and order blocks, kept light.",
     body: "Capped, mitigation-aware fair value gaps and order blocks that never slow the chart down.",
-    image: "/features/fvg.png",
+    media: { kind: "youtube", id: "mi6bUFqDDUY", title: "What is a Fair Value Gap? (demo clip)" },
   },
   {
-    title: "SMT Divergence & Alerts",
+    eyebrow: "SMT divergence & alerts",
+    title: "Divergence paired for you. Alerts when it prints.",
     body: "Auto-paired SMT for ES/NQ/YM/RTY, micros, BTC/ETH and GC/SI, with alerts for Candle 2, CISD, IC-CISD, FVG and OB.",
-    image: "/features/smt.png",
+    media: { kind: "youtube", id: "q1NmxUTm4n4", title: "SMT divergence explained (demo clip)" },
   },
 ];
 
