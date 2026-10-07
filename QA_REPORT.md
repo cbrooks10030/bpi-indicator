@@ -27,7 +27,7 @@ Scope: full read-through of `BPI_Fractal_Indicator_Fast.pine` (2.5k lines) for c
 - Pine cannot be compiled or executed in this environment; no results are claimed.
 
 ## Manual TradingView checks (required before selling)
-1. Paste into Pine Editor → Add to chart: **no compile error**.
+1. Paste into Pine Editor → Add to chart: **no compile error**. — PASSED (user, 2026-10-07).
 2. NQ1! 5m, 1m, 15m, 1H (Auto): C2/C3/C4, CISD, IC-CISD dots, projections only on live C2s, HTF blocks aligned.
 3. AAPL and EURUSD 5m: loads with `SMT: n/a`, no runtime error (finding 1).
 4. Leave a live 1m chart running across ≥ 3 HTF periods: no "historical offset" error (finding 2), countdowns tick.
@@ -38,6 +38,6 @@ Scope: full read-through of `BPI_Fractal_Indicator_Fast.pine` (2.5k lines) for c
 9. First bars of a thin-history symbol (e.g. new futures contract): no error on first HTF period (finding 3).
 
 ## Remaining risks
-- Compilation unverified for this revision.
+- Compilation confirmed by the user in TradingView for this revision; runtime checks 2–9 still open.
 - Intrabar CISD flicker is inherent to the model; disclose it to buyers.
 - `History = 0` relies on TradingView's own object eviction.
