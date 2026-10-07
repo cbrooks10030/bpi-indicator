@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BPI Fractal Indicator — Official Site</title>
+<meta name="description" content="The BPI Fractal Indicator for TradingView: automatic fractal-model setups, CISD, HTF candles, key levels and SMT — built for NQ, ES and futures traders.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="nav">
+  <a class="brand" href="#top"><span class="logo">BPI</span> Fractal Indicator</a>
+  <nav>
+    <a href="#features">Features</a>
+    <a href="#showcase">Showcase</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+  </nav>
+  <a class="btn btn-sm" href="#pricing">Get access</a>
+</header>
+
+<main id="top">
+<section class="hero">
+  <p class="eyebrow">For TradingView · Futures · Intraday</p>
+  <h1>Master the market with a repeatable fractal model.</h1>
+  <p class="lead">BPI automatically marks Candle 2 sweeps, CISD confirmations, protected swings, HTF candles and key levels — so you focus on execution, not drawing.</p>
+  <div class="cta-row">
+    <a class="btn" href="#pricing">Get the indicator</a>
+    <a class="btn btn-ghost" href="#showcase">See it in action</a>
+  </div>
+  <div class="hero-shot">
+    <img src="assets/chart-hero.svg" alt="BPI Fractal Indicator on an NQ chart">
+  </div>
+</section>
+
+<section class="cards" id="features">
+  <h2>Everything the model needs, on one chart.</h2>
+  <div class="grid">
+    <article><h3>Fractal Model setups</h3><p>C2 sweep-and-reclaim detection with C3/C4 expansion boxes, equilibrium and standard-deviation projections for the live setup only.</p></article>
+    <article><h3>CISD, Early CISD &amp; IC-CISD</h3><p>Change-in-state-of-delivery lines with protected swing points, auto-greyed once taken.</p></article>
+    <article><h3>HTF candles</h3><p>Up to three projected higher-timeframe blocks, plus 4H and Daily candles, with countdown, HTF open and O/C time lines.</p></article>
+    <article><h3>Key levels &amp; sessions</h3><p>PDH/PDL, Midnight / 8:30 / 6PM opens, Asia and London highs/lows, Opening Range Gap with C.E. and quadrants.</p></article>
+    <article><h3>FVG / Order Blocks</h3><p>Capped, mitigation-aware fair value gaps and order blocks that never slow the chart down.</p></article>
+    <article><h3>SMT divergence &amp; alerts</h3><p>Auto-paired SMT for ES/NQ/YM/RTY, micros, BTC/ETH, GC/SI. Alerts for Candle 2, CISD, IC-CISD, FVG and OB.</p></article>
+  </div>
+</section>
+
+<section class="showcase" id="showcase">
+  <h2>Built for speed and clarity.</h2>
+  <div class="split">
+    <img src="assets/chart-setup.svg" alt="Bullish fractal model setup with C2, C3 and CISD">
+    <ul class="checks">
+      <li>Auto LTF–HTF pairing (1m→15m, 5m→1H, 15m→4H …) or custom pairs</li>
+      <li>Confirmed-bar setups — Candle 2 marks never repaint</li>
+      <li>Independent label offsets so it plays nicely with your other tools</li>
+      <li>History control: keep 1–40 past setups, or just the live one</li>
+      <li>Lightweight: bounded drawings, 3 data requests per bar</li>
+    </ul>
+  </div>
+</section>
+
+<section class="pricing" id="pricing">
+  <h2>Pricing</h2>
+  <p class="sub">Invite-only TradingView access, delivered through Whop. Cancel anytime.</p>
+  <div class="plans">
+    <article class="plan">
+      <h3>Monthly</h3>
+      <p class="price">$<span data-price="monthly">—</span><small>/mo</small></p>
+      <ul><li>Full indicator access</li><li>All future updates</li><li>Alert support</li></ul>
+      <a class="btn" href="https://whop.com/" data-whop="monthly">Join monthly</a>
+    </article>
+    <article class="plan featured">
+      <span class="tag">Best value</span>
+      <h3>Yearly</h3>
+      <p class="price">$<span data-price="yearly">—</span><small>/yr</small></p>
+      <ul><li>Everything in Monthly</li><li>2 months free</li><li>Priority support</li></ul>
+      <a class="btn" href="https://whop.com/" data-whop="yearly">Join yearly</a>
+    </article>
+    <article class="plan">
+      <h3>Lifetime</h3>
+      <p class="price">$<span data-price="lifetime">—</span></p>
+      <ul><li>One payment</li><li>All future updates</li><li>Priority support</li></ul>
+      <a class="btn" href="https://whop.com/" data-whop="lifetime">Get lifetime</a>
+    </article>
+  </div>
+  <p class="fine">After purchase, send your TradingView username in Whop and access is added to the invite-only script.</p>
+</section>
+
+<section class="faq" id="faq">
+  <h2>FAQ</h2>
+  <details><summary>Which markets and timeframes does it work on?</summary><p>Designed for intraday futures (NQ, ES, YM, RTY and micros) on 1m–1H charts; the model also runs on 4H, Daily and Weekly. Key levels, sessions and ORG are intraday-only.</p></details>
+  <details><summary>Does it repaint?</summary><p>Candle 2 setups are evaluated once per HTF period from the completed previous candle and don't repaint. CISD confirmations use the live close and can update until the bar closes.</p></details>
+  <details><summary>How do I get the indicator after paying?</summary><p>Access is invite-only on TradingView. Submit your TradingView username after checkout; you'll find the script under Invite-only scripts in the Indicators menu.</p></details>
+  <details><summary>How do alerts work?</summary><p>Create an alert on the indicator with "Any alert() function call" for Candle 2 / IC-CISD events, or choose a named condition like "Bullish CISD Confirmed".</p></details>
+  <details><summary>Is this financial advice?</summary><p>No. BPI is an educational charting tool. Trading futures involves substantial risk; past performance of any setup does not guarantee future results.</p></details>
+</section>
+
+<section class="newsletter">
+  <h2>Stay in the loop</h2>
+  <p>New features, model notes and release updates — no spam.</p>
+  <form onsubmit="event.preventDefault(); this.querySelector('button').textContent='Subscribed';">
+    <input type="email" placeholder="you@email.com" required>
+    <button class="btn" type="submit">Subscribe</button>
+  </form>
+</section>
+</main>
+
+<footer>
+  <div>© <span id="y"></span> BPI. All rights reserved.</div>
+  <nav><a href="legal.html">Legal &amp; Disclaimer</a><a href="https://whop.com/" target="_blank" rel="noopener">Whop</a><a href="#" target="_blank" rel="noopener">X / Twitter</a><a href="#" target="_blank" rel="noopener">YouTube</a></nav>
+</footer>
+<script src="config.js"></script>
+<script>
+document.getElementById('y').textContent = new Date().getFullYear();
+for (const k in BPI_CONFIG.prices) { const el = document.querySelector(`[data-price="${k}"]`); if (el) el.textContent = BPI_CONFIG.prices[k]; }
+for (const k in BPI_CONFIG.whop) { const a = document.querySelector(`[data-whop="${k}"]`); if (a) a.href = BPI_CONFIG.whop[k]; }
+</script>
+</body>
+</html>
