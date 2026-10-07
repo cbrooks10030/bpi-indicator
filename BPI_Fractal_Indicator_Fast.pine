@@ -834,7 +834,9 @@ icFindSwingRange(C2Setup s, int startIdx, int endIdx) =>
     float bestPx  = na
     int   bestIdx = na
     if not na(startIdx) and not na(endIdx) and endIdx > startIdx
-        for m = startIdx to endIdx - 1
+        // stay inside the declared 1000-bar price buffer
+        int scanStart = math.max(startIdx, bar_index - 998)
+        for m = scanStart to endIdx - 1
             if m >= 1
                 offM = bar_index - m
                 offL = bar_index - (m - 1)

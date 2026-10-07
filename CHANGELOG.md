@@ -8,6 +8,7 @@
 
 ### Changed (behaviour-neutral)
 - Declared `max_bars_back(open/high/low/close, 1000)` so the IC-CISD back-scans (up to 300 replay + 500 level-search bars) cannot exceed TradingView's auto-sized history buffer on a late-arriving realtime bar.
+- `icFindSwingRange` clamps its scan start to the last 998 bars so a protected swing that confirms after a very long pending period cannot index past that buffer.
 - SMT swing searches break out early once past the lookback / pair-distance window (arrays are bar-ordered). Same results, fewer iterations on pivot bars.
 
 ### Added
