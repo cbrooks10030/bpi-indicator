@@ -12,6 +12,9 @@ showEarlyCisdAlerts = input.bool(false, 'Early CISD Alerts?', group = grpModel, 
 showSweepC2Alerts = input.bool(false, 'C2 Closure Alerts?', group = grpModel, inline = 'alerts', tooltip = "Fires when a Candle 1 Sweep line is drawn together with a confirmed C2 close (i.e. a new C2 setup is created). The global 'Alerts?' toggle above acts as a master switch.")
 sweepC2AlertTemplate = input.string('{side} Sweep + C2 confirmed on {ticker}', 'C2 Closure Alert Message', group = grpModel, tooltip = "Customize the text sent by the Sweep+C2 alert. Placeholders:\n{side}   -> 'Bullish' or 'Bearish'\n{ticker} -> the chart's ticker symbol\n\nNote: because this script fires alerts via alert() rather than alertcondition(), the 'Message' box in TradingView's Create Alert dialog is ignored — edit the text here instead.", active = showSweepC2Alerts)
 showIcCisdAlerts = input.bool(true, 'IC-CISD Alerts?', group = grpModel, tooltip = "Fires when a protected swing (IC-CISD) is confirmed. The global 'Alerts?' toggle acts as a master switch.")
+showClosureMarks  = input.bool(false, 'C3/C4 Closure Marks', group = grpModel, inline = 'closure', tooltip = "Adds a tick to the C3 / C4 label when that candle closes beyond the prior candle's extreme (bullish: above its high, bearish: below its low). C3 closure confirms the expansion; a C4 closure is the model completing.")
+showClosureAlerts = input.bool(false, 'Closure Alerts?', group = grpModel, inline = 'closure', tooltip = "Fires when a C3 or C4 closure is confirmed (see 'C3/C4 Closure Marks'). Also available as the named conditions 'Bullish/Bearish C3 Closure' and 'Bullish/Bearish C4 Closure'. The global 'Alerts?' toggle acts as a master switch.")
+showC4EntryAlerts = input.bool(false, 'C4 Entry Alerts?', group = grpModel, inline = 'closure', tooltip = "Fires when an IC-CISD (protected swing) is confirmed while the model is in its Candle 4 phase - the second-chance entry. Also available as the named conditions 'Bullish/Bearish C4 Entry'. The global 'Alerts?' toggle acts as a master switch.")
 showHistory = input.int(10, 'History', minval = 0, maxval = 40, group = grpModel, tooltip = 'Number of past setups (valid or invalidated) to keep drawn on the chart. 0 = unlimited.')
 modelType  = input.string('Auto', 'Fractal', options = ['Custom', 'Auto', '1m-15m', '2m-20m', '3m-30m', '5m-1H', '15m-4H', '30m-6H', '1H-1D', '2H-2D', '3H-3D', '4H-1W', '8H-2W', '12H-3W', '1D-1M', '2D-2M', '1W-3M', '2W-6M', '3W-9M', '1M-12M'], group = grpModel, inline = 'fractal')
 showEarlyCisd = input.bool(true, 'Early CISD', group = grpModel, inline = 'fractal')
@@ -306,6 +309,11 @@ type C2Setup
     int   icExtremeIndex  = na
     float c3Extreme = na
     bool  icStopped = false
+    bool  c3Closed      = false
+    bool  c4Closed      = false
+    bool  c3JustClosed  = false
+    bool  c4JustClosed  = false
+    bool  c4EntryJust   = false
 
 type SetupRecord
     C2Setup setup
@@ -342,6 +350,12 @@ var label                    htf4HInfoLbl         = na
 var label                    htfDailyInfoLbl      = na
 var bool                     cisdBullFiredThisBar = false
 var bool                     cisdBearFiredThisBar = false
+var bool                     c3CloseBullThisBar   = false
+var bool                     c3CloseBearThisBar   = false
+var bool                     c4CloseBullThisBar   = false
+var bool                     c4CloseBearThisBar   = false
+var bool                     c4EntryBullThisBar   = false
+var bool                     c4EntryBearThisBar   = false
 
 allowBuy  = biasFilter != 'Bearish'
 allowSell = biasFilter != 'Bullish'
@@ -929,6 +943,8 @@ icStep(C2Setup s, int m, bool live) =>
                 if not na(swPx) and not na(swIdx)
                     registerIcCisd(s, swPx, swIdx, m)
                     icClearPending(s)
+                    if live and s.phase == 2
+                        s.c4EntryJust := true
                     if live and showAlerts and showIcCisdAlerts
                         alert((s.isBull ? 'Bullish' : 'Bearish') + ' IC-CISD confirmed on ' + syminfo.ticker, alert.freq_once_per_bar)
                 else if not newExt
@@ -1072,10 +1088,27 @@ newSetup(bool isBull, float extreme, label c2Lbl, float cisdLevel, int cisdIndex
     registerRecord(s)
     s
 
+// True when the just-closed HTF candle (index 1) closed beyond the prior candle's extreme.
+closedBeyondPrior(bool isBull) =>
+    bool out = false
+    if htfCandles.size() > 2
+        cur   = htfCandles.get(1)
+        prior = htfCandles.get(2)
+        out := isBull ? cur.c > prior.h : cur.c < prior.l
+    out
+
+markClosure(label lbl, string txt) =>
+    if showClosureMarks and not na(lbl)
+        label.set_text(lbl, txt + ' ✓')
+
 method advanceToC4(C2Setup s) =>
     if htfCandles.size() > 1
         c3 = htfCandles.get(1)
         s.c3Extreme := s.isBull ? c3.l : c3.h
+    if closedBeyondPrior(s.isBull)
+        s.c3Closed     := true
+        s.c3JustClosed := true
+        markClosure(s.c3Lbl, 'C3')
     if not na(s.c3Box)
         box.set_right(s.c3Box, bar_index)
         line.set_x2(s.c3Dash, bar_index)
@@ -1104,6 +1137,10 @@ method finish(C2Setup s) =>
     if not na(s.c4Box)
         box.set_right(s.c4Box, bar_index)
         line.set_x2(s.c4Dash, bar_index)
+    if not s.c4Invalid and closedBeyondPrior(s.isBull)
+        s.c4Closed     := true
+        s.c4JustClosed := true
+        markClosure(s.c4Lbl, 'C4')
     s.phase := 0
     s.deleteStdDev()
     s
@@ -1279,6 +1316,12 @@ bullEarlyCisdFiredThisBar = false
 bearEarlyCisdFiredThisBar = false
 cisdBullFiredThisBar := false
 cisdBearFiredThisBar := false
+c3CloseBullThisBar := false
+c3CloseBearThisBar := false
+c4CloseBullThisBar := false
+c4CloseBearThisBar := false
+c4EntryBullThisBar := false
+c4EntryBearThisBar := false
 
 bullPeriodSweep = l0 < l1
 bearPeriodSweep = h0 > h1
@@ -1396,6 +1439,44 @@ if not na(sellSetup) and sellSetup.justConfirmed
     cisdBearFiredThisBar := true
     sellSetup.justConfirmed := false
 
+// Consume one-shot closure / C4-entry flags set inside the setup methods this bar
+consumeSetupFlags(C2Setup s) =>
+    bool c3 = false
+    bool c4 = false
+    bool en = false
+    if not na(s)
+        c3 := s.c3JustClosed
+        c4 := s.c4JustClosed
+        en := s.c4EntryJust
+        s.c3JustClosed := false
+        s.c4JustClosed := false
+        s.c4EntryJust  := false
+    [c3, c4, en]
+
+[c3B, c4B, enB] = consumeSetupFlags(buySetup)
+[c3S, c4S, enS] = consumeSetupFlags(sellSetup)
+c3CloseBullThisBar := c3B
+c3CloseBearThisBar := c3S
+c4CloseBullThisBar := c4B
+c4CloseBearThisBar := c4S
+c4EntryBullThisBar := enB
+c4EntryBearThisBar := enS
+
+if showAlerts and showClosureAlerts
+    if c3CloseBullThisBar
+        alert('Bullish C3 closure confirmed on ' + syminfo.ticker, alert.freq_once_per_bar)
+    if c3CloseBearThisBar
+        alert('Bearish C3 closure confirmed on ' + syminfo.ticker, alert.freq_once_per_bar)
+    if c4CloseBullThisBar
+        alert('Bullish C4 closure confirmed on ' + syminfo.ticker, alert.freq_once_per_bar)
+    if c4CloseBearThisBar
+        alert('Bearish C4 closure confirmed on ' + syminfo.ticker, alert.freq_once_per_bar)
+if showAlerts and showC4EntryAlerts
+    if c4EntryBullThisBar
+        alert('Bullish C4 entry (IC-CISD in C4) on ' + syminfo.ticker, alert.freq_once_per_bar)
+    if c4EntryBearThisBar
+        alert('Bearish C4 entry (IC-CISD in C4) on ' + syminfo.ticker, alert.freq_once_per_bar)
+
 if showAlerts
     if c2BuyTrigger and allowBuy and not showSweepC2Alerts
         alert('Bullish C2 formed on ' + syminfo.ticker, alert.freq_once_per_bar)
@@ -1410,6 +1491,12 @@ alertcondition(bullEarlyCisdFiredThisBar and showAlerts and showEarlyCisdAlerts,
 alertcondition(bearEarlyCisdFiredThisBar and showAlerts and showEarlyCisdAlerts, title = 'Bearish Early CISD', message = 'Bearish Early CISD confirmed on {{ticker}} ({{interval}})')
 alertcondition(cisdBullFiredThisBar and showAlerts, title = 'Bullish CISD Confirmed', message = 'Bullish CISD confirmed on {{ticker}} ({{interval}})')
 alertcondition(cisdBearFiredThisBar and showAlerts, title = 'Bearish CISD Confirmed', message = 'Bearish CISD confirmed on {{ticker}} ({{interval}})')
+alertcondition(c3CloseBullThisBar and showAlerts and showClosureAlerts, title = 'Bullish C3 Closure', message = 'Bullish C3 closure confirmed on {{ticker}} ({{interval}})')
+alertcondition(c3CloseBearThisBar and showAlerts and showClosureAlerts, title = 'Bearish C3 Closure', message = 'Bearish C3 closure confirmed on {{ticker}} ({{interval}})')
+alertcondition(c4CloseBullThisBar and showAlerts and showClosureAlerts, title = 'Bullish C4 Closure', message = 'Bullish C4 closure confirmed on {{ticker}} ({{interval}})')
+alertcondition(c4CloseBearThisBar and showAlerts and showClosureAlerts, title = 'Bearish C4 Closure', message = 'Bearish C4 closure confirmed on {{ticker}} ({{interval}})')
+alertcondition(c4EntryBullThisBar and showAlerts and showC4EntryAlerts, title = 'Bullish C4 Entry', message = 'Bullish C4 entry (IC-CISD in C4) on {{ticker}} ({{interval}})')
+alertcondition(c4EntryBearThisBar and showAlerts and showC4EntryAlerts, title = 'Bearish C4 Entry', message = 'Bearish C4 entry (IC-CISD in C4) on {{ticker}} ({{interval}})')
 
 if showVlines and periodChanged
     vLines.unshift(line.new(bar_index, low - ta.tr, bar_index, high + ta.tr, xloc.bar_index, extend.both, lineColor, lineStyleFromStr(lineStyle), lineWidth))
