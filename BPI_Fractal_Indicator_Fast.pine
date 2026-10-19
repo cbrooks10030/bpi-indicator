@@ -133,7 +133,7 @@ liqLabelSize = input.string('Small', 'Label Size', options = ['Tiny', 'Small', '
 
 // ---- NEW: Key Levels inputs ----
 grpKL        = 'Key Levels (PDH / PDL / Opens)'
-klShow       = input.bool(false, 'Show Key Levels', group = grpKL, tooltip = 'Intraday charts only. All times use the timezone selected below.')
+klShow       = input.bool(true, 'Show Key Levels', group = grpKL, tooltip = 'Intraday charts only. All times use the timezone selected below.')
 klTz         = input.string('America/New_York', 'Timezone', group = grpKL)
 klDayStart   = input.string('6 PM', 'Previous Day Starts At', options = ['Midnight', '6 PM'], group = grpKL, tooltip = "Defines what counts as a 'day' for PDH/PDL.\nMidnight = calendar day (00:00 - 23:59)\n6 PM = futures/forex session day (18:00 - 17:59)")
 klHistory    = input.int(1, 'Days To Keep', minval = 1, maxval = 20, group = grpKL, tooltip = 'How many past lines to keep per level. Older lines are frozen at the end of their day.')
