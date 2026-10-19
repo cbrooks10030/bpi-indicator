@@ -2270,7 +2270,7 @@ if (barstate.islast or barstate.isrealtime) and validTf and htfCandles.size() > 
             label.set_text(htf2InfoLbl, htf2InfoText)
             label.set_textcolor(htf2InfoLbl, htfInfoColor)
 
-        nextBlockStart := htf2Start + (htfCandleCount - 1) * candleSpacing + 2 + blockGap * candleSpacing
+        nextBlockStart := htf2Start + (n2 - 1) * candleSpacing + 2 + blockGap * candleSpacing
 
     else if not na(htf2InfoLbl)
         label.delete(htf2InfoLbl)
@@ -2303,7 +2303,7 @@ if (barstate.islast or barstate.isrealtime) and validTf and htfCandles.size() > 
             label.set_text(htf3InfoLbl, htf3InfoText)
             label.set_textcolor(htf3InfoLbl, htfInfoColor)
 
-        nextBlockStart := htf3Start + (htfCandleCount - 1) * candleSpacing + 2 + blockGap * candleSpacing
+        nextBlockStart := htf3Start + (n3 - 1) * candleSpacing + 2 + blockGap * candleSpacing
 
     else if not na(htf3InfoLbl)
         label.delete(htf3InfoLbl)
