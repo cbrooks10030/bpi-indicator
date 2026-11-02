@@ -123,6 +123,8 @@ stdDevWidth = input.int(1, '', minval = 1, group = grpStdDev, inline = 'stdc', a
 grpRR        = 'Risk : Reward'
 rrShow       = input.bool(true, 'Show Risk : Reward', group = grpRR, inline = 'rr1', tooltip = 'When the CISD of a setup confirms: entry = CISD level, stop = the C2 sweep extreme, target = entry + R x risk. The boxes extend until the target or stop is hit, then freeze and show the result.')
 rrMultiple   = input.float(2.5, 'Target (R)', minval = 0.5, maxval = 20, step = 0.5, group = grpRR, inline = 'rr1', active = rrShow)
+rrMaxCount   = input.int(3, 'Max on chart', minval = 1, maxval = 40, group = grpRR, inline = 'rr1b', active = rrShow, tooltip = 'How many Risk : Reward setups stay drawn at once (newest kept, oldest removed).')
+rrTrail      = input.bool(true, 'Trail stop to protected swings', group = grpRR, inline = 'rr1b', active = rrShow, tooltip = 'After entry, each new same-direction protected swing (IC-CISD dot) that sits between the current stop and the entry moves the stop to it. Only the risk box / SL label move; the target and reward box never change. Applies from the bar after the swing confirms.')
 rrRiskColor  = input.color(color.new(#787b86, 85), 'Risk', group = grpRR, inline = 'rr2', active = rrShow)
 rrRewardColor = input.color(color.new(#2962ff, 85), 'Reward', group = grpRR, inline = 'rr2', active = rrShow)
 rrShowLabels = input.bool(true, 'Labels', group = grpRR, inline = 'rr3', active = rrShow)
@@ -364,7 +366,8 @@ type C2Setup
     bool  c4JustClosed  = false
     bool  c4EntryJust   = false
     // [BPI R:R]
-    int   rrState   = 0        // 0 = none, 1 = open, 2 = win, 3 = loss
+    int   rrState   = 0        // 0 = none, 1 = open, 2 = win, 3 = loss, 4 = removed (max count)
+    float rrSlOrig  = na
     float rrEntry   = na
     float rrSl      = na
     float rrTp      = na
@@ -425,6 +428,7 @@ var label                    htfDailyInfoLbl      = na
 var bool                     cisdBullFiredThisBar = false
 var bool                     cisdBearFiredThisBar = false
 var bool                     c3CloseBullThisBar   = false
+var array<C2Setup>           rrList               = array.new<C2Setup>()   // [BPI R:R] setups with an R:R drawn, oldest first
 var bool                     c3CloseBearThisBar   = false
 var bool                     c4CloseBullThisBar   = false
 var bool                     c4CloseBearThisBar   = false
@@ -1119,8 +1123,10 @@ rrPts(float v) =>
     (v >= 0 ? '+' : '') + str.tostring(v, format.mintick)
 
 rrStatusText(C2Setup s) =>
-    float pts = s.rrState == 2 ? (s.rrTp - s.rrEntry) * (s.isBull ? 1 : -1) : s.rrState == 3 ? -math.abs(s.rrEntry - s.rrSl) : (close - s.rrEntry) * (s.isBull ? 1 : -1)
-    string res = s.rrState == 2 ? ' | WIN +' + str.tostring(rrMultiple, '#.##') + 'R' : s.rrState == 3 ? ' | LOSS -1R' : ''
+    float risk0 = math.abs(s.rrEntry - s.rrSlOrig)
+    float pts = s.rrState == 2 ? (s.rrTp - s.rrEntry) * (s.isBull ? 1 : -1) : s.rrState == 3 ? (s.rrSl - s.rrEntry) * (s.isBull ? 1 : -1) : (close - s.rrEntry) * (s.isBull ? 1 : -1)
+    float rMult = risk0 > 0 ? pts / risk0 : 0
+    string res = s.rrState == 2 ? ' | WIN +' + str.tostring(rrMultiple, '#.##') + 'R' : s.rrState == 3 ? (rMult < 0 ? ' | LOSS ' : ' | STOPPED ') + rrPts(rMult) + 'R' : ''
     '(' + rrPrice(s.rrEntry) + ')' + res + ' | ' + rrPts(pts) + ' pts'
 
 // Creates the risk / reward boxes once the CISD is confirmed.
@@ -1130,8 +1136,10 @@ createRR(C2Setup s, int confirmBar) =>
         if risk > 0
             s.rrEntry := s.cisdLevel
             s.rrSl    := s.extreme
+            s.rrSlOrig := s.extreme
             s.rrTp    := s.isBull ? s.cisdLevel + rrMultiple * risk : s.cisdLevel - rrMultiple * risk
             s.rrState := 1
+            rrList.push(s)
             int x1 = s.cisdIndex
             int x2 = confirmBar + 3
             s.rrRiskBox   := box.new(x1, math.max(s.rrEntry, s.rrSl), x2, math.min(s.rrEntry, s.rrSl), border_color = na, bgcolor = rrRiskColor)
@@ -1143,8 +1151,28 @@ createRR(C2Setup s, int confirmBar) =>
     s
 
 // Per bar: extend the open R:R boxes and resolve them on the first touch of stop / target.
+// Moves the stop to the tightest same-direction protected swing that sits between the current stop and the entry.
+rrTrailStop(C2Setup s) =>
+    if rrTrail and not na(s.icList) and s.icList.size() > 0
+        float best = s.rrSl
+        for ic in s.icList
+            float px = ic.extremePrice
+            if not na(px) and ic.endIndex < bar_index
+                if s.isBull ? (px > best and px < s.rrEntry) : (px < best and px > s.rrEntry)
+                    best := px
+        if best != s.rrSl
+            s.rrSl := best
+            if not na(s.rrRiskBox)
+                box.set_top(s.rrRiskBox, math.max(s.rrEntry, s.rrSl))
+                box.set_bottom(s.rrRiskBox, math.min(s.rrEntry, s.rrSl))
+            if not na(s.rrSlLbl)
+                label.set_y(s.rrSlLbl, s.rrSl)
+                label.set_text(s.rrSlLbl, 'SL (' + rrPrice(s.rrSl) + ')')
+    s
+
 method updateRR(C2Setup s) =>
     if not na(s) and s.rrState == 1
+        rrTrailStop(s)
         bool hitSl = s.isBull ? low <= s.rrSl : high >= s.rrSl
         bool hitTp = s.isBull ? high >= s.rrTp : low <= s.rrTp
         if hitSl
@@ -1437,6 +1465,10 @@ deleteSetupVisuals(C2Setup s) =>
         dropRoles(s)
         // [BPI R:R]
         deleteRR(s)
+        s.rrState := 4
+        int rrIdx = rrList.indexof(s)
+        if rrIdx >= 0
+            rrList.remove(rrIdx)
 
 registerRecord(C2Setup s) =>
     setupRecords.push(SetupRecord.new(s, bar_index))
@@ -1938,15 +1970,20 @@ sellSetup := sellSetup.checkC4Invalid()
 buySetup  := buySetup.checkCisdConfirm()
 sellSetup := sellSetup.checkCisdConfirm()
 
-// [BPI R:R] resolve / extend the risk-reward boxes (also covers setups still open after they finish)
-for rec in setupRecords
-    rec.setup.updateRR()
 
 // check every persistent dot against the current bar BEFORE new dots can form on it
 icMarkTakenAll()
 
 buySetup  := buySetup.updateIc()
 sellSetup := sellSetup.updateIc()
+
+// [BPI R:R] trail stops / extend / resolve the risk-reward boxes, newest rrMaxCount kept
+while rrList.size() > rrMaxCount
+    C2Setup old = rrList.shift()
+    deleteRR(old)
+    old.rrState := 4
+for rs in rrList
+    rs.updateRR()
 
 if not na(buySetup) and buySetup.justConfirmed
     cisdBullFiredThisBar := true
