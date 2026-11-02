@@ -119,6 +119,18 @@ stdDevColor = input.color(color.new(#2e2e2e, 0), '', group = grpStdDev, inline =
 stdDevStyle = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], group = grpStdDev, inline = 'stdc', active = showStdDev)
 stdDevWidth = input.int(1, '', minval = 1, group = grpStdDev, inline = 'stdc', active = showStdDev)
 
+// [BPI R:R] Risk : Reward box drawn when a setup's CISD confirms (entry = CISD level, SL = C2 sweep extreme)
+grpRR        = 'Risk : Reward'
+rrShow       = input.bool(true, 'Show Risk : Reward', group = grpRR, inline = 'rr1', tooltip = 'When the CISD of a setup confirms: entry = CISD level, stop = the C2 sweep extreme, target = entry + R x risk. The boxes extend until the target or stop is hit, then freeze and show the result.')
+rrMultiple   = input.float(2.5, 'Target (R)', minval = 0.5, maxval = 20, step = 0.5, group = grpRR, inline = 'rr1', active = rrShow)
+rrRiskColor  = input.color(color.new(#787b86, 85), 'Risk', group = grpRR, inline = 'rr2', active = rrShow)
+rrRewardColor = input.color(color.new(#2962ff, 85), 'Reward', group = grpRR, inline = 'rr2', active = rrShow)
+rrShowLabels = input.bool(true, 'Labels', group = grpRR, inline = 'rr3', active = rrShow)
+rrLabelSize  = input.string('Small', '', options = ['Tiny', 'Small', 'Normal', 'Large', 'Huge'], group = grpRR, inline = 'rr3', active = rrShow and rrShowLabels)
+rrTextColor  = input.color(color.new(#2e2e2e, 0), '', group = grpRR, inline = 'rr3', active = rrShow and rrShowLabels)
+rrSlColor    = input.color(color.new(#f23645, 0), 'SL / TP text', group = grpRR, inline = 'rr4', active = rrShow and rrShowLabels)
+rrTpColor    = input.color(color.new(#2962ff, 0), '', group = grpRR, inline = 'rr4', active = rrShow and rrShowLabels)
+
 grpLiq       = 'Liquidity Levels (BSL/SSL)'
 showLiq      = input.bool(false, 'Show BSL/SSL', group = grpLiq)
 liqSwingLen  = input.int(5, 'Swing Length', minval = 1, group = grpLiq, tooltip = 'Bars on each side used to confirm a swing high/low')
@@ -351,6 +363,16 @@ type C2Setup
     bool  c3JustClosed  = false
     bool  c4JustClosed  = false
     bool  c4EntryJust   = false
+    // [BPI R:R]
+    int   rrState   = 0        // 0 = none, 1 = open, 2 = win, 3 = loss
+    float rrEntry   = na
+    float rrSl      = na
+    float rrTp      = na
+    box   rrRiskBox = na
+    box   rrRewardBox = na
+    label rrLbl     = na
+    label rrSlLbl   = na
+    label rrTpLbl   = na
     // [HTF ROLE TAGS] references to the HTF candle objects that carry this setup's tags
     HtfCandle c1Candle = na
     HtfCandle c2Candle = na
@@ -1089,6 +1111,73 @@ createStdDevProjections(C2Setup s, int confirmBar) =>
 
             s.stdDevData := StdDevData.new(lns, lbs)
 
+// [BPI R:R] -----------------------------------------------------------------------------
+rrPrice(float px) =>
+    str.tostring(px, format.mintick)
+
+rrPts(float v) =>
+    (v >= 0 ? '+' : '') + str.tostring(v, format.mintick)
+
+rrStatusText(C2Setup s) =>
+    float pts = s.rrState == 2 ? (s.rrTp - s.rrEntry) * (s.isBull ? 1 : -1) : s.rrState == 3 ? -math.abs(s.rrEntry - s.rrSl) : (close - s.rrEntry) * (s.isBull ? 1 : -1)
+    string res = s.rrState == 2 ? ' | WIN +' + str.tostring(rrMultiple, '#.##') + 'R' : s.rrState == 3 ? ' | LOSS -1R' : ''
+    '(' + rrPrice(s.rrEntry) + ')' + res + ' | ' + rrPts(pts) + ' pts'
+
+// Creates the risk / reward boxes once the CISD is confirmed.
+createRR(C2Setup s, int confirmBar) =>
+    if rrShow and s.rrState == 0 and not na(s.cisdLevel) and not na(s.extreme) and not na(s.cisdIndex)
+        float risk = math.abs(s.cisdLevel - s.extreme)
+        if risk > 0
+            s.rrEntry := s.cisdLevel
+            s.rrSl    := s.extreme
+            s.rrTp    := s.isBull ? s.cisdLevel + rrMultiple * risk : s.cisdLevel - rrMultiple * risk
+            s.rrState := 1
+            int x1 = s.cisdIndex
+            int x2 = confirmBar + 3
+            s.rrRiskBox   := box.new(x1, math.max(s.rrEntry, s.rrSl), x2, math.min(s.rrEntry, s.rrSl), border_color = na, bgcolor = rrRiskColor)
+            s.rrRewardBox := box.new(x1, math.max(s.rrEntry, s.rrTp), x2, math.min(s.rrEntry, s.rrTp), border_color = na, bgcolor = rrRewardColor)
+            if rrShowLabels
+                s.rrLbl   := label.new(x2, s.rrEntry, rrStatusText(s), xloc = xloc.bar_index, style = label.style_label_left, color = na, textcolor = rrTextColor, size = textSize(rrLabelSize))
+                s.rrSlLbl := label.new(x2, s.rrSl, 'SL (' + rrPrice(s.rrSl) + ')', xloc = xloc.bar_index, style = label.style_label_left, color = na, textcolor = rrSlColor, size = textSize(rrLabelSize))
+                s.rrTpLbl := label.new(x2, s.rrTp, 'TP (' + rrPrice(s.rrTp) + ')', xloc = xloc.bar_index, style = label.style_label_left, color = na, textcolor = rrTpColor, size = textSize(rrLabelSize))
+    s
+
+// Per bar: extend the open R:R boxes and resolve them on the first touch of stop / target.
+method updateRR(C2Setup s) =>
+    if not na(s) and s.rrState == 1
+        bool hitSl = s.isBull ? low <= s.rrSl : high >= s.rrSl
+        bool hitTp = s.isBull ? high >= s.rrTp : low <= s.rrTp
+        if hitSl
+            s.rrState := 3
+        else if hitTp
+            s.rrState := 2
+        int xr = bar_index + (s.rrState == 1 ? 3 : 0)
+        if not na(s.rrRiskBox)
+            box.set_right(s.rrRiskBox, xr)
+        if not na(s.rrRewardBox)
+            box.set_right(s.rrRewardBox, xr)
+        if not na(s.rrLbl)
+            label.set_xy(s.rrLbl, xr, s.rrEntry)
+            label.set_text(s.rrLbl, rrStatusText(s))
+        if not na(s.rrSlLbl)
+            label.set_x(s.rrSlLbl, xr)
+        if not na(s.rrTpLbl)
+            label.set_x(s.rrTpLbl, xr)
+    s
+
+deleteRR(C2Setup s) =>
+    if not na(s.rrRiskBox)
+        box.delete(s.rrRiskBox)
+    if not na(s.rrRewardBox)
+        box.delete(s.rrRewardBox)
+    if not na(s.rrLbl)
+        label.delete(s.rrLbl)
+    if not na(s.rrSlLbl)
+        label.delete(s.rrSlLbl)
+    if not na(s.rrTpLbl)
+        label.delete(s.rrTpLbl)
+// ---------------------------------------------------------------------------------------
+
 confirmCisd(C2Setup s, int confirmBar, bool live = true) =>
     s.cisdConfirmed := true
     if live
@@ -1101,7 +1190,8 @@ confirmCisd(C2Setup s, int confirmBar, bool live = true) =>
     if showLine
         s.cisdLine := line.new(s.cisdIndex, s.cisdLevel, confirmBar + 3, s.cisdLevel, color = clr, style = lineStyleFromStr(lnStyle), width = lnWidth)
     createStdDevProjections(s, confirmBar)
-   
+    createRR(s, confirmBar)
+
 
 icClearPending(C2Setup s) =>
     s.icPending      := false
@@ -1345,6 +1435,8 @@ deleteSetupVisuals(C2Setup s) =>
                     label.delete(lb)
         // [HTF ROLE TAGS] evicted setups also lose their tags on the HTF candles
         dropRoles(s)
+        // [BPI R:R]
+        deleteRR(s)
 
 registerRecord(C2Setup s) =>
     setupRecords.push(SetupRecord.new(s, bar_index))
@@ -1845,6 +1937,10 @@ sellSetup := sellSetup.checkC4Invalid()
 
 buySetup  := buySetup.checkCisdConfirm()
 sellSetup := sellSetup.checkCisdConfirm()
+
+// [BPI R:R] resolve / extend the risk-reward boxes (also covers setups still open after they finish)
+for rec in setupRecords
+    rec.setup.updateRR()
 
 // check every persistent dot against the current bar BEFORE new dots can form on it
 icMarkTakenAll()
