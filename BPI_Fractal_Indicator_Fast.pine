@@ -733,7 +733,8 @@ roleLabel(label existing, int x, float y, string txt, color clr, bool isBull) =>
     result
 
 // [HTF SMT] Creates / updates / removes one divergence segment (line + centered label).
-smtHtfSeg(line ln, label lb, bool active, int x1, float y1, int x2, float y2, string txt, bool isHigh = true) =>
+// Label is anchored under the candle (lx, ly) and pushed down `below` text lines so it stacks beneath the role tag / time stamp.
+smtHtfSeg(line ln, label lb, bool active, int x1, float y1, int x2, float y2, string txt, int lx, float ly, int below) =>
     line  l = ln
     label b = lb
     if active
@@ -746,13 +747,16 @@ smtHtfSeg(line ln, label lb, bool active, int x1, float y1, int x2, float y2, st
             line.set_style(l, lineStyleFromStr(htfSmtStyle))
             line.set_width(l, htfSmtWidth)
         if showLabels
-            int   mx = int(math.round((x1 + x2) / 2.0))
-            float my = (y1 + y2) / 2
+            string pre = ""
+            for k = 1 to below
+                pre += "\n"
+            int   mx = lx
+            float my = ly
             if na(b)
-                b := label.new(mx, my, txt, xloc = xloc.bar_index, yloc = yloc.price, style = isHigh ? label.style_label_down : label.style_label_up, color = na, textcolor = htfSmtTextColor, size = textSize(htfSmtTextSize), text_font_family = font.family_default)
+                b := label.new(mx, my, pre + txt, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_up, color = na, textcolor = htfSmtTextColor, size = textSize(htfSmtTextSize), text_font_family = font.family_default)
             else
                 label.set_xy(b, mx, my)
-                label.set_text(b, txt)
+                label.set_text(b, pre + txt)
                 label.set_textcolor(b, htfSmtTextColor)
                 label.set_size(b, textSize(htfSmtTextSize))
         else if not na(b)
@@ -2369,10 +2373,16 @@ if (barstate.islast or barstate.isrealtime) and validTf and htfCandles.size() > 
         int   x1 = na(prev) ? cur.midX : prev.midX
         float yH = na(prev) ? cur.h : prev.h
         float yL = na(prev) ? cur.l : prev.l
-        [hLn, hLb] = smtHtfSeg(cur.smtHLine, cur.smtHLbl, bearSmt, x1, yH, cur.midX, cur.h, htfSmtTxt)
+        // text lines already sitting under this candle: stacked bull role tag (C2 / PSP / SMT) + time stamp
+        int below = 0
+        if showHtfRoles and showLabels and not na(cur.buyRole)
+            below += str.length(cur.buyRole) - str.length(str.replace_all(cur.buyRole, '+', '')) + 1
+        if showHtfStamps
+            below += 1
+        [hLn, hLb] = smtHtfSeg(cur.smtHLine, cur.smtHLbl, bearSmt, x1, yH, cur.midX, cur.h, htfSmtTxt, cur.midX, cur.l, below)
         cur.smtHLine := hLn
         cur.smtHLbl  := hLb
-        [lLn, lLb] = smtHtfSeg(cur.smtLLine, cur.smtLLbl, bullSmt, x1, yL, cur.midX, cur.l, htfSmtTxt, false)
+        [lLn, lLb] = smtHtfSeg(cur.smtLLine, cur.smtLLbl, bullSmt, x1, yL, cur.midX, cur.l, htfSmtTxt, cur.midX, cur.l, below + (bearSmt ? 1 : 0))
         cur.smtLLine := lLn
         cur.smtLLbl  := lLb
 
