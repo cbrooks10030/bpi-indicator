@@ -717,19 +717,23 @@ dropRoles(C2Setup s) =>
         clearRole(s.c6Candle, s.isBull, 'C6', 'XC6')
 
 // Creates or updates a single role label.
+// Display form of a role tag: 'C2+PSP+SMT' -> 'C2' / 'PSP' / 'SMT' on separate lines
+stackTag(string txt) =>
+    str.replace_all(txt, '+', '\n')
+
 roleLabel(label existing, int x, float y, string txt, color clr, bool isBull) =>
     label result = existing
     if na(existing)
-        result := label.new(x, y, txt, xloc = xloc.bar_index, yloc = yloc.price, style = isBull ? label.style_label_up : label.style_label_down, color = na, textcolor = clr, size = textSize(labelSize), text_font_family = font.family_default)
+        result := label.new(x, y, stackTag(txt), xloc = xloc.bar_index, yloc = yloc.price, style = isBull ? label.style_label_up : label.style_label_down, color = na, textcolor = clr, size = textSize(labelSize), text_font_family = font.family_default)
     else
         label.set_xy(existing, x, y)
-        label.set_text(existing, txt)
+        label.set_text(existing, stackTag(txt))
         label.set_textcolor(existing, clr)
         label.set_size(existing, textSize(labelSize))
     result
 
 // [HTF SMT] Creates / updates / removes one divergence segment (line + centered label).
-smtHtfSeg(line ln, label lb, bool active, int x1, float y1, int x2, float y2, string txt) =>
+smtHtfSeg(line ln, label lb, bool active, int x1, float y1, int x2, float y2, string txt, bool isHigh = true) =>
     line  l = ln
     label b = lb
     if active
@@ -745,7 +749,7 @@ smtHtfSeg(line ln, label lb, bool active, int x1, float y1, int x2, float y2, st
             int   mx = int(math.round((x1 + x2) / 2.0))
             float my = (y1 + y2) / 2
             if na(b)
-                b := label.new(mx, my, txt, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_center, color = na, textcolor = htfSmtTextColor, size = textSize(htfSmtTextSize), text_font_family = font.family_default)
+                b := label.new(mx, my, txt, xloc = xloc.bar_index, yloc = yloc.price, style = isHigh ? label.style_label_down : label.style_label_up, color = na, textcolor = htfSmtTextColor, size = textSize(htfSmtTextSize), text_font_family = font.family_default)
             else
                 label.set_xy(b, mx, my)
                 label.set_text(b, txt)
@@ -955,7 +959,7 @@ method draw(HtfCandle c, int leftBar, string tf = "") =>
     bool roleOn   = showHtfRoles and showLabels
     bool mergeBuy = roleOn and showHtfStamps and not na(c.buyRole)
     if mergeBuy
-        timeText := c.buyRole + "\n" + timeText
+        timeText := stackTag(c.buyRole) + "\n" + timeText
 
     if showHtfStamps
         if na(c.timeLbl)
@@ -1744,7 +1748,7 @@ method checkCisdConfirm(C2Setup s) =>
 processC2(bool trigger, bool allow, bool isBull, float extremePrice, int extremeBar, float sweepFromPrice, int sweepFromBar, float cisdLevel, int cisdIndex, bool cisdAlreadyConfirmed, int cisdConfirmBar, C2Setup existing, string c2Tag) =>
     C2Setup result = existing
     if trigger and allow and not na(extremePrice) and not na(extremeBar)
-        label lbl = (validTf and showLabels) ? directionalLabel(extremeBar, extremePrice + (isBull ? -1 : 1) * c2LabelOffset * syminfo.mintick, c2Tag, isBull) : na
+        label lbl = (validTf and showLabels) ? directionalLabel(extremeBar, extremePrice + (isBull ? -1 : 1) * c2LabelOffset * syminfo.mintick, stackTag(c2Tag), isBull) : na
         drawSweepLine(sweepFromBar, sweepFromPrice, bar_index)
         // Confirmed Sweep + C2 closure alert: fires exactly at the moment the
         // Candle 1 Sweep line is drawn and a new C2 setup is registered.
@@ -2368,7 +2372,7 @@ if (barstate.islast or barstate.isrealtime) and validTf and htfCandles.size() > 
         [hLn, hLb] = smtHtfSeg(cur.smtHLine, cur.smtHLbl, bearSmt, x1, yH, cur.midX, cur.h, htfSmtTxt)
         cur.smtHLine := hLn
         cur.smtHLbl  := hLb
-        [lLn, lLb] = smtHtfSeg(cur.smtLLine, cur.smtLLbl, bullSmt, x1, yL, cur.midX, cur.l, htfSmtTxt)
+        [lLn, lLb] = smtHtfSeg(cur.smtLLine, cur.smtLLbl, bullSmt, x1, yL, cur.midX, cur.l, htfSmtTxt, false)
         cur.smtLLine := lLn
         cur.smtLLbl  := lLb
 
