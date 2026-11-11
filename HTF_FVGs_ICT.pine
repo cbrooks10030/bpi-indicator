@@ -42,6 +42,8 @@ type Imbalance
     int     mitigated_time
     line    line_middle
     label   lbl
+    label   starL           // untapped marker, left of the TF label
+    label   starR           // untapped marker, right of the TF label
     box     box
     bool    tapped          // Tracks whether first tap alert has fired
 
@@ -125,7 +127,11 @@ settings.label_color            := input.color(color.new(color.black, 10), "", i
 settings.label_bgcolor          := input.color(color.new(color.white, 100), "", inline='label')
 settings.label_size             := input.string(size.small, "", [size.tiny, size.small, size.normal, size.large, size.huge], inline="label")
 string tap_type                 = input.string("Wick", "Tapped when", options=["Wick", "C.E."], inline="tap", tooltip="Wick = the first wick that trades into the gap counts as a tap. C.E. = the wick must reach the consequent encroachment (50% line) of the gap. Applies to bullish and bearish FVGs and to the first-tap alerts.")
-bool star_untapped              = input.bool(true, "Star untapped FVGs  ( * 4H * )", inline="tap", tooltip="Any FVG on any timeframe shows a star on each side of its label until price trades into the gap for the first time. The stars then drop off for good.")
+bool star_untapped              = input.bool(true, "Mark untapped FVGs", inline="tap", tooltip="Any FVG on any timeframe shows a marker beside its label until price trades into the gap for the first time (see 'Tapped when'). The markers then drop off for good.")
+string star_symbol              = input.string("*", "Marker", options=["*", "★", "●", "◆", "■", "▲", "✦", "✓", "!"], inline="star", tooltip="Symbol shown beside untapped FVG labels.")
+string star_size                = input.string(size.small, "", [size.tiny, size.small, size.normal, size.large, size.huge], inline="star")
+color  star_color               = input.color(color.new(color.black, 10), "", inline="star")
+string star_pos                 = input.string("Both sides", "", options=["Both sides", "Left", "Right"], inline="star")
 settings.padding                := input.int(4, "Distance from current candle", minval=0)
 settings.buffer                 := input.int(6, "Spacing between timeframes", minval=0)
 
@@ -206,10 +212,51 @@ method Gethtftext(Helper helper, string htf) =>
     
     formatted
 
-// Label text: stars on both sides while the gap has never been traded into
 fvgLabelText(string htf, Imbalance imb) =>
-    string base = helper.Gethtftext(htf)
-    star_untapped and not imb.tapped and not imb.mitigated ? "* " + base + " *" : base
+    helper.Gethtftext(htf)
+
+// Untapped markers: separate labels so they can have their own symbol / size / colour.
+// Left marker hangs off the same anchor (text extends left); right marker is pushed past the TF text with spaces.
+deleteStars(Imbalance imb) =>
+    if not na(imb.starL)
+        label.delete(imb.starL)
+        imb.starL := na
+    if not na(imb.starR)
+        label.delete(imb.starR)
+        imb.starR := na
+
+updateStars(Imbalance imb, int x, string htf) =>
+    bool show = star_untapped and settings.label_show and not imb.tapped and not imb.mitigated
+    if show
+        bool wantL = star_pos != "Right"
+        bool wantR = star_pos != "Left"
+        string pad = ""
+        for i = 0 to str.length(helper.Gethtftext(htf)) + 1
+            pad += " "
+        if wantL
+            if na(imb.starL)
+                imb.starL := label.new(x, imb.middle, star_symbol, xloc=xloc.bar_time, style=label.style_label_right, textcolor=star_color, color=color.new(color.white, 100), size=star_size)
+            else
+                label.set_x(imb.starL, x)
+                label.set_text(imb.starL, star_symbol)
+                label.set_textcolor(imb.starL, star_color)
+                label.set_size(imb.starL, star_size)
+        else if not na(imb.starL)
+            label.delete(imb.starL)
+            imb.starL := na
+        if wantR
+            if na(imb.starR)
+                imb.starR := label.new(x, imb.middle, pad + star_symbol, xloc=xloc.bar_time, style=label.style_label_left, textcolor=star_color, color=color.new(color.white, 100), size=star_size)
+            else
+                label.set_x(imb.starR, x)
+                label.set_text(imb.starR, pad + star_symbol)
+                label.set_textcolor(imb.starR, star_color)
+                label.set_size(imb.starR, star_size)
+        else if not na(imb.starR)
+            label.delete(imb.starR)
+            imb.starR := na
+    else
+        deleteStars(imb)
 
 method Validtimeframe(Helper helper, tf) =>
     helper.name := tf
@@ -253,8 +300,8 @@ method AddZone(ImbalanceStructure IS, Imbalance imb, int step) =>
             box.set_bgcolor(imb.box, imb.open < imb.close ? imb.mitigated ? settings.mitigated_color_bull : IS.settings.color_bull : imb.mitigated ? settings.mitigated_color_bear : IS.settings.color_bear)
             box.set_border_color(imb.box, settings.Border_show ? imb.open < imb.close ? color.new(settings.mitigated_color_bull, color.t(settings.mitigated_color_bull)/ 3) : color.new(settings.mitigated_color_bear, color.t(settings.mitigated_color_bear)/ 3) : color_transparent)
             label.set_x(imb.lbl, imb.mitigated ? imb.mitigated_time : buffer)
-            if not na(imb.lbl)
-                label.set_text(imb.lbl, fvgLabelText(IS.settings.htf, imb))
+        if settings.label_show
+            updateStars(imb, imb.mitigated ? imb.mitigated_time : buffer, IS.settings.htf)
             if settings.CE_show
                 line.set_x2(imb.line_middle, imb.mitigated ? imb.mitigated_time : buffer)
         if imb.mitigated and not settings.mitigated_show
@@ -262,6 +309,7 @@ method AddZone(ImbalanceStructure IS, Imbalance imb, int step) =>
                 box.delete(imb.box)
                 line.delete(imb.line_middle)
                 label.delete(imb.lbl)
+                deleteStars(imb)
                 visible := false
     visible
 
@@ -306,6 +354,7 @@ method CheckMitigated(ImbalanceStructure IS, o, h, l, c) =>
                             box.delete(imb.box)
                             line.delete(imb.line_middle)
                             label.delete(imb.lbl)
+                            deleteStars(imb)
                         IS.imbalance.remove(i)
                     else
                         imb.mitigated_time  := time
@@ -344,6 +393,7 @@ method AdjustMargins(ImbalanceStructure IS, int step) =>
                 if not na(imb.box)
                     box.delete(imb.box)
                     label.delete(imb.lbl)
+                    deleteStars(imb)
                     line.delete((imb.line_middle))
     IS
 
