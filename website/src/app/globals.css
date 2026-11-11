@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #ffffff;
+  --ink: #0b0d12;
+  --accent: #0d9488;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Subtle dotted background used on hero / section bands. */
+.dot-bg {
+  background-image: radial-gradient(rgba(11, 13, 18, 0.06) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+.card-shadow {
+  box-shadow: 0 1px 2px rgba(11, 13, 18, 0.04), 0 8px 30px -12px rgba(11, 13, 18, 0.12);
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.animate-float { animation: float 6s ease-in-out infinite; }
+
+/* Scroll-reveal (Apple-style ease). */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.9s cubic-bezier(0.22, 1, 0.36, 1), transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.reveal.is-visible { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+}
+
+.media-shadow {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04), 0 30px 80px -30px rgba(0, 0, 0, 0.35);
+}
+.media-dark {
+  background-image: radial-gradient(120% 90% at 20% 0%, rgba(13, 148, 136, 0.28), transparent 60%),
+    radial-gradient(90% 80% at 100% 100%, rgba(255, 255, 255, 0.08), transparent 60%);
+}
+.media-light {
+  background-image: radial-gradient(120% 90% at 0% 0%, rgba(13, 148, 136, 0.14), transparent 60%),
+    radial-gradient(90% 80% at 100% 100%, rgba(11, 13, 18, 0.06), transparent 60%);
+}
