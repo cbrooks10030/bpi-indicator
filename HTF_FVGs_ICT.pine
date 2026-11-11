@@ -225,38 +225,32 @@ deleteStars(Imbalance imb) =>
         label.delete(imb.starR)
         imb.starR := na
 
+// Creates / updates / removes one marker label; always returns the (possibly na) label so every branch has one type.
+starLabel(label existing, bool want, int x, float y, string txt, string sty) =>
+    label result = existing
+    if want
+        if na(result)
+            result := label.new(x, y, txt, xloc=xloc.bar_time, style=sty == "L" ? label.style_label_right : label.style_label_left, textcolor=star_color, color=color.new(color.white, 100), size=star_size)
+        else
+            label.set_xy(result, x, y)
+            label.set_text(result, txt)
+            label.set_textcolor(result, star_color)
+            label.set_size(result, star_size)
+    else if not na(result)
+        label.delete(result)
+        result := na
+    result
+
 updateStars(Imbalance imb, int x, string htf) =>
-    bool show = star_untapped and settings.label_show and not imb.tapped and not imb.mitigated
-    if show
-        bool wantL = star_pos != "Right"
-        bool wantR = star_pos != "Left"
-        string pad = ""
+    bool show  = star_untapped and settings.label_show and not imb.tapped and not imb.mitigated
+    bool wantL = show and star_pos != "Right"
+    bool wantR = show and star_pos != "Left"
+    string pad = ""
+    if wantR
         for i = 0 to str.length(helper.Gethtftext(htf)) + 1
             pad += " "
-        if wantL
-            if na(imb.starL)
-                imb.starL := label.new(x, imb.middle, star_symbol, xloc=xloc.bar_time, style=label.style_label_right, textcolor=star_color, color=color.new(color.white, 100), size=star_size)
-            else
-                label.set_x(imb.starL, x)
-                label.set_text(imb.starL, star_symbol)
-                label.set_textcolor(imb.starL, star_color)
-                label.set_size(imb.starL, star_size)
-        else if not na(imb.starL)
-            label.delete(imb.starL)
-            imb.starL := na
-        if wantR
-            if na(imb.starR)
-                imb.starR := label.new(x, imb.middle, pad + star_symbol, xloc=xloc.bar_time, style=label.style_label_left, textcolor=star_color, color=color.new(color.white, 100), size=star_size)
-            else
-                label.set_x(imb.starR, x)
-                label.set_text(imb.starR, pad + star_symbol)
-                label.set_textcolor(imb.starR, star_color)
-                label.set_size(imb.starR, star_size)
-        else if not na(imb.starR)
-            label.delete(imb.starR)
-            imb.starR := na
-    else
-        deleteStars(imb)
+    imb.starL := starLabel(imb.starL, wantL, x, imb.middle, star_symbol, "L")
+    imb.starR := starLabel(imb.starR, wantR, x, imb.middle, pad + star_symbol, "R")
 
 method Validtimeframe(Helper helper, tf) =>
     helper.name := tf
