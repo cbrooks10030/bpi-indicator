@@ -121,7 +121,7 @@ stdDevWidth = input.int(1, '', minval = 1, group = grpStdDev, inline = 'stdc', a
 
 // [BPI R:R] Risk : Reward box drawn when a setup's CISD confirms (entry = CISD level, SL = C2 sweep extreme)
 grpRR        = 'Risk : Reward'
-rrShow       = input.bool(true, 'Show Risk : Reward', group = grpRR, inline = 'rr1', tooltip = 'When the CISD of a setup confirms: entry = CISD level, stop = the C2 sweep extreme, target = entry + R x risk. The boxes extend until the target or stop is hit, then freeze and show the result.')
+rrShow       = input.bool(false, 'Show Risk : Reward', group = grpRR, inline = 'rr1', tooltip = 'When the CISD of a setup confirms: entry = CISD level, stop = the C2 sweep extreme, target = entry + R x risk. The boxes extend until the target or stop is hit, then freeze and show the result.')
 rrMultiple   = input.float(2.5, 'Target (R)', minval = 0.5, maxval = 20, step = 0.5, group = grpRR, inline = 'rr1', active = rrShow)
 rrMaxCount   = input.int(3, 'Max on chart', minval = 1, maxval = 40, group = grpRR, inline = 'rr1b', active = rrShow, tooltip = 'How many Risk : Reward setups stay drawn at once (newest kept, oldest removed).')
 rrTrail      = input.bool(true, 'Trail stop to protected swings', group = grpRR, inline = 'rr1b', active = rrShow, tooltip = 'After entry, each new same-direction protected swing (IC-CISD dot) that sits between the current stop and the entry moves the stop to it. Only the risk box / SL label move; the target and reward box never change. Applies from the bar after the swing confirms.')
