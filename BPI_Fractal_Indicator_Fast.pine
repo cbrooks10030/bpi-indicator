@@ -34,10 +34,19 @@ htfCandleCount = input.int(10, 'HTF Candles', minval = 1, maxval = 10, group = g
 hideHtf        = input.bool(false, 'Hide?', group = grpCandles, inline = 'count', tooltip = 'Hide HTF candles preview')
 showHtf2 = input.bool(true, 'Show HTF Candle 2', group = grpCandles, inline = 'extrahtf')
 showHtf3 = input.bool(true, 'Show HTF Candle 3', group = grpCandles, inline = 'extrahtf')
-htf2CandleCount = input.int(10, 'HTF 2 Candles', minval = 1, maxval = 10, group = grpCandles, inline = 'extracount')
+htf2CandleCount = input.int(5, 'HTF 2 Candles', minval = 1, maxval = 10, group = grpCandles, inline = 'extracount')
 htf3CandleCount = input.int(5, 'HTF 3 Candles', minval = 1, maxval = 10, group = grpCandles, inline = 'extracount')
 showHtf4H      = input.bool(true, 'Show 4H Candle', group = grpCandles, inline = 'dailyhtf')
 showHtfDaily = input.bool(true, 'Show Daily Candle', group = grpCandles, inline = 'dailyhtf')
+htf4HCandleCount    = input.int(5, '4H Candles', minval = 1, maxval = 10, group = grpCandles, inline = 'dailycount')
+htfDailyCandleCount = input.int(5, 'Daily Candles', minval = 1, maxval = 10, group = grpCandles, inline = 'dailycount')
+// [BPI] two extra user-timeframe blocks with the same options as HTF 2 / 3
+showHtf4        = input.bool(false, 'Show HTF Candle 4', group = grpCandles, inline = 'htf4')
+htf4TfIn        = input.timeframe('1W', '', group = grpCandles, inline = 'htf4')
+htf4CandleCount = input.int(5, '', minval = 1, maxval = 10, group = grpCandles, inline = 'htf4', tooltip = 'HTF Candle 4: timeframe and number of candles (1-10).')
+showHtf5        = input.bool(false, 'Show HTF Candle 5', group = grpCandles, inline = 'htf5')
+htf5TfIn        = input.timeframe('1M', '', group = grpCandles, inline = 'htf5')
+htf5CandleCount = input.int(5, '', minval = 1, maxval = 10, group = grpCandles, inline = 'htf5', tooltip = 'HTF Candle 5: timeframe and number of candles (1-10).')
 candleOffsetIn = input.int(20, 'Offset', minval = 0, group = grpCandles)
 
 bullBody   = input.color(color.blue, 'Body', group = grpCandles, inline = 'body')
@@ -66,7 +75,7 @@ lineColor  = input.color(color.new(color.gray, 60), '', group = grpCandles, inli
 lineStyle  = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], group = grpCandles, inline = 'vline')
 lineWidth  = input.int(1, '', minval = 1, group = grpCandles, inline = 'vline')
 
-showLH  = input.bool(true, 'L/H Lines', group = grpCandles, inline = 'lh')
+showLH  = input.bool(false, 'L/H Lines', group = grpCandles, inline = 'lh')
 lhColor = input.color(color.new(#1a1a1a, 30), '', group = grpCandles, inline = 'lh')
 lhStyle = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], group = grpCandles, inline = 'lh')
 lhWidth = input.int(1, '', minval = 1, group = grpCandles, inline = 'lh')
@@ -406,6 +415,8 @@ var array<HtfCandle>        htf2Candles          = array.new<HtfCandle>()
 var array<HtfCandle>        htf3Candles          = array.new<HtfCandle>()
 var array<HtfCandle>        htf4HCandles         = array.new<HtfCandle>()
 var array<HtfCandle>        htfDailyCandles      = array.new<HtfCandle>()
+var array<HtfCandle>        htf4Candles          = array.new<HtfCandle>()
+var array<HtfCandle>        htf5Candles          = array.new<HtfCandle>()
 var array<line>             vLines               = array.new<line>()
 var array<line>             hLines               = array.new<line>()
 var array<line>             lLines               = array.new<line>()
@@ -425,6 +436,8 @@ var label                    htf2InfoLbl          = na
 var label                    htf3InfoLbl          = na
 var label                    htf4HInfoLbl         = na
 var label                    htfDailyInfoLbl      = na
+var label                    htf4InfoLbl          = na
+var label                    htf5InfoLbl          = na
 var bool                     cisdBullFiredThisBar = false
 var bool                     cisdBearFiredThisBar = false
 var bool                     c3CloseBullThisBar   = false
@@ -881,6 +894,36 @@ extendExtraEq(array<HtfCandle> cs) =>
     int n = cs.size()
     for i = 1 to n - 1
         line.set_x2(cs.get(i).eqLine, cs.get(i - 1).midX)
+
+// [BPI] One extra HTF block (HTF 2/3/4/5, 4H, Daily): tags, candles, sweeps, EQ lines and the info label.
+// Returns the (re)used info label and the start column of the next block.
+drawExtraBlock(array<HtfCandle> cs, string tf, bool show, label infoLbl, int start, int blockGap) =>
+    label lbl  = infoLbl
+    int   next = start
+    if show and not na(tf) and cs.size() > 0
+        tagExtraBlock(cs)
+        int n = cs.size()
+        for i = n - 1 to 0
+            cs.get(i).draw(bar_index + start + candleSpacing * (n - 1 - i), tf)
+        drawExtraSweeps(cs)
+        extendExtraEq(cs)
+        float hi = extraInfoY(cs)
+        int center = bar_index + start + int(candleSpacing * (n - 1) / 2)
+        string txt = tfLabel(tf)
+        if showHtfTimer
+            int remMs = time_close(tf) - (barstate.isrealtime ? timenow : time_close)
+            txt := txt + '\n(' + formatRemaining(remMs, tfMins(tf) >= 60) + ')'
+        if na(lbl)
+            lbl := label.new(center, hi, txt, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_down, color = na, textcolor = htfInfoColor, size = textSize(labelSize), text_font_family = font.family_default)
+        else
+            label.set_xy(lbl, center, hi)
+            label.set_text(lbl, txt)
+            label.set_textcolor(lbl, htfInfoColor)
+        next := start + (n - 1) * candleSpacing + 2 + blockGap * candleSpacing
+    else if not na(lbl)
+        label.delete(lbl)
+        lbl := na
+    [lbl, next]
 
 method delete(HtfCandle c) =>
     box.delete(c.body)
@@ -1935,9 +1978,13 @@ if showHtf2
 if showHtf3
     htf3Candles := manageExtraHTF(htf3Candles, htf3Tf, htf3CandleCount)
 if showHtfDaily
-    htfDailyCandles := manageExtraHTF(htfDailyCandles, "1D", 1)
+    htfDailyCandles := manageExtraHTF(htfDailyCandles, "1D", htfDailyCandleCount)
 if showHtf4H
-    htf4HCandles := manageExtraHTF(htf4HCandles, "240", 1)
+    htf4HCandles := manageExtraHTF(htf4HCandles, "240", htf4HCandleCount)
+if showHtf4
+    htf4Candles := manageExtraHTF(htf4Candles, htf4TfIn, htf4CandleCount)
+if showHtf5
+    htf5Candles := manageExtraHTF(htf5Candles, htf5TfIn, htf5CandleCount)
 
 
 if showLH and htfCandles.size() > 0 and hLines.size() > 0
@@ -2385,115 +2432,18 @@ if (barstate.islast or barstate.isrealtime) and validTf and htfCandles.size() > 
     int htf1Right = candleOffset + (htfCandleCount - 1) * candleSpacing + 2
     int nextBlockStart = htf1Right + blockGap * candleSpacing
 
-    int htf2Start = nextBlockStart
-
-    if showHtf2 and not na(htf2Tf) and htf2Candles.size() > 0
-        tagExtraBlock(htf2Candles)
-        int n2 = htf2Candles.size()
-        for i = n2 - 1 to 0
-            htf2Candles.get(i).draw(bar_index + htf2Start + candleSpacing * (n2 - 1 - i), htf2Tf)
-        drawExtraSweeps(htf2Candles)      // <-- [EXTRA SWEEP] added
-        extendExtraEq(htf2Candles)        // <-- [EXTRA EQ] added
-        float htf2High = htf2Candles.get(0).h
-        for i = 1 to n2 - 1
-            htf2High := math.max(htf2High, htf2Candles.get(i).h)
-        htf2High := extraInfoY(htf2Candles)
-        int htf2Center = bar_index + htf2Start + int(candleSpacing * (n2 - 1) / 2)
-
-        string htf2InfoText = tfLabel(htf2Tf)
-        if showHtfTimer
-            int htf2RemainingMs = time_close(htf2Tf) - (barstate.isrealtime ? timenow : time_close)
-            htf2InfoText := htf2InfoText + '\n(' + formatRemaining(htf2RemainingMs, tfMins(htf2Tf) >= 60) + ')'
-
-        if na(htf2InfoLbl)
-            htf2InfoLbl := label.new(htf2Center, htf2High, htf2InfoText, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_down, color = na, textcolor = htfInfoColor, size = textSize(labelSize), text_font_family = font.family_default)
-        else
-            label.set_xy(htf2InfoLbl, htf2Center, htf2High)
-            label.set_text(htf2InfoLbl, htf2InfoText)
-            label.set_textcolor(htf2InfoLbl, htfInfoColor)
-
-        nextBlockStart := htf2Start + (n2 - 1) * candleSpacing + 2 + blockGap * candleSpacing
-
-    else if not na(htf2InfoLbl)
-        label.delete(htf2InfoLbl)
-        htf2InfoLbl := na
-
-    int htf3Start = nextBlockStart
-
-    if showHtf3 and not na(htf3Tf) and htf3Candles.size() > 0
-        tagExtraBlock(htf3Candles)
-        int n3 = htf3Candles.size()
-        for i = n3 - 1 to 0
-            htf3Candles.get(i).draw(bar_index + htf3Start + candleSpacing * (n3 - 1 - i), htf3Tf)
-        drawExtraSweeps(htf3Candles)      // <-- [EXTRA SWEEP] added
-        extendExtraEq(htf3Candles)        // <-- [EXTRA EQ] added
-        float htf3High = htf3Candles.get(0).h
-        for i = 1 to n3 - 1
-            htf3High := math.max(htf3High, htf3Candles.get(i).h)
-        htf3High := extraInfoY(htf3Candles)
-        int htf3Center = bar_index + htf3Start + int(candleSpacing * (n3 - 1) / 2)
-
-        string htf3InfoText = tfLabel(htf3Tf)
-        if showHtfTimer
-            int htf3RemainingMs = time_close(htf3Tf) - (barstate.isrealtime ? timenow : time_close)
-            htf3InfoText := htf3InfoText + '\n(' + formatRemaining(htf3RemainingMs, tfMins(htf3Tf) >= 60) + ')'
-
-        if na(htf3InfoLbl)
-            htf3InfoLbl := label.new(htf3Center, htf3High, htf3InfoText, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_down, color = na, textcolor = htfInfoColor, size = textSize(labelSize), text_font_family = font.family_default)
-        else
-            label.set_xy(htf3InfoLbl, htf3Center, htf3High)
-            label.set_text(htf3InfoLbl, htf3InfoText)
-            label.set_textcolor(htf3InfoLbl, htfInfoColor)
-
-        nextBlockStart := htf3Start + (n3 - 1) * candleSpacing + 2 + blockGap * candleSpacing
-
-    else if not na(htf3InfoLbl)
-        label.delete(htf3InfoLbl)
-        htf3InfoLbl := na
-
-    int htf4HStart = nextBlockStart
-
-    if showHtf4H and htf4HCandles.size() > 0
-        htf4HCandles.get(0).draw(bar_index + htf4HStart, "240")
-        float htf4HHigh = htf4HCandles.get(0).h
-        int htf4HCenter = bar_index + htf4HStart + 1
-
-        string htf4HInfoText = tfLabel("240")
-        if showHtfTimer
-            int htf4HRemainingMs = time_close("240") - (barstate.isrealtime ? timenow : time_close)
-            htf4HInfoText := htf4HInfoText + '\n(' + formatRemaining(htf4HRemainingMs, tfMins("240") >= 60) + ')'
-
-        if na(htf4HInfoLbl)
-            htf4HInfoLbl := label.new(htf4HCenter, htf4HHigh, htf4HInfoText, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_down, color = na, textcolor = htfInfoColor, size = textSize(labelSize), text_font_family = font.family_default)
-        else
-            label.set_xy(htf4HInfoLbl, htf4HCenter, htf4HHigh)
-            label.set_text(htf4HInfoLbl, htf4HInfoText)
-            label.set_textcolor(htf4HInfoLbl, htfInfoColor)
-
-        nextBlockStart := htf4HStart + 2 + blockGap * candleSpacing
-
-    else if not na(htf4HInfoLbl)
-        label.delete(htf4HInfoLbl)
-        htf4HInfoLbl := na
-
-    int htfDailyStart = nextBlockStart
-
-    if showHtfDaily and htfDailyCandles.size() > 0
-        htfDailyCandles.get(0).draw(bar_index + htfDailyStart, "1D")
-        float htfDHigh = htfDailyCandles.get(0).h
-        int htfDCenter = bar_index + htfDailyStart + 1
-
-        string htfDInfoText = tfLabel("1D")
-        if showHtfTimer
-            int htfDRemainingMs = time_close("1D") - (barstate.isrealtime ? timenow : time_close)
-            htfDInfoText := htfDInfoText + '\n(' + formatRemaining(htfDRemainingMs, true) + ')'
-
-        if na(htfDailyInfoLbl)
-            htfDailyInfoLbl := label.new(htfDCenter, htfDHigh, htfDInfoText, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_down, color = na, textcolor = htfInfoColor, size = textSize(labelSize), text_font_family = font.family_default)
-        else
-            label.set_xy(htfDailyInfoLbl, htfDCenter, htfDHigh)
-            label.set_text(htfDailyInfoLbl, htfDInfoText)
-            label.set_textcolor(htfDailyInfoLbl, htfInfoColor)
+    [l2, n2s] = drawExtraBlock(htf2Candles, htf2Tf, showHtf2, htf2InfoLbl, nextBlockStart, blockGap)
+    htf2InfoLbl := l2
+    [l3, n3s] = drawExtraBlock(htf3Candles, htf3Tf, showHtf3, htf3InfoLbl, n2s, blockGap)
+    htf3InfoLbl := l3
+    [l4h, n4hs] = drawExtraBlock(htf4HCandles, "240", showHtf4H, htf4HInfoLbl, n3s, blockGap)
+    htf4HInfoLbl := l4h
+    [ld, nds] = drawExtraBlock(htfDailyCandles, "1D", showHtfDaily, htfDailyInfoLbl, n4hs, blockGap)
+    htfDailyInfoLbl := ld
+    [l4, n4s] = drawExtraBlock(htf4Candles, htf4TfIn, showHtf4, htf4InfoLbl, nds, blockGap)
+    htf4InfoLbl := l4
+    [l5, n5s] = drawExtraBlock(htf5Candles, htf5TfIn, showHtf5, htf5InfoLbl, n4s, blockGap)
+    htf5InfoLbl := l5
 else
     if not na(htfInfoLbl)
         label.delete(htfInfoLbl)
@@ -2504,6 +2454,18 @@ else
     if not na(htf3InfoLbl)
         label.delete(htf3InfoLbl)
         htf3InfoLbl := na
+    if not na(htf4HInfoLbl)
+        label.delete(htf4HInfoLbl)
+        htf4HInfoLbl := na
+    if not na(htfDailyInfoLbl)
+        label.delete(htfDailyInfoLbl)
+        htfDailyInfoLbl := na
+    if not na(htf4InfoLbl)
+        label.delete(htf4InfoLbl)
+        htf4InfoLbl := na
+    if not na(htf5InfoLbl)
+        label.delete(htf5InfoLbl)
+        htf5InfoLbl := na
 
 tbl_row_count = 0
 tbl_row_count += tbl_show_bias   ? 1 : 0
