@@ -42,11 +42,22 @@ htf4HCandleCount    = input.int(5, '4H Candles', minval = 1, maxval = 10, group 
 htfDailyCandleCount = input.int(5, 'Daily Candles', minval = 1, maxval = 10, group = grpCandles, inline = 'dailycount')
 // [BPI] two extra user-timeframe blocks with the same options as HTF 2 / 3
 showHtf4        = input.bool(false, 'Show HTF Candle 4', group = grpCandles, inline = 'htf4')
-htf4TfIn        = input.timeframe('1W', '', group = grpCandles, inline = 'htf4')
+htf4TfSel       = input.string('1W', '', options = ['1m', '2m', '3m', '5m', '10m', '15m', '20m', '30m', '45m', '1H', '2H', '3H', '4H', '6H', '8H', '12H', '1D', '2D', '3D', '1W', '2W', '1M', '3M'], group = grpCandles, inline = 'htf4')
 htf4CandleCount = input.int(5, '', minval = 1, maxval = 10, group = grpCandles, inline = 'htf4', tooltip = 'HTF Candle 4: timeframe and number of candles (1-10).')
 showHtf5        = input.bool(false, 'Show HTF Candle 5', group = grpCandles, inline = 'htf5')
-htf5TfIn        = input.timeframe('1M', '', group = grpCandles, inline = 'htf5')
+htf5TfSel       = input.string('1M', '', options = ['1m', '2m', '3m', '5m', '10m', '15m', '20m', '30m', '45m', '1H', '2H', '3H', '4H', '6H', '8H', '12H', '1D', '2D', '3D', '1W', '2W', '1M', '3M'], group = grpCandles, inline = 'htf5')
 htf5CandleCount = input.int(5, '', minval = 1, maxval = 10, group = grpCandles, inline = 'htf5', tooltip = 'HTF Candle 5: timeframe and number of candles (1-10).')
+
+// [BPI] dropdown label ('20m', '6H', '1W'...) -> Pine timeframe code ('20', '360', '1W'...)
+tfFromLabel(string lbl) =>
+    string out = lbl
+    if str.endswith(lbl, 'm')
+        out := str.tostring(int(str.tonumber(str.replace(lbl, 'm', ''))))
+    else if str.endswith(lbl, 'H')
+        out := str.tostring(int(str.tonumber(str.replace(lbl, 'H', '')) * 60))
+    out
+htf4TfIn = tfFromLabel(htf4TfSel)
+htf5TfIn = tfFromLabel(htf5TfSel)
 candleOffsetIn = input.int(20, 'Offset', minval = 0, group = grpCandles)
 
 bullBody   = input.color(color.blue, 'Body', group = grpCandles, inline = 'body')
