@@ -376,6 +376,7 @@ type C2Setup
     bool  c4EntryJust   = false
     // [BPI R:R]
     int   rrState   = 0        // 0 = none, 1 = open, 2 = win, 3 = loss, 4 = removed (max count)
+    int   rrConfirmBar = na
     float rrSlOrig  = na
     float rrEntry   = na
     float rrSl      = na
@@ -1187,7 +1188,18 @@ createRR(C2Setup s, int confirmBar) =>
             s.rrSlOrig := s.extreme
             s.rrTp    := s.isBull ? s.cisdLevel + rrMultiple * risk : s.cisdLevel - rrMultiple * risk
             s.rrState := 1
+            s.rrConfirmBar := confirmBar
             rrList.push(s)
+            // CISD confirmed on an earlier bar (replayed setup): resolve any stop / target touch in between
+            if confirmBar < bar_index - 1
+                for off = bar_index - confirmBar - 1 to 1
+                    if s.rrState == 1
+                        bool hSl = s.isBull ? low[off] <= s.rrSl : high[off] >= s.rrSl
+                        bool hTp = s.isBull ? high[off] >= s.rrTp : low[off] <= s.rrTp
+                        if hSl
+                            s.rrState := 3
+                        else if hTp
+                            s.rrState := 2
             int x1 = s.cisdIndex
             int x2 = confirmBar + 3
             s.rrRiskBox   := box.new(x1, math.max(s.rrEntry, s.rrSl), x2, math.min(s.rrEntry, s.rrSl), border_color = na, bgcolor = rrRiskColor)
@@ -1221,8 +1233,10 @@ rrTrailStop(C2Setup s) =>
 method updateRR(C2Setup s) =>
     if not na(s) and s.rrState == 1
         rrTrailStop(s)
-        bool hitSl = s.isBull ? low <= s.rrSl : high >= s.rrSl
-        bool hitTp = s.isBull ? high >= s.rrTp : low <= s.rrTp
+        // the confirmation bar itself is not a fill bar: hits count from the next bar on
+        bool canHit = na(s.rrConfirmBar) or bar_index > s.rrConfirmBar
+        bool hitSl = canHit and (s.isBull ? low <= s.rrSl : high >= s.rrSl)
+        bool hitTp = canHit and (s.isBull ? high >= s.rrTp : low <= s.rrTp)
         if hitSl
             s.rrState := 3
         else if hitTp
