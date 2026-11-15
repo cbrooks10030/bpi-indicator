@@ -2434,18 +2434,42 @@ if (barstate.islast or barstate.isrealtime) and validTf and htfCandles.size() > 
     int htf1Right = candleOffset + (htfCandleCount - 1) * candleSpacing + 2
     int nextBlockStart = htf1Right + blockGap * candleSpacing
 
-    [l2, n2s] = drawExtraBlock(htf2Candles, htf2Tf, showHtf2, htf2InfoLbl, nextBlockStart, blockGap)
-    htf2InfoLbl := l2
-    [l3, n3s] = drawExtraBlock(htf3Candles, htf3Tf, showHtf3, htf3InfoLbl, n2s, blockGap)
-    htf3InfoLbl := l3
-    [l4h, n4hs] = drawExtraBlock(htf4HCandles, "240", showHtf4H, htf4HInfoLbl, n3s, blockGap)
-    htf4HInfoLbl := l4h
-    [ld, nds] = drawExtraBlock(htfDailyCandles, "1D", showHtfDaily, htfDailyInfoLbl, n4hs, blockGap)
-    htfDailyInfoLbl := ld
-    [l4, n4s] = drawExtraBlock(htf4Candles, htf4TfIn, showHtf4, htf4InfoLbl, nds, blockGap)
-    htf4InfoLbl := l4
-    [l5, n5s] = drawExtraBlock(htf5Candles, htf5TfIn, showHtf5, htf5InfoLbl, n4s, blockGap)
-    htf5InfoLbl := l5
+    // [BPI] extra blocks are placed left -> right from the smallest to the largest timeframe
+    array<int> blkOrder = array.from(0, 1, 2, 3, 4, 5)
+    array<int> blkMins  = array.from(na(htf2Tf) ? 0 : tfMins(htf2Tf), na(htf3Tf) ? 0 : tfMins(htf3Tf), 240, 1440, tfMins(htf4TfIn), tfMins(htf5TfIn))
+    for a = 0 to 4
+        for b = a + 1 to 5
+            if blkMins.get(blkOrder.get(b)) < blkMins.get(blkOrder.get(a))
+                int tmp = blkOrder.get(a)
+                blkOrder.set(a, blkOrder.get(b))
+                blkOrder.set(b, tmp)
+    int blkStart = nextBlockStart
+    for k = 0 to 5
+        switch blkOrder.get(k)
+            0 =>
+                [l2, n2s] = drawExtraBlock(htf2Candles, htf2Tf, showHtf2, htf2InfoLbl, blkStart, blockGap)
+                htf2InfoLbl := l2
+                blkStart := n2s
+            1 =>
+                [l3, n3s] = drawExtraBlock(htf3Candles, htf3Tf, showHtf3, htf3InfoLbl, blkStart, blockGap)
+                htf3InfoLbl := l3
+                blkStart := n3s
+            2 =>
+                [l4h, n4hs] = drawExtraBlock(htf4HCandles, "240", showHtf4H, htf4HInfoLbl, blkStart, blockGap)
+                htf4HInfoLbl := l4h
+                blkStart := n4hs
+            3 =>
+                [ld, nds] = drawExtraBlock(htfDailyCandles, "1D", showHtfDaily, htfDailyInfoLbl, blkStart, blockGap)
+                htfDailyInfoLbl := ld
+                blkStart := nds
+            4 =>
+                [l4, n4s] = drawExtraBlock(htf4Candles, htf4TfIn, showHtf4, htf4InfoLbl, blkStart, blockGap)
+                htf4InfoLbl := l4
+                blkStart := n4s
+            5 =>
+                [l5, n5s] = drawExtraBlock(htf5Candles, htf5TfIn, showHtf5, htf5InfoLbl, blkStart, blockGap)
+                htf5InfoLbl := l5
+                blkStart := n5s
 else
     if not na(htfInfoLbl)
         label.delete(htfInfoLbl)
