@@ -1191,8 +1191,10 @@ createRR(C2Setup s, int confirmBar) =>
             s.rrConfirmBar := confirmBar
             rrList.push(s)
             // CISD confirmed on an earlier bar (replayed setup): resolve any stop / target touch in between
-            if confirmBar < bar_index - 1
-                for off = bar_index - confirmBar - 1 to 1
+            // replay is clamped to the declared 1000-bar price buffer (max_bars_back)
+            int replayFrom = math.min(bar_index - confirmBar - 1, 999)
+            if replayFrom >= 1
+                for off = replayFrom to 1
                     if s.rrState == 1
                         bool hSl = s.isBull ? low[off] <= s.rrSl : high[off] >= s.rrSl
                         bool hTp = s.isBull ? high[off] >= s.rrTp : low[off] <= s.rrTp
