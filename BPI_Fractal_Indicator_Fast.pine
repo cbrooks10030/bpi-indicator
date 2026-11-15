@@ -895,35 +895,6 @@ extendExtraEq(array<HtfCandle> cs) =>
     for i = 1 to n - 1
         line.set_x2(cs.get(i).eqLine, cs.get(i - 1).midX)
 
-// [BPI] One extra HTF block (HTF 2/3/4/5, 4H, Daily): tags, candles, sweeps, EQ lines and the info label.
-// Returns the (re)used info label and the start column of the next block.
-drawExtraBlock(array<HtfCandle> cs, string tf, bool show, label infoLbl, int start, int blockGap) =>
-    label lbl  = infoLbl
-    int   next = start
-    if show and not na(tf) and cs.size() > 0
-        tagExtraBlock(cs)
-        int n = cs.size()
-        for i = n - 1 to 0
-            cs.get(i).draw(bar_index + start + candleSpacing * (n - 1 - i), tf)
-        drawExtraSweeps(cs)
-        extendExtraEq(cs)
-        float hi = extraInfoY(cs)
-        int center = bar_index + start + int(candleSpacing * (n - 1) / 2)
-        string txt = tfLabel(tf)
-        if showHtfTimer
-            int remMs = time_close(tf) - (barstate.isrealtime ? timenow : time_close)
-            txt := txt + '\n(' + formatRemaining(remMs, tfMins(tf) >= 60) + ')'
-        if na(lbl)
-            lbl := label.new(center, hi, txt, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_down, color = na, textcolor = htfInfoColor, size = textSize(labelSize), text_font_family = font.family_default)
-        else
-            label.set_xy(lbl, center, hi)
-            label.set_text(lbl, txt)
-            label.set_textcolor(lbl, htfInfoColor)
-        next := start + (n - 1) * candleSpacing + 2 + blockGap * candleSpacing
-    else if not na(lbl)
-        label.delete(lbl)
-        lbl := na
-    [lbl, next]
 
 method delete(HtfCandle c) =>
     box.delete(c.body)
@@ -1036,6 +1007,36 @@ method draw(HtfCandle c, int leftBar, string tf = "") =>
         c.sellLbl := na
 
     c.midX := midX
+
+// [BPI] One extra HTF block (HTF 2/3/4/5, 4H, Daily): tags, candles, sweeps, EQ lines and the info label.
+// Returns the (re)used info label and the start column of the next block.
+drawExtraBlock(array<HtfCandle> cs, string tf, bool show, label infoLbl, int start, int blockGap) =>
+    label lbl  = infoLbl
+    int   next = start
+    if show and not na(tf) and cs.size() > 0
+        tagExtraBlock(cs)
+        int n = cs.size()
+        for i = n - 1 to 0
+            cs.get(i).draw(bar_index + start + candleSpacing * (n - 1 - i), tf)
+        drawExtraSweeps(cs)
+        extendExtraEq(cs)
+        float hi = extraInfoY(cs)
+        int center = bar_index + start + int(candleSpacing * (n - 1) / 2)
+        string txt = tfLabel(tf)
+        if showHtfTimer
+            int remMs = time_close(tf) - (barstate.isrealtime ? timenow : time_close)
+            txt := txt + '\n(' + formatRemaining(remMs, tfMins(tf) >= 60) + ')'
+        if na(lbl)
+            lbl := label.new(center, hi, txt, xloc = xloc.bar_index, yloc = yloc.price, style = label.style_label_down, color = na, textcolor = htfInfoColor, size = textSize(labelSize), text_font_family = font.family_default)
+        else
+            label.set_xy(lbl, center, hi)
+            label.set_text(lbl, txt)
+            label.set_textcolor(lbl, htfInfoColor)
+        next := start + (n - 1) * candleSpacing + 2 + blockGap * candleSpacing
+    else if not na(lbl)
+        label.delete(lbl)
+        lbl := na
+    [lbl, next]
 
 newHtfCandle() =>
     HtfCandle.new(open, high, low, close, bar_index, bar_index,
