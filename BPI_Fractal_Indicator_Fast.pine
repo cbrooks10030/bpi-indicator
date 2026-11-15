@@ -1802,9 +1802,17 @@ processC2(bool trigger, bool allow, bool isBull, float extremePrice, int extreme
         if showAlerts and showSweepC2Alerts
             sweepC2Msg = str.replace_all(str.replace_all(sweepC2AlertTemplate, '{side}', isBull ? 'Bullish' : 'Bearish'), '{ticker}', syminfo.ticker)
             alert(sweepC2Msg, alert.freq_once_per_bar)
+        bool carryC4Closed = false
         if not na(existing)
             existing.deleteStdDev()
+            // the HTF candle that just closed was the old setup's stage candle: settle its C4 closure first
+            if not existing.dead and existing.phase == 2 and periodChanged
+                existing.checkC4Closure()
+                carryC4Closed := existing.c4JustClosed
+                existing.c4JustClosed := false
         result := newSetup(isBull, extremePrice, lbl, cisdLevel, cisdIndex, cisdAlreadyConfirmed, cisdConfirmBar, extremeBar, c2Tag)
+        if carryC4Closed
+            result.c4JustClosed := true
     else if periodChanged and not na(existing) and not existing.dead
         // [C5-C6 PORT] C3 -> C4. From C4 onward: advance to the next candle (up to maxCandle) unless the current
         // stage was invalidated (XC4/XC5/XC6), in which case the setup finishes and no further box prints.
