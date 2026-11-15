@@ -892,8 +892,9 @@ drawExtraSweeps(array<HtfCandle> cs) =>
 // Must be called AFTER the block's candles have been drawn (it needs each candle's midX).
 extendExtraEq(array<HtfCandle> cs) =>
     int n = cs.size()
-    for i = 1 to n - 1
-        line.set_x2(cs.get(i).eqLine, cs.get(i - 1).midX)
+    if n > 1
+        for i = 1 to n - 1
+            line.set_x2(cs.get(i).eqLine, cs.get(i - 1).midX)
 
 
 method delete(HtfCandle c) =>
