@@ -1411,7 +1411,7 @@ icStep(C2Setup s, int m, bool live) =>
                 if not na(swPx) and not na(swIdx)
                     registerIcCisd(s, swPx, swIdx, m)
                     icClearPending(s)
-                    if live and s.phase == 2
+                    if live and s.phase == 2 and s.stage == 4
                         s.c4EntryJust := true
                     if live and showAlerts and showIcCisdAlerts
                         alert((s.isBull ? 'Bullish' : 'Bearish') + ' IC-CISD confirmed on ' + syminfo.ticker, alert.freq_once_per_bar)
