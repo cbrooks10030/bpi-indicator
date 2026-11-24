@@ -94,12 +94,14 @@ lhWidth = input.int(1, '', minval = 1, group = grpCandles, inline = 'lh')
 // [BPI] Fair value gaps drawn on the HTF candle blocks (3-candle gaps between the preview candles)
 grpHtfFvg       = 'HTF Candle FVGs'
 hfShow          = input.bool(true, 'Show FVGs on HTF Candles', group = grpHtfFvg, tooltip = 'Shades the gap between candle 1 and candle 3 of every 3-candle imbalance inside each HTF block, with a consequent-encroachment (CE) line. Visual only.')
-hfBullColor     = input.color(color.new(#089981, 80), 'Bull / Bear', group = grpHtfFvg, inline = 'hfc')
-hfBearColor     = input.color(color.new(#f23645, 80), '', group = grpHtfFvg, inline = 'hfc')
-hfTransp        = input.int(80, 'Transparency', minval = 0, maxval = 100, group = grpHtfFvg, inline = 'hft', tooltip = 'Box fill transparency (0 = solid, 100 = invisible).')
+hfBullColor     = input.color(color.new(#a5d6a7, 75), 'Bull / Bear fill', group = grpHtfFvg, inline = 'hfc')
+hfBearColor     = input.color(color.new(#ef9a9a, 75), '', group = grpHtfFvg, inline = 'hfc')
+hfTransp        = input.int(75, 'Transparency', minval = 0, maxval = 100, group = grpHtfFvg, inline = 'hft', tooltip = 'Box fill transparency (0 = solid, 100 = invisible).')
 hfBorder        = input.bool(true, 'Border', group = grpHtfFvg, inline = 'hfb')
 hfBorderStyle   = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], group = grpHtfFvg, inline = 'hfb')
 hfBorderWidth   = input.int(1, '', minval = 1, maxval = 4, group = grpHtfFvg, inline = 'hfb')
+hfBullBorder    = input.color(color.new(#000000, 30), 'Bull / Bear border', group = grpHtfFvg, inline = 'hfbc')
+hfBearBorder    = input.color(color.new(#b71c1c, 30), '', group = grpHtfFvg, inline = 'hfbc')
 hfShowCE        = input.bool(true, 'C.E. line', group = grpHtfFvg, inline = 'hfe')
 hfCEColor       = input.color(color.new(#2e2e2e, 40), '', group = grpHtfFvg, inline = 'hfe')
 hfCEStyle       = input.string('Dotted', '', options = ['Solid', 'Dashed', 'Dotted'], group = grpHtfFvg, inline = 'hfe')
@@ -1080,7 +1082,7 @@ drawBlockFvgs(array<HtfCandle> cs, array<box> bxs, array<line> lns, int rightX, 
                             break
                 if not filled
                     color fill = color.new(bull ? hfBullColor : hfBearColor, hfTransp)
-                    color brd  = hfBorder ? color.new(bull ? hfBullColor : hfBearColor, 0) : na
+                    color brd  = hfBorder ? (bull ? hfBullBorder : hfBearBorder) : na
                     bxs.push(box.new(older.midX, top, rightX, bot, border_color = brd, border_style = lineStyleFromStr(hfBorderStyle), border_width = hfBorderWidth, bgcolor = fill))
                     if hfShowCE
                         float ce = (top + bot) / 2
