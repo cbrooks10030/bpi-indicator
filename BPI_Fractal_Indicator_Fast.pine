@@ -91,6 +91,21 @@ lhColor = input.color(color.new(#1a1a1a, 30), '', group = grpCandles, inline = '
 lhStyle = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], group = grpCandles, inline = 'lh')
 lhWidth = input.int(1, '', minval = 1, group = grpCandles, inline = 'lh')
 
+// [BPI] Fair value gaps drawn on the HTF candle blocks (3-candle gaps between the preview candles)
+grpHtfFvg       = 'HTF Candle FVGs'
+hfShow          = input.bool(true, 'Show FVGs on HTF Candles', group = grpHtfFvg, tooltip = 'Shades the gap between candle 1 and candle 3 of every 3-candle imbalance inside each HTF block, with a consequent-encroachment (CE) line. Visual only.')
+hfBullColor     = input.color(color.new(#089981, 80), 'Bull / Bear', group = grpHtfFvg, inline = 'hfc')
+hfBearColor     = input.color(color.new(#f23645, 80), '', group = grpHtfFvg, inline = 'hfc')
+hfTransp        = input.int(80, 'Transparency', minval = 0, maxval = 100, group = grpHtfFvg, inline = 'hft', tooltip = 'Box fill transparency (0 = solid, 100 = invisible).')
+hfBorder        = input.bool(true, 'Border', group = grpHtfFvg, inline = 'hfb')
+hfBorderStyle   = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], group = grpHtfFvg, inline = 'hfb')
+hfBorderWidth   = input.int(1, '', minval = 1, maxval = 4, group = grpHtfFvg, inline = 'hfb')
+hfShowCE        = input.bool(true, 'C.E. line', group = grpHtfFvg, inline = 'hfe')
+hfCEColor       = input.color(color.new(#2e2e2e, 40), '', group = grpHtfFvg, inline = 'hfe')
+hfCEStyle       = input.string('Dotted', '', options = ['Solid', 'Dashed', 'Dotted'], group = grpHtfFvg, inline = 'hfe')
+hfCEWidth       = input.int(1, '', minval = 1, maxval = 4, group = grpHtfFvg, inline = 'hfe')
+hfHideFilled    = input.bool(true, 'Hide filled gaps', group = grpHtfFvg, tooltip = 'Remove a gap once a later HTF candle in the block has traded through it completely.')
+
 grpVisuals = 'Model Style'
 showLabels = input.bool(true, 'Labels?', group = grpVisuals, inline = 'lbl')
 labelSize  = input.string('Normal', '', group = grpVisuals, inline = 'lbl', options = ['Tiny', 'Small', 'Normal', 'Large', 'Huge'], active = showLabels)
@@ -429,6 +444,21 @@ var array<HtfCandle>        htf4HCandles         = array.new<HtfCandle>()
 var array<HtfCandle>        htfDailyCandles      = array.new<HtfCandle>()
 var array<HtfCandle>        htf4Candles          = array.new<HtfCandle>()
 var array<HtfCandle>        htf5Candles          = array.new<HtfCandle>()
+// [BPI] HTF-block FVG drawings, one pair of arrays per block (rebuilt on the last bar)
+var array<box>  hfBoxes1  = array.new<box>()
+var array<line> hfLines1  = array.new<line>()
+var array<box>  hfBoxes2  = array.new<box>()
+var array<line> hfLines2  = array.new<line>()
+var array<box>  hfBoxes3  = array.new<box>()
+var array<line> hfLines3  = array.new<line>()
+var array<box>  hfBoxes4H = array.new<box>()
+var array<line> hfLines4H = array.new<line>()
+var array<box>  hfBoxesD  = array.new<box>()
+var array<line> hfLinesD  = array.new<line>()
+var array<box>  hfBoxes4  = array.new<box>()
+var array<line> hfLines4  = array.new<line>()
+var array<box>  hfBoxes5  = array.new<box>()
+var array<line> hfLines5  = array.new<line>()
 var array<line>             vLines               = array.new<line>()
 var array<line>             hLines               = array.new<line>()
 var array<line>             lLines               = array.new<line>()
@@ -1021,9 +1051,44 @@ method draw(HtfCandle c, int leftBar, string tf = "") =>
 
     c.midX := midX
 
+// [BPI] FVGs between the preview candles of one HTF block. Drawings are rebuilt from scratch each call
+// (bounded by the block's candle count), so nothing accumulates. rightX = right edge of the block.
+drawBlockFvgs(array<HtfCandle> cs, array<box> bxs, array<line> lns, int rightX, bool active) =>
+    for b in bxs
+        box.delete(b)
+    bxs.clear()
+    for l in lns
+        line.delete(l)
+    lns.clear()
+    int n = cs.size()
+    if active and n >= 3
+        // i = middle candle; older = i + 1, newer = i - 1 (index 0 is the forming candle)
+        for i = n - 2 to 1
+            HtfCandle older = cs.get(i + 1)
+            HtfCandle newer = cs.get(i - 1)
+            bool bull = older.h < newer.l
+            bool bear = older.l > newer.h
+            if bull or bear
+                float top = bull ? newer.l : older.l
+                float bot = bull ? older.h : newer.h
+                bool filled = false
+                if hfHideFilled and i >= 2
+                    for k = i - 2 to 0
+                        HtfCandle later = cs.get(k)
+                        if bull ? later.l <= bot : later.h >= top
+                            filled := true
+                            break
+                if not filled
+                    color fill = color.new(bull ? hfBullColor : hfBearColor, hfTransp)
+                    color brd  = hfBorder ? color.new(bull ? hfBullColor : hfBearColor, 0) : na
+                    bxs.push(box.new(older.midX, top, rightX, bot, border_color = brd, border_style = lineStyleFromStr(hfBorderStyle), border_width = hfBorderWidth, bgcolor = fill))
+                    if hfShowCE
+                        float ce = (top + bot) / 2
+                        lns.push(line.new(older.midX, ce, rightX, ce, xloc = xloc.bar_index, color = hfCEColor, style = lineStyleFromStr(hfCEStyle), width = hfCEWidth))
+
 // [BPI] One extra HTF block (HTF 2/3/4/5, 4H, Daily): tags, candles, sweeps, EQ lines and the info label.
 // Returns the (re)used info label and the start column of the next block.
-drawExtraBlock(array<HtfCandle> cs, string tf, bool show, label infoLbl, int start, int blockGap) =>
+drawExtraBlock(array<HtfCandle> cs, string tf, bool show, label infoLbl, int start, int blockGap, array<box> fvgBxs, array<line> fvgLns) =>
     label lbl  = infoLbl
     int   next = start
     if show and not na(tf) and cs.size() > 0
@@ -1033,6 +1098,7 @@ drawExtraBlock(array<HtfCandle> cs, string tf, bool show, label infoLbl, int sta
             cs.get(i).draw(bar_index + start + candleSpacing * (n - 1 - i), tf)
         drawExtraSweeps(cs)
         extendExtraEq(cs)
+        drawBlockFvgs(cs, fvgBxs, fvgLns, bar_index + start + candleSpacing * (n - 1) + 2, hfShow)
         float hi = extraInfoY(cs)
         int center = bar_index + start + int(candleSpacing * (n - 1) / 2)
         string txt = tfLabel(tf)
@@ -1046,9 +1112,11 @@ drawExtraBlock(array<HtfCandle> cs, string tf, bool show, label infoLbl, int sta
             label.set_text(lbl, txt)
             label.set_textcolor(lbl, htfInfoColor)
         next := start + (n - 1) * candleSpacing + 2 + blockGap * candleSpacing
-    else if not na(lbl)
-        label.delete(lbl)
-        lbl := na
+    else
+        drawBlockFvgs(cs, fvgBxs, fvgLns, 0, false)
+        if not na(lbl)
+            label.delete(lbl)
+            lbl := na
     [lbl, next]
 
 newHtfCandle() =>
@@ -2372,6 +2440,7 @@ if (barstate.islast or barstate.isrealtime) and validTf and htfCandles.size() > 
     n = htfCandles.size()
     for i = n - 1 to 0
         htfCandles.get(i).draw(bar_index + candleOffset + candleSpacing * (n - 1 - i), autoTf)
+    drawBlockFvgs(htfCandles, hfBoxes1, hfLines1, bar_index + candleOffset + candleSpacing * (n - 1) + 2, hfShow)
     if showHtfOpen and not na(htfOpenBar)
         curOpenX2 = box.get_right(htfCandles.first().body)
         if na(htfOpenLn)
@@ -2482,27 +2551,27 @@ if (barstate.islast or barstate.isrealtime) and validTf and htfCandles.size() > 
     for k = 0 to 5
         switch blkOrder.get(k)
             0 =>
-                [l2, n2s] = drawExtraBlock(htf2Candles, htf2Tf, showHtf2, htf2InfoLbl, blkStart, blockGap)
+                [l2, n2s] = drawExtraBlock(htf2Candles, htf2Tf, showHtf2, htf2InfoLbl, blkStart, blockGap, hfBoxes2, hfLines2)
                 htf2InfoLbl := l2
                 blkStart := n2s
             1 =>
-                [l3, n3s] = drawExtraBlock(htf3Candles, htf3Tf, showHtf3, htf3InfoLbl, blkStart, blockGap)
+                [l3, n3s] = drawExtraBlock(htf3Candles, htf3Tf, showHtf3, htf3InfoLbl, blkStart, blockGap, hfBoxes3, hfLines3)
                 htf3InfoLbl := l3
                 blkStart := n3s
             2 =>
-                [l4h, n4hs] = drawExtraBlock(htf4HCandles, "240", showHtf4H, htf4HInfoLbl, blkStart, blockGap)
+                [l4h, n4hs] = drawExtraBlock(htf4HCandles, "240", showHtf4H, htf4HInfoLbl, blkStart, blockGap, hfBoxes4H, hfLines4H)
                 htf4HInfoLbl := l4h
                 blkStart := n4hs
             3 =>
-                [ld, nds] = drawExtraBlock(htfDailyCandles, "1D", showHtfDaily, htfDailyInfoLbl, blkStart, blockGap)
+                [ld, nds] = drawExtraBlock(htfDailyCandles, "1D", showHtfDaily, htfDailyInfoLbl, blkStart, blockGap, hfBoxesD, hfLinesD)
                 htfDailyInfoLbl := ld
                 blkStart := nds
             4 =>
-                [l4, n4s] = drawExtraBlock(htf4Candles, htf4TfIn, showHtf4, htf4InfoLbl, blkStart, blockGap)
+                [l4, n4s] = drawExtraBlock(htf4Candles, htf4TfIn, showHtf4, htf4InfoLbl, blkStart, blockGap, hfBoxes4, hfLines4)
                 htf4InfoLbl := l4
                 blkStart := n4s
             5 =>
-                [l5, n5s] = drawExtraBlock(htf5Candles, htf5TfIn, showHtf5, htf5InfoLbl, blkStart, blockGap)
+                [l5, n5s] = drawExtraBlock(htf5Candles, htf5TfIn, showHtf5, htf5InfoLbl, blkStart, blockGap, hfBoxes5, hfLines5)
                 htf5InfoLbl := l5
                 blkStart := n5s
 else
