@@ -1054,8 +1054,8 @@ method draw(HtfCandle c, int leftBar, string tf = "") =>
     c.midX := midX
 
 // [BPI] FVGs between the preview candles of one HTF block. Drawings are rebuilt from scratch each call
-// (bounded by the block's candle count), so nothing accumulates. rightX = right edge of the block.
-drawBlockFvgs(array<HtfCandle> cs, array<box> bxs, array<line> lns, int rightX, bool active) =>
+// (bounded by the block's candle count), so nothing accumulates. Boxes span candle 1 -> candle 3 wick.
+drawBlockFvgs(array<HtfCandle> cs, array<box> bxs, array<line> lns, bool active) =>
     for b in bxs
         box.delete(b)
     bxs.clear()
@@ -1083,10 +1083,10 @@ drawBlockFvgs(array<HtfCandle> cs, array<box> bxs, array<line> lns, int rightX, 
                 if not filled
                     color fill = color.new(bull ? hfBullColor : hfBearColor, hfTransp)
                     color brd  = hfBorder ? (bull ? hfBullBorder : hfBearBorder) : na
-                    bxs.push(box.new(older.midX, top, rightX, bot, border_color = brd, border_style = lineStyleFromStr(hfBorderStyle), border_width = hfBorderWidth, bgcolor = fill))
+                    bxs.push(box.new(older.midX, top, newer.midX, bot, border_color = brd, border_style = lineStyleFromStr(hfBorderStyle), border_width = hfBorderWidth, bgcolor = fill))
                     if hfShowCE
                         float ce = (top + bot) / 2
-                        lns.push(line.new(older.midX, ce, rightX, ce, xloc = xloc.bar_index, color = hfCEColor, style = lineStyleFromStr(hfCEStyle), width = hfCEWidth))
+                        lns.push(line.new(older.midX, ce, newer.midX, ce, xloc = xloc.bar_index, color = hfCEColor, style = lineStyleFromStr(hfCEStyle), width = hfCEWidth))
 
 // [BPI] One extra HTF block (HTF 2/3/4/5, 4H, Daily): tags, candles, sweeps, EQ lines and the info label.
 // Returns the (re)used info label and the start column of the next block.
@@ -1100,7 +1100,7 @@ drawExtraBlock(array<HtfCandle> cs, string tf, bool show, label infoLbl, int sta
             cs.get(i).draw(bar_index + start + candleSpacing * (n - 1 - i), tf)
         drawExtraSweeps(cs)
         extendExtraEq(cs)
-        drawBlockFvgs(cs, fvgBxs, fvgLns, bar_index + start + candleSpacing * (n - 1) + 2, hfShow)
+        drawBlockFvgs(cs, fvgBxs, fvgLns, hfShow)
         float hi = extraInfoY(cs)
         int center = bar_index + start + int(candleSpacing * (n - 1) / 2)
         string txt = tfLabel(tf)
@@ -1115,7 +1115,7 @@ drawExtraBlock(array<HtfCandle> cs, string tf, bool show, label infoLbl, int sta
             label.set_textcolor(lbl, htfInfoColor)
         next := start + (n - 1) * candleSpacing + 2 + blockGap * candleSpacing
     else
-        drawBlockFvgs(cs, fvgBxs, fvgLns, 0, false)
+        drawBlockFvgs(cs, fvgBxs, fvgLns, false)
         if not na(lbl)
             label.delete(lbl)
             lbl := na
@@ -2442,7 +2442,7 @@ if (barstate.islast or barstate.isrealtime) and validTf and htfCandles.size() > 
     n = htfCandles.size()
     for i = n - 1 to 0
         htfCandles.get(i).draw(bar_index + candleOffset + candleSpacing * (n - 1 - i), autoTf)
-    drawBlockFvgs(htfCandles, hfBoxes1, hfLines1, bar_index + candleOffset + candleSpacing * (n - 1) + 2, hfShow)
+    drawBlockFvgs(htfCandles, hfBoxes1, hfLines1, hfShow)
     if showHtfOpen and not na(htfOpenBar)
         curOpenX2 = box.get_right(htfCandles.first().body)
         if na(htfOpenLn)
