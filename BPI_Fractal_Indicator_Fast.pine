@@ -92,7 +92,7 @@ lhStyle = input.string('Solid', '', options = ['Solid', 'Dashed', 'Dotted'], gro
 lhWidth = input.int(1, '', minval = 1, group = grpCandles, inline = 'lh')
 
 // [BPI] Fair value gaps drawn on the HTF candle blocks (3-candle gaps between the preview candles)
-grpHtfFvg       = 'HTF Candle FVGs'
+grpHtfFvg       = 'HTF Candle FVGs & Imbalances'
 hfShow          = input.bool(true, 'Show FVGs on HTF Candles', group = grpHtfFvg, tooltip = 'Shades the gap between candle 1 and candle 3 of every 3-candle imbalance inside each HTF block, with a consequent-encroachment (CE) line. Visual only.')
 hfBullColor     = input.color(color.new(#a5d6a7, 75), 'Bull / Bear fill', group = grpHtfFvg, inline = 'hfc')
 hfBearColor     = input.color(color.new(#ef9a9a, 75), '', group = grpHtfFvg, inline = 'hfc')
@@ -107,6 +107,11 @@ hfCEColor       = input.color(color.new(#2e2e2e, 40), '', group = grpHtfFvg, inl
 hfCEStyle       = input.string('Dotted', '', options = ['Solid', 'Dashed', 'Dotted'], group = grpHtfFvg, inline = 'hfe')
 hfCEWidth       = input.int(1, '', minval = 1, maxval = 4, group = grpHtfFvg, inline = 'hfe')
 hfHideFilled    = input.bool(true, 'Hide filled gaps', group = grpHtfFvg, tooltip = 'Remove a gap once a later HTF candle in the block has traded through it completely.')
+viShow          = input.bool(true, 'Show Volume Imbalances', group = grpHtfFvg, tooltip = 'Gap between one HTF candle\'s close and the next candle\'s open (bodies do not overlap). Uses the same border, transparency, C.E. and hide-filled settings as the FVGs.')
+viBullColor     = input.color(color.new(#90caf9, 75), 'VI Bull / Bear fill', group = grpHtfFvg, inline = 'vic')
+viBearColor     = input.color(color.new(#ffcc80, 75), '', group = grpHtfFvg, inline = 'vic')
+viBullBorder    = input.color(color.new(#1565c0, 30), 'VI Bull / Bear border', group = grpHtfFvg, inline = 'vib')
+viBearBorder    = input.color(color.new(#e65100, 30), '', group = grpHtfFvg, inline = 'vib')
 
 grpVisuals = 'Model Style'
 showLabels = input.bool(true, 'Labels?', group = grpVisuals, inline = 'lbl')
@@ -1087,6 +1092,34 @@ drawBlockFvgs(array<HtfCandle> cs, array<box> bxs, array<line> lns, bool active)
                     if hfShowCE
                         float ce = (top + bot) / 2
                         lns.push(line.new(older.midX, ce, newer.midX, ce, xloc = xloc.bar_index, color = hfCEColor, style = lineStyleFromStr(hfCEStyle), width = hfCEWidth))
+    if active and viShow and n >= 2
+        // volume imbalance: body of candle i+1 does not overlap body of candle i (close -> open gap)
+        for i = n - 2 to 0
+            HtfCandle prev = cs.get(i + 1)
+            HtfCandle cur  = cs.get(i)
+            float prevTop = math.max(prev.o, prev.c)
+            float prevBot = math.min(prev.o, prev.c)
+            float curTop  = math.max(cur.o, cur.c)
+            float curBot  = math.min(cur.o, cur.c)
+            bool bull = prevTop < curBot
+            bool bear = prevBot > curTop
+            if bull or bear
+                float top = bull ? curBot : prevBot
+                float bot = bull ? prevTop : curTop
+                bool filled = false
+                if hfHideFilled and i >= 1
+                    for k = i - 1 to 0
+                        HtfCandle later = cs.get(k)
+                        if bull ? later.l <= bot : later.h >= top
+                            filled := true
+                            break
+                if not filled
+                    color fill = color.new(bull ? viBullColor : viBearColor, hfTransp)
+                    color brd  = hfBorder ? (bull ? viBullBorder : viBearBorder) : na
+                    bxs.push(box.new(prev.midX, top, cur.midX, bot, border_color = brd, border_style = lineStyleFromStr(hfBorderStyle), border_width = hfBorderWidth, bgcolor = fill))
+                    if hfShowCE
+                        float ce = (top + bot) / 2
+                        lns.push(line.new(prev.midX, ce, cur.midX, ce, xloc = xloc.bar_index, color = hfCEColor, style = lineStyleFromStr(hfCEStyle), width = hfCEWidth))
 
 // [BPI] One extra HTF block (HTF 2/3/4/5, 4H, Daily): tags, candles, sweeps, EQ lines and the info label.
 // Returns the (re)used info label and the start column of the next block.
