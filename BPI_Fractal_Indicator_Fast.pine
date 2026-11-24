@@ -1068,7 +1068,7 @@ drawBlockFvgs(array<HtfCandle> cs, array<box> bxs, array<line> lns, bool active)
         line.delete(l)
     lns.clear()
     int n = cs.size()
-    if active and n >= 3
+    if active and hfShow and n >= 3
         // i = middle candle; older = i + 1, newer = i - 1 (index 0 is the forming candle)
         for i = n - 2 to 1
             HtfCandle older = cs.get(i + 1)
@@ -1133,7 +1133,7 @@ drawExtraBlock(array<HtfCandle> cs, string tf, bool show, label infoLbl, int sta
             cs.get(i).draw(bar_index + start + candleSpacing * (n - 1 - i), tf)
         drawExtraSweeps(cs)
         extendExtraEq(cs)
-        drawBlockFvgs(cs, fvgBxs, fvgLns, hfShow)
+        drawBlockFvgs(cs, fvgBxs, fvgLns, hfShow or viShow)
         float hi = extraInfoY(cs)
         int center = bar_index + start + int(candleSpacing * (n - 1) / 2)
         string txt = tfLabel(tf)
@@ -2475,7 +2475,7 @@ if (barstate.islast or barstate.isrealtime) and validTf and htfCandles.size() > 
     n = htfCandles.size()
     for i = n - 1 to 0
         htfCandles.get(i).draw(bar_index + candleOffset + candleSpacing * (n - 1 - i), autoTf)
-    drawBlockFvgs(htfCandles, hfBoxes1, hfLines1, hfShow)
+    drawBlockFvgs(htfCandles, hfBoxes1, hfLines1, hfShow or viShow)
     if showHtfOpen and not na(htfOpenBar)
         curOpenX2 = box.get_right(htfCandles.first().body)
         if na(htfOpenLn)
